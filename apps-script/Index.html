@@ -1,0 +1,2466 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Car Jaune Live</title>
+<!-- appli installable (PWA) : ignorés quand la page tourne dans Apps Script -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F6BE00">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Car Jaune">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,300;6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  /* Charte inspirée de carjaune.re : Nunito Sans, jaune #F6BE00, cartes blanches arrondies */
+  :root{
+    --jaune:#F6BE00; --jaune-clair:#FFF5D1; --jaune-fonce:#C99A00;
+    --texte:#444; --titre:#222; --gris:#7A7F87; --fond:#F2F4F7; --carte:#FFFFFF; --ligne:#E3E6EA;
+    --ombre:0 0 5px rgba(0,0,0,.2);
+    --ok:#1E8A4C; --retard:#D9480F; --avance:#1D6FD8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:"Nunito Sans",Arial,"Helvetica Neue",Helvetica,sans-serif;font-size:15px;color:var(--texte);background:var(--fond);
+       display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+  button,input{font-family:inherit}
+
+  /* ---------- en-tête ---------- */
+  .top{background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.08);flex:none;position:relative;z-index:1000}
+  .top-in{display:flex;align-items:stretch;gap:18px;padding:0 20px;min-height:64px}
+  .brand{display:flex;align-items:center;gap:10px;flex:none}
+  .mark{width:38px;height:38px;border-radius:10px;background:var(--jaune);display:grid;place-items:center}
+  .mark svg{width:24px;height:24px}
+  .brand b{display:block;font-size:19px;font-weight:800;color:var(--titre);line-height:1.05}
+  .brand small{display:block;font-size:11px;color:var(--gris)}
+  .tabs{display:flex;align-items:stretch;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{border:none;background:transparent;color:var(--titre);font-size:14px;font-weight:700;padding:0 18px;cursor:pointer;
+       white-space:nowrap;display:flex;align-items:center;gap:6px;position:relative}
+  .tab:hover{background:var(--jaune-clair)}
+  @media (max-width:1500px){ #status{display:none} .tab{padding:0 13px;font-size:13.5px} }
+  .tab.on{background:var(--jaune)}
+  .tab .n{background:var(--retard);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px}
+  .tab .n[hidden]{display:none}
+  .live{display:flex;align-items:center;gap:8px;flex:none;font-size:13px}
+  .pill{display:flex;align-items:center;gap:8px;border-radius:25px;background:var(--fond);padding:7px 14px;white-space:nowrap}
+  .pill .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(30,138,76,.5);animation:pulse 2s infinite}
+  .pill.asleep .dot{background:#9AA0A6;animation:none}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(30,138,76,.5)}70%{box-shadow:0 0 0 8px rgba(30,138,76,0)}100%{box-shadow:0 0 0 0 rgba(30,138,76,0)}}
+  #count{font-weight:800;color:var(--titre)}
+  #status{color:var(--gris);max-width:260px;overflow:hidden;text-overflow:ellipsis}
+  .crumb{font-size:12px;color:var(--gris);padding:8px 20px;flex:none}
+  .crumb b{color:var(--titre);font-weight:600}
+
+  /* ---------- vues ---------- */
+  main{flex:1;min-height:0;position:relative}
+  .view{position:absolute;inset:0;overflow:auto;display:none}
+  .view.on{display:block}
+  #view-map.on{display:flex;gap:16px;padding:0 20px 16px;overflow:hidden}
+  .wrap{max-width:1040px;margin:0 auto;padding:4px 20px 30px}
+  h1{font-size:32px;font-weight:300;color:var(--titre);margin:6px 0 4px}
+  h1 + .lead{margin:0 0 18px;color:var(--gris);font-size:14px}
+  h1::after{content:'';display:block;width:56px;height:4px;background:var(--jaune);border-radius:2px;margin-top:8px}
+  .card{background:var(--carte);border-radius:10px;box-shadow:var(--ombre);padding:18px}
+  .card + .card{margin-top:16px}
+  .card h2{font-size:18px;font-weight:700;color:var(--titre);margin:0 0 12px}
+
+  /* ---------- carte en direct ---------- */
+  aside{width:370px;flex:none;display:flex;flex-direction:column;background:var(--carte);border-radius:10px;box-shadow:var(--ombre);min-height:0;overflow:hidden}
+  #mapCard{flex:1;border-radius:10px;overflow:hidden;box-shadow:var(--ombre);min-height:0;position:relative}
+  #map{width:100%;height:100%;background:#AAD3DF}
+  #view-map.panel-off aside{display:none}
+  /* plein écran : on masque en-tête, fil d'Ariane et pied de page */
+  body.fs .top, body.fs .crumb, body.fs footer{display:none}
+  body.fs #view-map.on{padding:0}
+  body.fs #mapCard{border-radius:0}
+  /* boutons sur la carte */
+  .map-ctl{display:flex;flex-direction:column;gap:6px}
+  .map-ctl button{border:none;background:#fff;color:var(--titre);font:700 13px "Nunito Sans",sans-serif;border-radius:25px;
+                  padding:8px 13px;box-shadow:0 1px 5px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap;text-align:left}
+  .map-ctl button:hover,.map-ctl button.on{background:var(--jaune)}
+  .leaflet-control-layers{border-radius:10px !important;border:none !important;box-shadow:0 1px 5px rgba(0,0,0,.35) !important;font-family:"Nunito Sans",sans-serif}
+  .leaflet-control-layers-expanded{padding:8px 12px}
+  .crumb.hide{display:none}
+  .toolbar{display:flex;gap:8px;align-items:center;padding:14px 14px 8px}
+  .search{flex:1;min-width:0;border:1px solid var(--ligne);background:#fff;color:var(--texte);border-radius:25px;padding:9px 14px;font-size:14px;outline:none}
+  .search:focus{border-color:var(--jaune);box-shadow:0 0 0 3px var(--jaune-clair)}
+  .toolbar label{font-size:12px;color:var(--gris);display:flex;align-items:center;gap:4px;white-space:nowrap}
+  .round{border:none;background:var(--jaune);color:var(--titre);border-radius:50%;width:38px;height:38px;font-size:18px;cursor:pointer;flex:none;display:grid;place-items:center}
+  .round:hover{background:var(--jaune-fonce)}
+  .spin{animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px;border-bottom:1px solid var(--ligne)}
+  .chip{border:1.5px solid var(--ligne);background:#fff;color:var(--titre);border-radius:25px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer}
+  .chip:hover{border-color:var(--jaune)}
+  .chip.on{border-color:var(--jaune);background:var(--jaune)}
+  .chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+  #countdown{font-size:11px;color:var(--gris);padding:8px 14px 0}
+  #list{overflow:auto;flex:1;padding:6px 8px 16px}
+  .bus-item{display:flex;gap:10px;align-items:flex-start;padding:10px 8px;border-radius:10px;cursor:pointer}
+  .bus-item:hover{background:var(--jaune-clair)}
+  .bus-item.stale{opacity:.55}
+  .badge{display:inline-block;min-width:42px;text-align:center;font-weight:800;font-size:13px;border-radius:6px;padding:4px 6px;border:1.5px solid rgba(0,0,0,.2)}
+  .info{min-width:0;flex:1}
+  .dest{font-weight:700;color:var(--titre);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta{font-size:12px;color:var(--gris);margin-top:2px}
+  .delay{font-size:12px;font-weight:800;white-space:nowrap}
+  .d-ok{color:var(--ok)} .d-late{color:var(--retard)} .d-early{color:var(--avance)} .d-none{color:var(--gris);font-weight:600}
+  .empty{text-align:center;color:var(--gris);padding:40px 16px;font-size:14px;line-height:1.55}
+  .times{font-size:12px;margin-top:3px}
+  .muted{color:var(--gris);font-weight:400}
+  s.muted{font-size:11px}
+  .pdf{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap;
+       color:var(--titre);border:1.5px solid var(--jaune);border-radius:25px;padding:3px 10px;background:#fff}
+  .pdf:hover{background:var(--jaune)}
+  .pdf-links{display:flex;gap:5px;flex-wrap:wrap}
+  .bus-item .pdf-links{margin-top:6px}
+
+  /* marqueurs & bulles */
+  .bus-mk{position:relative}
+  .bus-mk .pill2{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:800 13px "Nunito Sans",sans-serif;
+                 padding:4px 8px;border-radius:7px;border:2.5px solid #222;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.45)}
+  .bus-mk .arrow{position:absolute;left:50%;top:50%;width:0;height:0;margin-left:-7px;margin-top:-30px;
+                 border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:10px solid #222;transform-origin:7px 30px}
+  .bus-mk.stale .pill2{opacity:.5;border-style:dashed}
+  .leaflet-container{font-family:"Nunito Sans",sans-serif}
+  .leaflet-popup-content-wrapper{border-radius:10px}
+  .leaflet-popup-content{font-size:13px;line-height:1.45;margin:12px 14px;min-width:250px}
+  .pop-h{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+  .pop-h b{font-size:14px;color:var(--titre)}
+  .tt{border-collapse:collapse;margin:4px 0 6px;width:100%}
+  .tt td{padding:5px 4px;vertical-align:top;border-top:1px solid #eee;font-size:12.5px}
+  .tt tr:first-child td{border-top:none}
+  .tt td:first-child{width:18px}
+  .tt td:last-child{text-align:right;white-space:nowrap}
+
+  /* veille */
+  .sleep{text-align:center;padding:36px 20px;line-height:1.5}
+  .sleep .moon{width:64px;height:64px;border-radius:50%;background:var(--jaune-clair);color:var(--jaune-fonce);font-size:34px;display:grid;place-items:center;margin:0 auto}
+  .sleep h2{margin:12px 0 6px;font-size:20px;color:var(--titre)}
+  .sleep p{margin:6px 0;color:var(--gris);font-size:14px}
+  .sleep p b{color:var(--titre)}
+  .sleep-cd{font-size:26px !important;font-weight:800;color:var(--titre) !important}
+  .btn{border:none;background:var(--jaune);color:var(--titre);border-radius:25px;padding:9px 18px;font-size:14px;font-weight:700;cursor:pointer}
+  .btn:hover{background:var(--jaune-fonce)}
+  .btn.ghost{background:#fff;border:1.5px solid var(--jaune)}
+  .sleep .btn{margin-top:14px}
+
+  /* ---------- départs à l'arrêt ---------- */
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--titre);margin-bottom:6px}
+  .field-row{display:flex;gap:10px;align-items:center;position:relative}
+  #stopInput{flex:1;font-size:15px;padding:11px 16px}
+  .star{width:42px;height:42px;font-size:20px}
+  .star.on{background:var(--titre);color:var(--jaune)}
+  #suggest{position:absolute;left:0;right:52px;top:calc(100% + 4px);background:#fff;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);
+           list-style:none;margin:0;padding:6px;z-index:50;max-height:320px;overflow:auto}
+  #suggest[hidden]{display:none}
+  #suggest li{padding:9px 12px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+  #suggest li.act,#suggest li:hover{background:var(--jaune-clair)}
+  #suggest li small{color:var(--gris)}
+  .favs{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center}
+  .favs .lbl{font-size:12px;color:var(--gris);margin-right:2px}
+  .board-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  .board-head h2{margin:0}
+  .board-head .upd{font-size:12px;color:var(--gris)}
+  .board{width:100%;border-collapse:collapse}
+  .board th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--gris);font-weight:700;text-align:left;padding:8px 10px;border-bottom:2px solid var(--jaune)}
+  .board td{padding:11px 10px;border-bottom:1px solid var(--ligne);vertical-align:middle}
+  .board tr.sep td{background:var(--fond);font-size:12px;font-weight:700;color:var(--gris);padding:6px 10px}
+  .board tr.gone{opacity:.45}
+  .when{font-size:20px;font-weight:800;color:var(--titre);white-space:nowrap;line-height:1}
+  .when small{font-size:12px;font-weight:600;margin-left:2px}
+  .when.soon{color:var(--retard)}
+  .b-dest{font-weight:700;color:var(--titre)}
+  .b-dest small{display:block;font-weight:400;color:var(--gris);font-size:12px}
+  .rt{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--ok);white-space:nowrap}
+  .rt::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+  .th{font-size:12px;color:var(--gris);white-space:nowrap}
+  .see{border:none;background:none;color:var(--titre);font-weight:700;font-size:12px;cursor:pointer;text-decoration:underline;padding:0;margin-top:3px}
+  .placeholder{text-align:center;color:var(--gris);padding:34px 10px;line-height:1.6}
+  .placeholder .big{font-size:40px}
+
+  /* ---------- période scolaire / vacances ---------- */
+  .tag{display:inline-block;font-size:10.5px;font-weight:800;border-radius:25px;padding:2px 8px;margin-left:6px;vertical-align:2px;
+       text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+  .tag-s{background:#E3EEFF;color:#1D4FA8}
+  .tag-v{background:#FFE9D6;color:#B4470A}
+  .tag-f{background:#EBDDFB;color:#6B2BB8}
+  .pill.period{font-weight:700;color:var(--titre)}
+  .pill.period.p-scolaire{background:#E3EEFF}
+  .pill.period.p-vacances{background:#FFE9D6}
+  .pill.period.p-ferie{background:#EBDDFB}
+  .pdf.cur{background:var(--jaune)}
+  .pdf.dim{opacity:.55}
+  .cal-now{font-size:16px;font-weight:700;color:var(--titre);margin:0 0 10px}
+  .cal-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px 18px}
+  .cal-list li{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--ligne)}
+  .cal-list li b{color:var(--titre)}
+  .cal-list li.now{font-weight:700}
+  .cal-h{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--gris);font-weight:700;margin:14px 0 4px}
+
+  /* ---------- arrêts par ligne & fiches lues ---------- */
+  .lines-box{margin-top:14px;border-top:1px solid var(--ligne);padding-top:12px}
+  .lines-box .lbl{font-size:12px;color:var(--gris);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .line-chips{display:flex;flex-wrap:wrap;gap:6px}
+  .line-chip{border:none;background:none;padding:0;cursor:pointer;border-radius:8px}
+  .line-chip .badge{transition:transform .1s}
+  .line-chip:hover .badge{transform:translateY(-1px)}
+  .line-chip.on .badge{outline:3px solid var(--titre);outline-offset:2px}
+  .stops-dir h4{font-size:12px;color:var(--titre);margin:12px 0 6px;font-weight:700}
+  .stop-btns{display:flex;flex-wrap:wrap;gap:6px}
+  .stop-btn{border:1.5px solid var(--ligne);background:#fff;border-radius:25px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--titre);cursor:pointer}
+  .stop-btn:hover{border-color:var(--jaune)}
+  .stop-btn.on{background:var(--jaune);border-color:var(--jaune)}
+  .stop-btn .n{color:var(--gris);font-weight:700;margin-right:4px;font-size:11px}
+  .fiche-prog{font-size:12px;color:var(--gris);margin-top:10px}
+  .fiche-prog:empty{display:none}
+  .src-note{font-size:12px;color:var(--gris);margin:-4px 0 8px}
+  .btn.small{padding:6px 12px;font-size:12.5px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;display:flex;align-items:center;justify-content:center;padding:14px}
+  .modal[hidden]{display:none}
+  .modal-box{background:#fff;border-radius:12px;max-width:1150px;width:100%;max-height:92dvh;overflow:auto;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+  .modal-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .modal-head h2{margin:0;font-size:20px;color:var(--titre);display:flex;gap:10px;align-items:center}
+  .ptabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+  .dir-h{font-weight:700;color:var(--titre);margin:14px 0 6px;font-size:14px}
+  .dir-h small{font-weight:600;color:var(--gris);margin-left:6px}
+  .tt-wrap{overflow:auto;border:1px solid var(--ligne);border-radius:8px}
+  table.fiche{border-collapse:collapse;font-size:12px;white-space:nowrap}
+  table.fiche td{padding:5px 7px;border-bottom:1px solid var(--ligne);text-align:center;font-variant-numeric:tabular-nums}
+  table.fiche td:first-child{position:sticky;left:0;background:#fff;text-align:left;font-weight:700;color:var(--titre);z-index:1;border-right:1px solid var(--ligne)}
+  table.fiche td.past{color:#B9BDC3}
+  table.fiche td.next{background:var(--jaune-clair);font-weight:800;color:var(--titre)}
+  table.fiche tr.here td:first-child{background:var(--jaune-clair)}
+
+  /* ---------- alertes d'arrivée ---------- */
+  #alertCard h2{display:flex;align-items:center;gap:8px}
+  .al-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:10px 0;font-size:14px}
+  .al-row select{font:inherit;border:1px solid var(--ligne);border-radius:25px;padding:6px 10px;background:#fff}
+  .al-row label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .al-stop{font-weight:800;color:var(--titre)}
+  .al-status{font-size:13px;margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--fond)}
+  .al-status.on{background:#E6F5EC;color:#14532D}
+  .al-status:empty{display:none}
+  details.ntfy{margin-top:10px;font-size:13px}
+  details.ntfy summary{cursor:pointer;font-weight:700;color:var(--titre)}
+  details.ntfy p{color:var(--gris);margin:6px 0}
+  details.ntfy input{font:inherit;border:1px solid var(--ligne);border-radius:25px;padding:7px 12px;min-width:220px}
+  #alertFeed{position:fixed;right:16px;top:76px;z-index:2500;display:flex;flex-direction:column;gap:8px;max-width:min(380px,calc(100vw - 32px))}
+  .al-pop{background:#fff;border-left:6px solid var(--jaune);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:12px 14px;
+          font-size:13.5px;animation:popin .25s ease-out;cursor:pointer}
+  .al-pop b{display:block;color:var(--titre);font-size:14.5px;margin-bottom:2px}
+  .al-pop.warn{border-left-color:var(--retard)}
+  .al-pop.none{border-left-color:#9AA0A6}
+  @keyframes popin{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
+
+  /* ---------- aller / retour ---------- */
+  .sens-h{display:flex;align-items:center;gap:10px;margin:16px 0 4px;font-weight:800;color:var(--titre);font-size:15px}
+  .sens-h:first-of-type{margin-top:4px}
+  .sens-h .pillx{border-radius:25px;padding:3px 12px;font-size:12px;letter-spacing:.4px;text-transform:uppercase}
+  .sens-aller .pillx{background:#E3EEFF;color:#1D4FA8}
+  .sens-retour .pillx{background:#FFE9D6;color:#B4470A}
+  .sens-h small{font-weight:600;color:var(--gris);font-size:12px}
+  .grp{display:inline-flex;border:1.5px solid var(--ligne);border-radius:25px;overflow:hidden;margin-left:8px;vertical-align:middle}
+  .grp button,.seg button{border:none;background:#fff;padding:5px 12px;font:700 12px "Nunito Sans",sans-serif;color:var(--titre);cursor:pointer}
+  .grp button.on,.seg button.on{background:var(--jaune)}
+  .trip-form{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:end}
+  .trip-form label{display:block;font-size:13px;font-weight:600;color:var(--titre);margin-bottom:6px}
+  .trip-form .search{width:100%}
+  .seg{display:inline-flex;border:1.5px solid var(--jaune);border-radius:25px;overflow:hidden}
+  .sens-banner{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 18px;border-radius:12px;margin-bottom:14px}
+  .sens-banner.aller{background:#E3EEFF}
+  .sens-banner.retour{background:#FFE9D6}
+  .sens-banner .big{font-size:26px;font-weight:800;letter-spacing:.5px}
+  .sens-banner.aller .big{color:#1D4FA8}
+  .sens-banner.retour .big{color:#B4470A}
+  .sens-banner .route{font-size:16px;font-weight:700;color:var(--titre)}
+  .sens-banner .why{font-size:12.5px;color:var(--gris)}
+  .jt td .arr{font-weight:800;color:var(--titre)}
+  .dur{font-size:12px;color:var(--gris);white-space:nowrap}
+  @media (max-width:860px){
+    .trip-form{grid-template-columns:1fr}
+    .trip-form .round{justify-self:center;transform:rotate(90deg)}
+    .jt th:nth-child(5),.jt td:nth-child(5){display:none}
+  }
+
+  /* ---------- fiches & infos trafic ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+  .fcard{background:#fff;border-radius:10px;box-shadow:var(--ombre);padding:16px;display:flex;flex-direction:column;gap:10px}
+  .fcard .hd{display:flex;gap:10px;align-items:center}
+  .fcard .nm{font-weight:700;color:var(--titre);font-size:14px;line-height:1.3}
+  .note{font-size:12px;color:var(--gris);margin-top:16px}
+  .alert{background:#fff;border-radius:10px;box-shadow:var(--ombre);padding:16px 18px;border-left:5px solid var(--jaune)}
+  .alert + .alert{margin-top:12px}
+  .alert b{color:var(--titre);font-size:15px}
+  .alert p{margin:6px 0 0;white-space:pre-line;line-height:1.5}
+
+  footer{background:var(--jaune);color:var(--titre);font-size:12px;padding:7px 20px;flex:none;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+  #toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);background:var(--titre);color:#fff;padding:10px 16px;
+         border-radius:25px;font-size:13px;z-index:9999;max-width:90vw;box-shadow:0 4px 18px rgba(0,0,0,.3)}
+
+  @media (max-width:860px){
+    .top-in{flex-wrap:wrap;padding:8px 14px 0;gap:8px 12px}
+    .brand{order:1}
+    .live{order:2;margin-left:auto}
+    #status{display:none}
+    .tabs{order:3;flex-basis:100%;margin:0 -14px}
+    .tab{padding:12px 14px;font-size:13px}
+    .crumb{display:none}
+    /* mobile : carte plein écran, la liste s'ouvre en panneau par-dessus (bouton « Liste ») */
+    #view-map.on{display:block;padding:0}
+    #mapCard{position:absolute;inset:0;border-radius:0;box-shadow:none}
+    aside{position:absolute;left:0;right:0;bottom:0;height:62%;width:auto;z-index:1001;border-radius:16px 16px 0 0;
+          box-shadow:0 -4px 18px rgba(0,0,0,.25)}
+    aside::before{content:'';display:block;width:40px;height:4px;border-radius:2px;background:var(--ligne);margin:8px auto 0}
+    .wrap{padding:14px 12px 30px}
+    h1{font-size:26px}
+    .board th:nth-child(4),.board td:nth-child(4){display:none}
+    .when{font-size:17px}
+    footer span:last-child{display:none}
+    .modal{padding:0}
+    .modal-box{max-height:100dvh;height:100%;border-radius:0}
+    #periodPill .sub{display:none}
+    .live .pill{padding:6px 10px}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="#222"><path d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-1 1.7V20a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 3 16V5a2 2 0 0 1 2-2Zm0 3v5h14V6H5Zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm10 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg></div>
+      <div><b>Car Jaune Live</b><small>Suivi en temps réel · non officiel</small></div>
+    </div>
+    <nav class="tabs">
+      <button class="tab" data-view="map">🗺️ Carte en direct</button>
+      <button class="tab" data-view="trip">🧭 Mon trajet</button>
+      <button class="tab" data-view="board">🕒 Horaires à l'arrêt</button>
+      <button class="tab" data-view="fiches">📄 Fiches horaires</button>
+      <button class="tab" data-view="trafic">⚠️ Infos trafic <span class="n" id="alertCount" hidden></span></button>
+    </nav>
+    <div class="live"><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
+  </div>
+</header>
+<div class="crumb">Accueil › <b id="crumbCur">Carte en direct</b></div>
+
+<main>
+  <!-- ===== Carte en direct ===== -->
+  <section class="view" id="view-map">
+    <aside>
+      <div class="toolbar">
+        <input id="search" class="search" type="search" placeholder="Ligne, destination, arrêt…">
+        <label><input type="checkbox" id="showShapes" checked> Tracés</label>
+        <button id="refresh" class="round" title="Actualiser">↻</button>
+      </div>
+      <div id="chips"></div>
+      <div id="countdown"></div>
+      <div id="list"></div>
+    </aside>
+    <div id="mapCard"><div id="map"></div></div>
+  </section>
+
+  <!-- ===== Horaires à l'arrêt ===== -->
+  <section class="view" id="view-trip">
+    <div class="wrap">
+      <h1>Mon trajet</h1>
+      <p class="lead">Ton aller et ton retour en car jaune : le sens est détecté automatiquement selon ta position.</p>
+      <div class="card">
+        <div class="trip-form">
+          <div><label for="tripA">Aller : je pars de</label><input id="tripA" class="search" list="stopList" placeholder="ex. Gare de St-Paul" autocomplete="off"></div>
+          <button class="round" id="tripSwap" title="Inverser départ et arrivée">⇄</button>
+          <div><label for="tripB">Aller : j’arrive à</label><input id="tripB" class="search" list="stopList" placeholder="ex. Gare de St-Denis" autocomplete="off"></div>
+        </div>
+        <div class="al-row">
+          <button class="btn ghost small" id="tripGeo">📍 Départ = gare la plus proche</button>
+          <span>Sens :</span>
+          <div class="seg" id="tripMode"><button data-m="auto">Automatique</button><button data-m="aller">Aller</button><button data-m="retour">Retour</button></div>
+        </div>
+      </div>
+      <div class="card" id="tripCard" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-board">
+    <div class="wrap">
+      <h1>Horaires à l'arrêt</h1>
+      <p class="lead">Prochains passages en temps réel, mis à jour automatiquement.</p>
+      <div class="card field">
+        <label for="stopInput">Nom de l'arrêt</label>
+        <div class="field-row">
+          <input id="stopInput" class="search" type="search" placeholder="Arrêt, gare… (ex. Gare de St-Denis)" autocomplete="off">
+          <button id="favBtn" class="round star" title="Ajouter aux favoris">☆</button>
+          <ul id="suggest" hidden></ul>
+        </div>
+        <div class="favs" id="favs"></div>
+        <div class="lines-box" id="linesBox"></div>
+        <div class="fiche-prog"></div>
+      </div>
+      <div class="card" id="alertCard">
+        <h2>🔔 Alertes d'arrivée en gare</h2>
+        <div class="al-row">
+          <button class="btn" id="geoBtn">📍 Gare la plus proche de moi</button>
+          <label><input type="checkbox" id="alFollow"> Suivre ma position</label>
+        </div>
+        <div class="src-note" id="geoInfo"></div>
+        <div class="al-row">Me prévenir
+          <select id="alLead"><option value="2">2 min</option><option value="5" selected>5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select>
+          avant chaque car à <span class="al-stop" id="alStop">— choisis un arrêt —</span>
+          <select id="alLine"><option value="">toutes les lignes</option></select>
+        </div>
+        <div class="al-row">
+          <label><input type="checkbox" id="alQuai" checked> à son arrivée à quai</label>
+          <label><input type="checkbox" id="alLate" checked> si son retard change</label>
+          <label><input type="checkbox" id="alNoBus" checked> s’il n’y a aucun car dans l’heure</label>
+        </div>
+        <details class="ntfy"><summary>📱 Recevoir aussi sur mon téléphone (gratuit, sans compte)</summary>
+          <p>Installe l’appli gratuite <b>ntfy</b> (Android / iPhone), abonne-toi au nom ci-dessous, et les alertes arriveront en vraies notifications sur ton téléphone.</p>
+          <div class="al-row"><input id="ntfyTopic" placeholder="nom secret, ex. carjaune-samuel-7f3k"> <button class="btn ghost small" id="ntfyTest">Tester</button></div>
+        </details>
+        <div class="al-row"><button class="btn" id="alToggle">🔔 Activer les alertes</button></div>
+        <div class="al-status" id="alStatus"></div>
+      </div>
+      <div class="card" id="boardCard">
+        <div class="placeholder"><div class="big">🚏</div>Choisis un arrêt pour voir ses prochains départs.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== Fiches horaires ===== -->
+  <section class="view" id="view-fiches">
+    <div class="wrap">
+      <h1>Fiches horaires</h1>
+      <p class="lead">Les fiches PDF officielles de chaque ligne, récupérées automatiquement sur carjaune.re.</p>
+      <div class="card" id="calCard" style="margin-bottom:16px"><h2>Calendrier scolaire · La Réunion</h2><p class="muted">Chargement…</p></div>
+      <div class="grid" id="fichesGrid"><div class="card">Chargement…</div></div>
+      <div class="note" id="fichesNote"></div>
+      <div class="fiche-prog"></div>
+    </div>
+  </section>
+
+  <!-- ===== Infos trafic ===== -->
+  <section class="view" id="view-trafic">
+    <div class="wrap">
+      <h1>Infos trafic</h1>
+      <p class="lead">Perturbations publiées dans le flux temps réel du réseau.</p>
+      <div id="alertsList"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>Données : Région Réunion · réseau Car Jaune (Licence Ouverte)
+    <button id="installBtn" class="btn small" hidden style="margin-left:8px;padding:2px 10px">📲 Installer l’appli</button>
+    <button id="apiBtn" class="btn small ghost" hidden style="margin-left:4px;padding:2px 10px">⚙️ Serveur</button></span>
+  <span>Application personnelle, non affiliée à Car Jaune</span>
+</footer>
+
+<div class="modal" id="ficheModal" hidden><div class="modal-box" id="ficheModalBox"></div></div>
+
+<datalist id="stopList"></datalist>
+<div id="alertFeed"></div>
+<div id="toast" hidden></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/protobufjs@7.4.0/dist/protobuf.min.js"></script>
+<script>
+/* ====================== Réglages ====================== */
+const REFRESH_MS = 20000;          // actualisation auto toutes les 20 s
+const STALE_MS   = 5 * 60 * 1000;  // position > 5 min : affichée en grisé
+const HIDE_MS    = 30 * 60 * 1000; // position > 30 min : masquée
+const BOARD_MAX  = 25;             // nombre de passages affichés à l'arrêt
+
+/* Mise en veille automatique (calculée chaque jour depuis les horaires GTFS) */
+const MARGIN_BEFORE = 15 * 60 * 1000; // réveil 15 min avant le premier départ
+const MARGIN_AFTER  = 20 * 60 * 1000; // reste actif 20 min après la dernière arrivée prévue
+const LATE_MAX      = 60 * 60 * 1000; // si des cars roulent encore (retard), suivi jusqu'à 1 h de plus
+const FALLBACK_H    = [5, 21];        // horaires de secours si le GTFS ne donne rien
+const OFFSET_MS     = 4 * 3600 * 1000; // La Réunion : UTC+4, pas d'heure d'été
+
+/* Sous-ensemble du schéma officiel gtfs-realtime.proto (champs utiles uniquement) */
+const PROTO = `
+syntax = "proto2";
+package transit_realtime;
+message FeedMessage { optional FeedHeader header = 1; repeated FeedEntity entity = 2; }
+message FeedHeader { optional string gtfs_realtime_version = 1; optional uint64 timestamp = 3; }
+message FeedEntity {
+  optional string id = 1; optional bool is_deleted = 2;
+  optional TripUpdate trip_update = 3; optional VehiclePosition vehicle = 4; optional Alert alert = 5;
+}
+message TripDescriptor {
+  optional string trip_id = 1; optional string start_time = 2; optional string start_date = 3;
+  optional string route_id = 5; optional uint32 direction_id = 6;
+}
+message VehicleDescriptor { optional string id = 1; optional string label = 2; optional string license_plate = 3; }
+message Position {
+  optional float latitude = 1; optional float longitude = 2; optional float bearing = 3;
+  optional double odometer = 4; optional float speed = 5;
+}
+message VehiclePosition {
+  optional TripDescriptor trip = 1; optional Position position = 2; optional uint32 current_stop_sequence = 3;
+  optional uint64 timestamp = 5; optional string stop_id = 7; optional VehicleDescriptor vehicle = 8;
+}
+message TripUpdate {
+  optional TripDescriptor trip = 1; repeated StopTimeUpdate stop_time_update = 2;
+  optional uint64 timestamp = 4; optional int32 delay = 5;
+}
+message StopTimeUpdate {
+  optional uint32 stop_sequence = 1; optional StopTimeEvent arrival = 2;
+  optional StopTimeEvent departure = 3; optional string stop_id = 4;
+}
+message StopTimeEvent { optional int32 delay = 1; optional int64 time = 2; }
+message Alert { optional TranslatedString header_text = 10; optional TranslatedString description_text = 11; }
+message TranslatedString {
+  message Translation { optional string text = 1; optional string language = 2; }
+  repeated Translation translation = 1;
+}`;
+
+/* ====================== État ====================== */
+let FeedMessage = null;
+let S = { routes:{}, trips:{}, stops:{}, shapes:{} };
+let vehicles = [], alerts = [], feedTime = null, lastTus = {};
+let selected = new Set(), query = '';
+let busy = false, nextAt = 0;
+let mode = 'init', sched = null, schedAt = 0, forceUntil = 0;
+let FICHES = {}, fichesInfo = null;
+let view = 'map';
+let stopGroups = [], board = { group:null, data:null, loading:false, at:0 };
+let favs = [];
+let CAL = { holidays:[], feries:{} }, SVC_TYPE = {};
+let alertCfg = { on:false, lead:5, line:'', quai:true, late:true, noBus:true, follow:false, ntfy:'' };
+const alertSent = {};                  // ce qui a déjà été notifié (par passage)
+let geoWatch = null, myPos = null, noBusAt = 0, wakeLock = null;
+let trip = { a:'', b:'', mode:'auto' }, tripBoard = { key:'', data:null, loading:false }, lastSens = '';
+let boardGroupBy = 'sens';
+let FICHE_DATA = {}, ficheJob = { total:0, done:0, running:false, error:'' }, selLine = '';
+const markers = new Map();
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const errMsg = e => (e && (e.message || e)) + '';
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/saint/g, 'st').replace(/[^a-z0-9]+/g, ' ').trim();
+
+/* ====================== Carte ====================== */
+const REUNION = [[-21.39, 55.21], [-20.86, 55.84]];
+const map = L.map('map', { zoomControl:true, zoomSnap:0.5 });
+map.fitBounds(REUNION);
+
+// Fonds de carte (gratuits, sans clé) : le choix est mémorisé
+const SRC = ' · Données Région Réunion (Licence Ouverte)';
+const BASES = {
+  'Plan détaillé': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom:19, attribution:'© OpenStreetMap' + SRC }),
+  'Plan clair': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    subdomains:'abcd', maxZoom:19, attribution:'© OpenStreetMap, © CARTO' + SRC }),
+  'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom:19, attribution:'Imagerie © Esri' + SRC })
+};
+let baseName = 'Plan détaillé';
+try { const b = localStorage.getItem('cj_base'); if (BASES[b]) baseName = b; } catch(e){}
+BASES[baseName].addTo(map);
+L.control.layers(BASES, null, { position:'bottomright' }).addTo(map);
+map.on('baselayerchange', e => { try { localStorage.setItem('cj_base', e.name); } catch(err){} });
+const shapeLayer = L.layerGroup().addTo(map);
+
+// La carte est créée dans un onglet parfois caché (taille 0) : on la recalcule dès que sa taille change,
+// et on recadre sur l'île la première fois qu'elle devient visible
+let mapFitted = false;
+function fixMapSize(){
+  map.invalidateSize();
+  const s = map.getSize();
+  if (!mapFitted && s.x > 50 && s.y > 50){ map.fitBounds(REUNION); mapFitted = true; }
+}
+if ('ResizeObserver' in window) new ResizeObserver(fixMapSize).observe($('#mapCard'));
+setTimeout(fixMapSize, 300);
+
+// Boutons : liste, plein écran, recentrer
+const isMobile = () => window.innerWidth <= 860;
+const MapButtons = L.Control.extend({
+  options:{ position:'topright' },
+  onAdd(){
+    const box = L.DomUtil.create('div', 'map-ctl');
+    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnFs">⛶ Plein écran</button><button id="btnFit">🏝️ Toute l'île</button>`;
+    L.DomEvent.disableClickPropagation(box);
+    return box;
+  }
+});
+new MapButtons().addTo(map);
+
+function setPanel(open){
+  $('#view-map').classList.toggle('panel-off', !open);
+  $('#btnList').classList.toggle('on', open);
+  $('#btnList').textContent = open ? (isMobile() ? '✕ Fermer la liste' : '◧ Masquer la liste') : `☰ Liste${vehicles.length ? ' (' + vehicles.length + ')' : ''}`;
+}
+let panelOpen = !isMobile();
+setPanel(panelOpen);
+$('#btnList').addEventListener('click', () => { panelOpen = !panelOpen; setPanel(panelOpen); });
+$('#btnFs').addEventListener('click', () => {
+  const on = document.body.classList.toggle('fs');
+  $('#btnFs').classList.toggle('on', on);
+  $('#btnFs').textContent = on ? '⤡ Quitter' : '⛶ Plein écran';
+});
+$('#btnFit').addEventListener('click', () => map.flyToBounds(REUNION, { duration:.8 }));
+
+/* ====================== Appels serveur ====================== */
+/* Adresse de ton Apps Script déployé (…/exec) pour l'appli installée sur le téléphone.
+   Laisse vide pour la demander au premier lancement (elle est alors mémorisée). */
+const API_URL = '';
+const IN_GAS = typeof google !== 'undefined' && !!(google.script && google.script.run);
+function apiUrl(){
+  let u = API_URL;
+  try { u = localStorage.getItem('cj_api') || API_URL; } catch(e){}
+  return u;
+}
+function call(fn, ...args){
+  if (IN_GAS) return new Promise((resolve, reject) => {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+  });
+  // appli installée : même serveur, appelé par son API JSON
+  const url = apiUrl();
+  if (!url) return Promise.reject(new Error('adresse du serveur Apps Script non configurée'));
+  const big = fn === 'saveParsedFiche';
+  const req = big
+    ? fetch(url, { method:'POST', body: JSON.stringify({ action: fn, args }) })     // text/plain : pas de pré-requête CORS
+    : fetch(url + (url.includes('?') ? '&' : '?') + 'action=' + fn + '&args=' + encodeURIComponent(JSON.stringify(args)));
+  return req.then(r => { if (!r.ok) throw new Error('serveur HTTP ' + r.status); return r.json(); })
+            .then(o => { if (!o.ok) throw new Error(o.error || 'erreur serveur'); return o.result; });
+}
+
+/* ---------- appli installable (PWA) ---------- */
+let swReg = null, installEvt = null;
+if (!IN_GAS && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
+  navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
+}
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); installEvt = e;
+  const b = document.getElementById('installBtn'); if (b) b.hidden = false;
+});
+function setupApiScreen(){
+  $('#ficheModalBox').innerHTML = `<div class="modal-head"><h2>⚙️ Connexion au serveur</h2></div>
+    <p>Colle l’adresse de ta Web App Apps Script (elle se termine par <b>/exec</b>).<br>
+    <span class="muted">Apps Script → Déployer → Gérer les déploiements → copier l’URL de l’application Web.</span></p>
+    <div class="al-row"><input id="apiInput" class="search" style="flex:1;min-width:240px" placeholder="https://script.google.com/macros/s/…/exec" value="${esc(apiUrl())}">
+      <button class="btn" id="apiSave">Enregistrer</button></div>
+    <p class="src-note" id="apiMsg"></p>`;
+  $('#ficheModal').hidden = false;
+  $('#apiSave').onclick = async () => {
+    const u = $('#apiInput').value.trim();
+    if (!/^https:\/\/script\.google(usercontent)?\.com\/.+/.test(u)){ $('#apiMsg').textContent = 'Adresse invalide : elle doit commencer par https://script.google.com/'; return; }
+    $('#apiMsg').textContent = 'Test de la connexion…';
+    try {
+      const r = await fetch(u + (u.includes('?') ? '&' : '?') + 'action=getSchoolCalendar').then(r => r.json());
+      if (!r.ok) throw new Error(r.error);
+      localStorage.setItem('cj_api', u);
+      location.reload();
+    } catch(e){ $('#apiMsg').textContent = 'Connexion impossible : vérifie l’adresse et que l’accès est « Tout le monde ». (' + errMsg(e) + ')'; }
+  };
+}
+
+function b64ToBytes(b64){
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/* ====================== Démarrage ====================== */
+async function init(){
+  loadPrefs();
+  if (!IN_GAS && !apiUrl()){ setupApiScreen(); return; }
+  setView(view, true);
+  try {
+    FeedMessage = protobuf.parse(PROTO).root.lookupType('transit_realtime.FeedMessage');
+  } catch(e){ toast('Décodeur GTFS-RT indisponible : ' + errMsg(e)); return; }
+
+  setStatus('Chargement des lignes…');
+  const [st, cal] = await Promise.allSettled([call('getStatic'), call('getSchoolCalendar')]);
+  if (st.status === 'fulfilled') S = JSON.parse(st.value);
+  else toast('Horaires théoriques indisponibles : ' + errMsg(st.reason));
+  if (cal.status === 'fulfilled') CAL = JSON.parse(cal.value);
+  classifyServices();
+  renderPeriod();
+  buildChips();
+  drawShapes();
+  buildStopGroups();
+  fillStopList();
+  renderFavs();
+  loadFiches();                 // en parallèle, sans bloquer la carte
+  loadAlertCfg();
+  restoreLastStop();
+  updateAlertUI();
+  if (view === 'trip') renderTrip();
+  updateMode();
+  if (mode === 'live') await refresh(); else render();
+  setInterval(tick, 1000);
+}
+
+/* ====================== Navigation par onglets ====================== */
+const VIEW_NAMES = { map:'Carte en direct', trip:'Mon trajet', board:"Horaires à l'arrêt", fiches:'Fiches horaires', trafic:'Infos trafic' };
+function setView(v, silent){
+  if (!VIEW_NAMES[v]) v = 'map';
+  view = v;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.view === v));
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + v));
+  $('#crumbCur').textContent = VIEW_NAMES[v];
+  $('.crumb').classList.toggle('hide', v === 'map');          // plus de place pour la carte
+  if (v === 'map') setTimeout(fixMapSize, 50);
+  if (v === 'board') renderBoard();
+  if (v === 'trip') renderTrip();
+  if (!silent) savePrefs();
+}
+document.querySelector('.tabs').addEventListener('click', e => {
+  const t = e.target.closest('.tab'); if (t) setView(t.dataset.view);
+});
+
+/* ====================== Fiches horaires PDF ====================== */
+async function loadFiches(){
+  try {
+    const o = JSON.parse(await call('getTimetables'));
+    FICHES = o.lines || {};
+    fichesInfo = o;
+  } catch(e){
+    FICHES = {};
+    fichesInfo = { error: errMsg(e) };
+  }
+  buildFiches();
+  render();                     // ajoute les liens PDF dans la liste et les bulles
+  loadFicheData();              // horaires lus dans les fiches PDF
+}
+
+function routeByShort(s){
+  return Object.values(S.routes).find(r => r.s === s) || { s, l:'', c:'F6BE00', t:'222222' };
+}
+
+function ficheLinks(short){
+  const f = FICHES[short];
+  if (!f) return '';
+  const a = (url, txt) => `<a class="pdf" href="${esc(url)}" target="_blank" rel="noopener">${txt}</a>`;
+  // uniquement les fiches PDF publiées sur carjaune.re ; celle de la période en cours est mise en avant
+  const cur = (CAL.holidays || []).length ? periodOf(Date.now()).type : '';
+  const kind = p => /vacances/i.test(p.label + p.url) ? 'vacances' : /scolaire/i.test(p.label + p.url) ? 'scolaire' : '';
+  const out = (f.pdfs || []).filter(p => /carjaune/i.test(p.url))
+    .sort((x, y) => (kind(y) === cur) - (kind(x) === cur))
+    .map(p => {
+      const k = kind(p), cls = !k || !cur ? '' : k === cur ? ' cur' : ' dim';
+      const tip = !k ? 'Fiche horaire officielle' : k === cur ? 'Fiche de la période en cours' : 'Fiche d’une autre période';
+      return `<a class="pdf${cls}" href="${esc(p.url)}" target="_blank" rel="noopener" title="${tip}">📄 ${esc(p.label || 'Fiche horaire')}</a>`;
+    });
+  return out.length ? `<span class="pdf-links">${out.join('')}</span>` : '';
+}
+
+function buildFiches(){
+  const grid = $('#fichesGrid');
+  const shorts = Object.keys(FICHES).sort((a, b) => a.localeCompare(b, 'fr', { numeric:true }));
+  if (!shorts.length){
+    grid.innerHTML = `<div class="card">Fiches indisponibles pour le moment${fichesInfo && fichesInfo.error ? ' : ' + esc(fichesInfo.error) : ''}.</div>`;
+    $('#fichesNote').textContent = '';
+    return;
+  }
+  grid.innerHTML = shorts.map(s => {
+    const r = routeByShort(s);
+    const read = ficheOfLine(s);
+    return `<div class="fcard"><div class="hd">${badge(r)}<span class="nm">${esc(FICHES[s].name || r.l || 'Ligne ' + s)}</span></div>${ficheLinks(s)}
+      ${read ? `<div><button class="btn small" data-fiche-line="${esc(s)}">🕒 Horaires du jour</button></div>` : ''}</div>`;
+  }).join('');
+  $('#fichesNote').textContent = `Source : www.carjaune.re · ` +
+    `${fichesInfo.unchecked ? 'liste intégrée (site momentanément injoignable)' : 'relues le ' + new Date(fichesInfo.checkedAt).toLocaleDateString('fr-FR')} · mise à jour automatique toutes les 24 h`;
+}
+
+/* ====================== Dates (heure de La Réunion) ====================== */
+const pad = n => String(n).padStart(2, '0');
+function reuDate(ms){
+  const d = new Date(ms + OFFSET_MS);
+  return { y:d.getUTCFullYear(), m:d.getUTCMonth() + 1, d:d.getUTCDate(), wd:(d.getUTCDay() + 6) % 7, h:d.getUTCHours(), mi:d.getUTCMinutes() };
+}
+function midnightMs(ms){
+  const d = new Date(ms + OFFSET_MS);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - OFFSET_MS;
+}
+const ymd = o => `${o.y}${pad(o.m)}${pad(o.d)}`;
+function fmtHM(ms){ const o = reuDate(ms); return `${pad(o.h)}:${pad(o.mi)}`; }
+function dayLabel(ms){
+  const diff = Math.round((midnightMs(ms) - midnightMs(Date.now())) / 864e5);
+  if (diff === 0) return 'aujourd’hui';
+  if (diff === 1) return 'demain';
+  return ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'][reuDate(ms).wd];
+}
+
+/* ====================== Période scolaire / vacances / férié ====================== */
+const dayKey = ms => { const o = reuDate(ms); return `${o.y}-${pad(o.m)}-${pad(o.d)}`; };
+const JOURS = ['lun.','mar.','mer.','jeu.','ven.','sam.','dim.'];
+function fmtKey(key, withDay){                 // "2027-02-01" -> "lun. 01/02"
+  const [y, m, d] = key.split('-').map(Number);
+  const wd = (new Date(Date.UTC(y, m - 1, d)).getUTCDay() + 6) % 7;
+  return `${withDay ? JOURS[wd] + ' ' : ''}${pad(d)}/${pad(m)}`;
+}
+const prevKey = key => { const [y, m, d] = key.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d) - 864e5).toISOString().slice(0, 10); };
+
+/** Type de journée d'après le calendrier officiel : férié, vacances scolaires ou période scolaire. */
+function periodOf(ms){
+  const key = dayKey(ms);
+  const hol = (CAL.holidays || []).find(h => h.start <= key && key < h.end);
+  if ((CAL.feries || {})[key]) return { type:'ferie', name: CAL.feries[key], hol };
+  if (hol) return { type:'vacances', name: hol.name, until: hol.end, hol };
+  const next = (CAL.holidays || []).filter(h => h.start > key).sort((a, b) => a.start < b.start ? -1 : 1)[0];
+  return { type:'scolaire', name:'Période scolaire', next };
+}
+
+/**
+ * Classe chaque service GTFS : 'S' = ne roule qu'en période scolaire, 'V' = qu'en vacances, 'T' = toute l'année.
+ * On compare les jours où il circule réellement aux jours où il aurait pu circuler (60 j avant → 240 j après).
+ */
+function classifyServices(){
+  SVC_TYPE = {};
+  const sv = S.service;
+  if (!sv || !sv.cal || !(CAL.holidays || []).length) return;
+  const today = midnightMs(Date.now()), days = [];
+  for (let i = -60; i <= 240; i++){
+    const d = today + i * 864e5, act = activeServices(d);
+    if (!act || !act.size) continue;                       // réseau sans service ce jour-là (GTFS non couvert)
+    const p = periodOf(d + 12 * 3600e3).type;
+    if (p === 'ferie') continue;
+    const o = reuDate(d);
+    days.push({ act, p, key: ymd(o), wd: o.wd });
+  }
+  const sids = new Set(Object.keys(sv.cal));
+  Object.values(sv.dates || {}).forEach(x => x.add.forEach(s => sids.add(s)));
+  sids.forEach(sid => {
+    const c = sv.cal[sid];
+    let aS = 0, aV = 0, oS = 0, oV = 0;
+    days.forEach(x => {
+      const could = c ? (c[1] <= x.key && x.key <= c[2] && c[0][x.wd] === '1') : true;
+      const on = x.act.has(sid);
+      if (x.p === 'scolaire'){ if (could || on) oS++; if (on) aS++; }
+      else { if (could || on) oV++; if (on) aV++; }
+    });
+    SVC_TYPE[sid] = (aS > 0 && aV === 0 && oV >= 3) ? 'S' : (aV > 0 && aS === 0 && oS >= 3) ? 'V' : 'T';
+  });
+}
+
+function svcTag(sid){
+  const t = SVC_TYPE[sid];
+  if (t === 'S') return '<span class="tag tag-s" title="Ne circule qu’en période scolaire">Scolaire</span>';
+  if (t === 'V') return '<span class="tag tag-v" title="Ne circule que pendant les vacances scolaires">Vacances</span>';
+  return '';
+}
+
+function periodLabel(p){
+  if (p.type === 'ferie') return `🎉 Férié <span class="sub">· ${esc(p.name)}</span>`;
+  if (p.type === 'vacances') return `🏖️ Vacances scolaires <span class="sub">· reprise ${fmtKey(p.until, true)}</span>`;
+  return `🎒 Période scolaire${p.next ? ` <span class="sub">· vacances le ${fmtKey(p.next.start)}</span>` : ''}`;
+}
+
+let lastPeriodKey = '';
+function renderPeriod(){
+  if (!(CAL.holidays || []).length){
+    $('#calCard').innerHTML = '<h2>Calendrier scolaire · La Réunion</h2><p class="muted">Calendrier indisponible pour le moment.</p>';
+    return;
+  }
+  const p = periodOf(Date.now());
+  const pill = $('#periodPill');
+  pill.hidden = false;
+  pill.className = 'pill period p-' + p.type;
+  pill.innerHTML = periodLabel(p);
+  pill.title = p.type === 'ferie' ? `Jour férié : ${p.name} — horaires adaptés`
+             : p.type === 'vacances' ? `${p.name} — horaires de vacances` : 'Horaires de période scolaire';
+  renderCalendar();
+  lastPeriodKey = dayKey(Date.now());
+}
+
+function renderCalendar(){
+  const box = $('#calCard');
+  const today = dayKey(Date.now()), p = periodOf(Date.now());
+  const now = p.type === 'ferie' ? `Aujourd’hui : jour férié (${esc(p.name)})${p.hol ? ' pendant les ' + esc(p.hol.name.toLowerCase()) : ''}`
+            : p.type === 'vacances' ? `Aujourd’hui : ${esc(p.name)} · reprise des cours le ${fmtKey(p.until, true)}`
+            : `Aujourd’hui : période scolaire${p.next ? ` · prochaines vacances le ${fmtKey(p.next.start, true)}` : ''}`;
+  const hols = (CAL.holidays || []).filter(h => h.end > today).slice(0, 5)
+    .map(h => `<li class="${h.start <= today ? 'now' : ''}"><span>🏖️ ${esc(h.name)}</span><b>${fmtKey(h.start)} → ${fmtKey(prevKey(h.end))}</b></li>`).join('');
+  const fer = Object.keys(CAL.feries || {}).filter(k => k >= today).sort().slice(0, 6)
+    .map(k => `<li class="${k === today ? 'now' : ''}"><span>🎉 ${esc(CAL.feries[k])}</span><b>${fmtKey(k, true)}</b></li>`).join('');
+  box.innerHTML = `<h2>Calendrier scolaire · La Réunion</h2>
+    <p class="cal-now">${now}</p>
+    ${hols ? `<div class="cal-h">Vacances scolaires (du … au …)</div><ul class="cal-list">${hols}</ul>` : ''}
+    ${fer ? `<div class="cal-h">Prochains jours fériés</div><ul class="cal-list">${fer}</ul>` : ''}
+    <p class="note" style="margin-top:12px">Source : ministère de l’Éducation nationale (zone Réunion) et calendrier.api.gouv.fr ·
+      ${CAL.source === 'defaut' ? 'calendrier intégré (API injoignable)' : 'mise à jour automatique chaque semaine'}.
+      Les horaires affichés suivent automatiquement la période : les services « Scolaire » ou « Vacances » n’apparaissent que les jours où ils circulent.</p>`;
+}
+
+/* ====================== Lecture des fiches horaires PDF carjaune.re ====================== */
+const FP_VERSION = 3;
+const fpNorm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+  .replace(/[’']/g, ' ').replace(/saint/g, 'st').replace(/[^a-z0-9]+/g, ' ').trim();
+const FP_TIME = /^(\d{1,2})\s*[:h.]\s*(\d{2})$/;
+const FP_DAYS = ['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'];
+
+/** "Samedi (toute l'année) et du Lundi au Vendredi (vacances scolaires)" -> [{days:[5],period:'all'},{days:[0..4],period:'vac'}] */
+function parseDayRule(label){
+  const rules = [];
+  // on coupe d'abord après chaque parenthèse fermante et sur « / », puis sur « et »
+  const parts = String(label || '').split(/\)|\//).map(fpNorm).flatMap(s => s.split(/\bet\b|,|\+/));
+  parts.forEach(pt => {
+    const days = new Set();
+    const re = /(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(?:au|a)\s+(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)/g;
+    let m;
+    while ((m = re.exec(pt))){
+      const a = FP_DAYS.indexOf(m[1]), b = FP_DAYS.indexOf(m[2]);
+      for (let i = a; ; i = (i + 1) % 7){ days.add(i); if (i === b) break; }
+    }
+    FP_DAYS.forEach((d, i) => { if (new RegExp('\\b' + d + 's?\\b').test(pt)) days.add(i); });
+    if (/tous les jours/.test(pt)) for (let i = 0; i < 7; i++) days.add(i);
+    const ferie = /\bferie/.test(pt);
+    const period = /vacances/.test(pt) ? 'vac' : /scolaire/.test(pt) ? 'scol' : 'all';
+    if (days.size || ferie) rules.push({ days: [...days].sort(), period, ferie });
+  });
+  // une précision de période seule ("période scolaire") s'applique aux jours cités juste avant
+  return rules;
+}
+
+/** Lit un PDF (ArrayBuffer) et renvoie ses tableaux d'horaires. */
+async function parseFichePdf(pdfjs, data){
+  const doc = await pdfjs.getDocument({ data, isEvalSupported:false }).promise;
+  const tables = [];
+  for (let p = 1; p <= doc.numPages; p++){
+    const page = await doc.getPage(p);
+    const vp = page.getViewport({ scale: 1 });
+    const tc = await page.getTextContent();
+    const items = [];
+    tc.items.forEach(i => {
+      // certaines fiches codent « : » avec un caractère de contrôle et collent plusieurs heures dans un même bloc
+      const str = (i.str || '').replace(/[\u0000-\u001f]/g, ':');
+      if (!str.trim()) return;
+      const base = { y: vp.height - i.transform[5], f: Math.hypot(i.transform[0], i.transform[1]) || 8 };
+      const toks = str.trim().split(/\s+/);
+      if (toks.length > 1 && toks.every(t => FP_TIME.test(t) || /^[-–—]$/.test(t))){
+        let pos = 0;
+        toks.forEach(t => {
+          const at = str.indexOf(t, pos); pos = at + t.length;
+          items.push(Object.assign({ x: i.transform[4] + (i.width || 0) * at / str.length, s: t, w: (i.width || 0) * t.length / str.length }, base));
+        });
+      } else items.push(Object.assign({ x: i.transform[4], s: str.trim(), w: i.width || 0 }, base));
+    });
+    const isCell = i => FP_TIME.test(i.s) || /^[-–—|]$/.test(i.s);
+    const cells = items.filter(isCell);
+    const texts = items.filter(i => !isCell(i));
+
+    // 1. lignes : un nom d'arrêt suivi, sur la même hauteur, d'au moins un horaire
+    let rows = [];
+    texts.forEach(t => {
+      if (t.s.length < 2 || t.f > 11) return;
+      const rc = cells.filter(c => Math.abs(c.y - t.y) < 2.6 && c.x > t.x + 15);
+      if (!rc.some(c => FP_TIME.test(c.s))) return;
+      rows.push({ x: t.x, y: t.y, name: t.s, cells: rc });
+    });
+    // tableaux côte à côte : les horaires d'une ligne s'arrêtent au nom d'arrêt suivant sur la même hauteur
+    rows.forEach(r => {
+      const nextX = Math.min(...rows.filter(o => o !== r && Math.abs(o.y - r.y) < 2.6 && o.x > r.x + 30).map(o => o.x), Infinity);
+      r.cells = r.cells.filter(c => c.x < nextX).sort((a, b) => a.x - b.x);
+    });
+    rows = rows.filter(r => r.cells.some(c => FP_TIME.test(c.s)));
+
+    // 2. regroupement en tableaux : même colonne de noms, lignes rapprochées
+    rows.sort((a, b) => a.y - b.y);                 // de haut en bas (les x varient de quelques millièmes)
+    const groups = [];
+    rows.forEach(r => {
+      const g = groups.find(g => Math.abs(g.x - r.x) < 6 && r.y - g.rows[g.rows.length - 1].y < 34 && r.y > g.rows[g.rows.length - 1].y);
+      if (g) g.rows.push(r); else groups.push({ x: r.x, rows: [r] });
+    });
+
+    groups.forEach(g => {
+      if (g.rows.length < 2) return;
+      // colonnes = trajets
+      const xs = [];
+      g.rows.forEach(r => r.cells.forEach(c => {
+        const cx = c.x + (c.w || 0) / 2;
+        const col = xs.find(v => Math.abs(v.x - cx) < 9);
+        if (col){ col.n++; col.x += (cx - col.x) / col.n; } else xs.push({ x: cx, n: 1 });
+      }));
+      xs.sort((a, b) => a.x - b.x);
+      const stops = g.rows.map(r => r.name);
+      const cols = xs.map(() => new Array(stops.length).fill(null));
+      g.rows.forEach((r, si) => r.cells.forEach(c => {
+        const m = c.s.match(FP_TIME);
+        if (!m) return;
+        const cx = c.x + (c.w || 0) / 2;
+        let best = 0;
+        xs.forEach((v, i) => { if (Math.abs(v.x - cx) < Math.abs(xs[best].x - cx)) best = i; });
+        cols[best][si] = (+m[1]) * 60 + (+m[2]);
+      }));
+      // passage de minuit dans une colonne
+      cols.forEach(col => { let prev = -1; col.forEach((t, i) => { if (t == null) return; if (prev >= 0 && t < prev - 120) t += 1440; col[i] = t; prev = t; }); });
+      const trips = cols.filter(c => c.filter(v => v != null).length >= 2);
+      if (!trips.length) return;
+
+      // 3. titre du tableau (jours / période) : texte plus gros juste au-dessus, en français
+      const top = g.rows[0].y, x0 = g.x;
+      const right = Math.max(...xs.map(v => v.x)) + 30;
+      const EN = /monday|tuesday|wednesday|thursday|friday|saturday|sunday|school|holiday|every day|all year/i;
+      const inBox = t => t.y < top - 2 && t.y > top - 72 && t.x > x0 - 40 && t.x < right;
+      const cands = texts.filter(t => t.f >= 9.5 && inBox(t) && !EN.test(t.s)
+        && /lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|tous les jours|vacances|scolaire|f[ée]ri/i.test(t.s));
+      cands.sort((a, b) => b.y - a.y);
+      let label = '';
+      if (cands.length){
+        // toute la ligne de titre (morceaux de tailles différentes inclus), les titres éloignés séparés par « / »
+        const y0 = cands[0].y;
+        const parts = texts.filter(t => Math.abs(t.y - y0) < 2 && inBox(t) && !EN.test(t.s))
+          .sort((a, b) => a.x - b.x)
+          .map(t => ({ x: t.x, end: t.x + t.w, s: t.s.replace(/[•·]/g, '').trim() })).filter(t => t.s.length > 3);
+        parts.forEach((t, i) => { label += (i ? (t.x - parts[i - 1].end > 25 ? ' / ' : ' ') : '') + t.s; });
+        label = label.replace(/\s+/g, ' ').trim();
+      }
+
+      // 4. direction : en-tête « DIRECTION » le plus proche au-dessus
+      const heads = texts.filter(t => /^direction$/i.test(t.s) && t.y < top);
+      let dir = '';
+      if (heads.length){
+        heads.sort((a, b) => (Math.abs(a.x - x0) + (top - a.y)) - (Math.abs(b.x - x0) + (top - b.y)));
+        const h = heads[0];
+        const dest = texts.filter(t => Math.abs(t.y - h.y) < 3 && t.x > h.x + 5 && !/^direction$/i.test(t.s)).sort((a, b) => a.x - b.x)[0];
+        if (dest) dir = dest.s;
+      }
+      if (!dir) dir = stops[stops.length - 1];
+
+      // tableau coupé en deux blocs (espace vertical) : on recolle le bloc sans titre à celui du dessus
+      const bottom = g.rows[g.rows.length - 1].y;
+      const prev = tables.filter(t => t.page === p && Math.abs(t._x - x0) < 6 && t._bottom < top && top - t._bottom < 110
+        && t.trips.length === trips.length).pop();
+      if (!label && prev){
+        prev.stops.push(...stops);
+        prev.trips.forEach((col, i) => col.push(...trips[i]));
+        prev._bottom = bottom;
+        return;
+      }
+      tables.push({ page: p, dir, label, rules: parseDayRule(label), stops, trips, _x: x0, _bottom: bottom });
+    });
+  }
+  tables.forEach(t => { delete t._x; delete t._bottom; });
+  return { v: FP_VERSION, tables: tables.filter(t => t.label) };
+}
+
+/* ---------- fiches lues : chargement ---------- */
+function ficheUrls(){
+  const s = new Set();
+  Object.values(FICHES).forEach(f => (f.pdfs || []).forEach(p => { if (/documents_CARJAUNE\/.+\.pdf$/i.test(p.url)) s.add(p.url); }));
+  return [...s];
+}
+function linesOfUrl(url){
+  return Object.keys(FICHES).filter(k => (FICHES[k].pdfs || []).some(p => p.url === url))
+    .sort((a, b) => a.localeCompare(b, 'fr', { numeric:true }));
+}
+/** Fiche générale (pas un horaire exceptionnel) lue pour une ligne. */
+function ficheOfLine(short){
+  const f = FICHES[short];
+  if (!f) return null;
+  const p = (f.pdfs || []).find(p => FICHE_DATA[p.url] && !/exceptionnel/i.test(p.label)) || (f.pdfs || []).find(p => FICHE_DATA[p.url]);
+  return p ? FICHE_DATA[p.url] : null;
+}
+
+let pdfjsReady = null;
+function loadPdfJs(){
+  if (pdfjsReady) return pdfjsReady;
+  const base = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  const add = src => new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = () => rej(new Error('lecteur PDF indisponible'));
+    document.head.appendChild(s);
+  });
+  // le « worker » est chargé comme script normal : pdf.js l'utilise alors directement (compatible Apps Script)
+  pdfjsReady = add(base + 'pdf.worker.min.js').then(() => add(base + 'pdf.min.js')).then(() => {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js';
+    return window.pdfjsLib;
+  });
+  pdfjsReady.catch(() => { pdfjsReady = null; });
+  return pdfjsReady;
+}
+
+async function loadFicheData(){
+  const urls = ficheUrls();
+  if (!urls.length) return;
+  try { FICHE_DATA = JSON.parse(await call('getParsedFiches', urls)); } catch(e){ FICHE_DATA = {}; }
+  Object.keys(FICHE_DATA).forEach(u => { if (!FICHE_DATA[u] || FICHE_DATA[u].v !== FP_VERSION) delete FICHE_DATA[u]; });
+  afterFicheData();
+  const missing = urls.filter(u => !FICHE_DATA[u]);
+  if (!missing.length || ficheJob.running) return;
+  ficheJob = { total: missing.length, done: 0, running: true, error: '' };
+  renderFicheProgress();
+  let lib;
+  try { lib = await loadPdfJs(); }
+  catch(e){ ficheJob.running = false; ficheJob.error = errMsg(e); renderFicheProgress(); return; }
+  for (const url of missing){
+    try {
+      const parsed = await parseFichePdf(lib, b64ToBytes(await call('getPdfB64', url)));
+      if (parsed.tables.length){
+        FICHE_DATA[url] = parsed;
+        call('saveParsedFiche', url, JSON.stringify(parsed)).catch(() => {});   // partagé avec les prochaines ouvertures
+      }
+    } catch(e){ ficheJob.error = errMsg(e); }
+    ficheJob.done++;
+    renderFicheProgress();
+    afterFicheData();
+  }
+  ficheJob.running = false;
+  renderFicheProgress();
+}
+
+function afterFicheData(){
+  buildFiches();
+  renderLinesBox();
+  if (view === 'board') renderBoard();
+  if (view === 'trip') renderTrip();
+}
+
+function renderFicheProgress(){
+  const n = Object.keys(FICHE_DATA).length;
+  const txt = ficheJob.running ? `📖 Lecture des fiches carjaune.re… ${ficheJob.done}/${ficheJob.total} (une seule fois, ensuite c’est instantané)`
+            : ficheJob.error && !n ? `Fiches PDF non lues (${esc(ficheJob.error)}) : horaires GTFS utilisés.` : '';
+  document.querySelectorAll('.fiche-prog').forEach(el => el.innerHTML = txt);
+}
+
+/* ---------- quel tableau de la fiche pour quel jour ---------- */
+function dayInfo(dayStart){
+  const mid = dayStart + 12 * 3600e3;
+  const p = (CAL.holidays || []).length ? periodOf(mid) : { type:'scolaire' };
+  return { wd: reuDate(mid).wd, type: p.type, p };
+}
+function tableApplies(t, di){
+  return (t.rules || []).some(r => di.type === 'ferie' ? r.ferie
+    : r.days.includes(di.wd) && (r.period === 'all' || (r.period === 'scol' && di.type === 'scolaire') || (r.period === 'vac' && di.type === 'vacances')));
+}
+function tableKindLabel(t){
+  const l = fpNorm(t.label);
+  if (/feri|dimanche/.test(l) && !/lundi/.test(l)) return 'Dimanches et jours fériés';
+  if (/vacances/.test(l)) return 'Vacances scolaires';
+  if (/scolaire/.test(l)) return 'Période scolaire';
+  return t.label;
+}
+const sameStop = (a, b) => { const x = fpNorm(a), y = fpNorm(b); return x === y || (x.length > 6 && y.length > 6 && (x.includes(y) || y.includes(x))); };
+
+/* ---------- arrêts par ligne (boutons) ---------- */
+function lineStopLists(short){
+  const fd = ficheOfLine(short);
+  if (fd){
+    const byDir = {};
+    fd.tables.forEach(t => { if (!byDir[t.dir] || t.stops.length > byDir[t.dir].length) byDir[t.dir] = t.stops; });
+    return Object.entries(byDir).map(([dir, stops]) => ({ dir, stops: [...new Set(stops)] }));
+  }
+  const rid = Object.keys(S.routes).find(k => S.routes[k].s === short);
+  return ((S.routeStops || {})[rid] || []).filter(Boolean).map(ids => {
+    const names = [];
+    ids.forEach(id => { const n = (S.stops[id] || [])[0]; if (n && names[names.length - 1] !== n) names.push(n); });
+    return { dir: names[names.length - 1] || '', stops: names };
+  });
+}
+function renderLinesBox(){
+  const box = $('#linesBox');
+  if (!box) return;
+  const shorts = [...new Set(Object.values(S.routes).map(r => r.s).concat(Object.keys(FICHES)))]
+    .sort((a, b) => a.localeCompare(b, 'fr', { numeric:true }));
+  if (!shorts.length){ box.innerHTML = ''; return; }
+  let html = `<div class="lbl">Tous les arrêts par ligne</div><div class="line-chips">` +
+    shorts.map(s => `<button class="line-chip${s === selLine ? ' on' : ''}" data-line="${esc(s)}" title="Ligne ${esc(s)}">${badge(routeByShort(s))}</button>`).join('') + `</div>`;
+  if (selLine){
+    const cur = board.group ? board.group.name : '';
+    lineStopLists(selLine).forEach(d => {
+      html += `<div class="stops-dir"><h4>Direction ${esc(d.dir)}</h4><div class="stop-btns">` +
+        d.stops.map((n, i) => `<button class="stop-btn${cur && sameStop(n, cur) ? ' on' : ''}" data-stopname="${esc(n)}"><span class="n">${i + 1}</span>${esc(n)}</button>`).join('') +
+        `</div></div>`;
+    });
+  }
+  box.innerHTML = html;
+}
+$('#linesBox').addEventListener('click', e => {
+  const l = e.target.closest('[data-line]');
+  if (l){ selLine = selLine === l.dataset.line ? '' : l.dataset.line; savePrefs(); renderLinesBox(); return; }
+  const b = e.target.closest('[data-stopname]');
+  if (!b) return;
+  const name = b.dataset.stopname;
+  const g = stopGroups.find(x => fpNorm(x.name) === fpNorm(name)) || stopGroups.find(x => sameStop(x.name, name))
+         || { name, key: norm(name), ids: [] };                        // arrêt présent seulement dans la fiche
+  $('#stopInput').value = g.name;
+  selectStop(g);
+  $('#boardCard').scrollIntoView({ behavior:'smooth', block:'start' });
+});
+
+/* ---------- horaires du jour d'une ligne (fenêtre) ---------- */
+const DAY_VIEWS = [
+  { k:'auto', t:'Aujourd’hui' },
+  { k:'scol', t:'Lun-ven · période scolaire', di:{ wd:0, type:'scolaire' } },
+  { k:'vac',  t:'Lun-ven · vacances', di:{ wd:0, type:'vacances' } },
+  { k:'sam',  t:'Samedi', di:{ wd:5, type:'scolaire' } },
+  { k:'dim',  t:'Dimanche & fériés', di:{ wd:6, type:'scolaire' } }
+];
+function openFicheModal(short, k){
+  const fd = ficheOfLine(short);
+  if (!fd) return;
+  k = k || 'auto';
+  const today = midnightMs(Date.now());
+  const v = DAY_VIEWS.find(x => x.k === k);
+  const di = v.di || dayInfo(today);
+  const tables = fd.tables.filter(t => tableApplies(t, di));
+  const nowMin = k === 'auto' ? Math.round((Date.now() - today) / 60000) : null;
+  const pTxt = k !== 'auto' ? v.t : di.type === 'ferie' ? `jour férié (${esc(di.p.name)})` : di.type === 'vacances' ? 'vacances scolaires' : 'période scolaire';
+  let html = `<div class="modal-head"><h2>${badge(routeByShort(short))} Horaires ${k === 'auto' ? 'du jour' : ''}</h2>
+      <button class="round" data-close title="Fermer">✕</button></div>
+    <div class="src-note" style="margin-top:6px">D’après la fiche officielle carjaune.re · ${k === 'auto' ? `aujourd’hui : <b>${pTxt}</b> (choisi automatiquement)` : `<b>${pTxt}</b>`}</div>
+    <div class="ptabs">${DAY_VIEWS.map(x => `<button class="chip${x.k === k ? ' on' : ''}" data-day="${x.k}" data-line="${esc(short)}">${x.t}</button>`).join('')}</div>`;
+  if (!tables.length) html += `<div class="placeholder"><div class="big">🚫</div>Pas de service ce jour-là selon la fiche.</div>`;
+  tables.forEach(t => {
+    const nextCol = nowMin == null ? -1 : t.trips.findIndex(c => (c.find(x => x != null) || 0) >= nowMin);
+    const cur = board.group ? board.group.name : '';
+    html += `<div class="dir-h">Direction ${esc(t.dir)}<small>${esc(t.label)}</small></div><div class="tt-wrap"><table class="fiche"><tbody>` +
+      t.stops.map((s, si) => `<tr class="${cur && sameStop(s, cur) ? 'here' : ''}"><td>${esc(s)}</td>` + t.trips.map((c, ci) => {
+        const m = c[si];
+        const cls = nowMin == null ? '' : ci === nextCol ? 'next' : (c.find(x => x != null) || 0) < nowMin ? 'past' : '';
+        return `<td class="${cls}">${m == null ? '–' : pad(Math.floor(m / 60) % 24) + ':' + pad(m % 60)}</td>`;
+      }).join('') + `</tr>`).join('') + `</tbody></table></div>`;
+  });
+  $('#ficheModalBox').innerHTML = html;
+  $('#ficheModal').hidden = false;
+  const nx = $('#ficheModalBox td.next');
+  if (nx) nx.scrollIntoView({ inline:'center', block:'nearest' });
+}
+$('#fichesGrid').addEventListener('click', e => { const b = e.target.closest('[data-fiche-line]'); if (b) openFicheModal(b.dataset.ficheLine); });
+$('#ficheModal').addEventListener('click', e => {
+  if (e.target.id === 'ficheModal' || e.target.closest('[data-close]')){ $('#ficheModal').hidden = true; return; }
+  const d = e.target.closest('[data-day]');
+  if (d) openFicheModal(d.dataset.line, d.dataset.day);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#ficheModal').hidden = true; });
+
+/* ====================== Aller / retour ====================== */
+// Sens d'une ligne : « aller » = 1re direction de sa fiche carjaune.re (page 1), « retour » = l'autre.
+function ficheDirs(url){
+  const d = [];
+  (FICHE_DATA[url] ? FICHE_DATA[url].tables : []).slice().sort((a, b) => a.page - b.page)
+    .forEach(t => { if (!d.some(x => sameStop(x, t.dir))) d.push(t.dir); });
+  return d;
+}
+function ficheSens(url, dir){
+  const d = ficheDirs(url);
+  return d[1] && sameStop(dir, d[1]) ? 'retour' : 'aller';
+}
+function sensFor(short, dest, dirId){
+  const f = FICHES[short];
+  const p = f && (f.pdfs || []).find(p => FICHE_DATA[p.url]);
+  if (p){
+    const d = ficheDirs(p.url);
+    if (d[0] && sameStop(dest, d[0])) return 'aller';
+    if (d[1] && sameStop(dest, d[1])) return 'retour';
+  }
+  return String(dirId) === '1' ? 'retour' : 'aller';     // sinon : direction_id du GTFS
+}
+
+function findGroup(name){
+  if (!name) return null;
+  return stopGroups.find(g => fpNorm(g.name) === fpNorm(name)) || stopGroups.find(g => sameStop(g.name, name))
+      || { name, key: norm(name), ids: [] };
+}
+function tripReady(){ return trip.a && trip.b && fpNorm(trip.a) !== fpNorm(trip.b); }
+
+/** Sens du trajet perso : position (gare la plus proche des deux), sinon heure (matin = aller). */
+function detectSens(){
+  const A = findGroup(trip.a), B = findGroup(trip.b);
+  if (trip.mode === 'aller' || trip.mode === 'retour') return { sens: trip.mode, why: 'choisi à la main', A, B };
+  if (myPos && isFinite(A.lat) && isFinite(B.lat)){
+    const da = distM(myPos.lat, myPos.lon, A.lat, A.lon), db = distM(myPos.lat, myPos.lon, B.lat, B.lon);
+    return da <= db ? { sens:'aller', why:`détecté : tu es à ${fmtDist(da)} de ${A.name}`, A, B }
+                    : { sens:'retour', why:`détecté : tu es à ${fmtDist(db)} de ${B.name}`, A, B };
+  }
+  const hr = reuDate(Date.now()).h;
+  return hr < 13 ? { sens:'aller', why:'détecté à l’heure (matin) : active ta position pour plus de précision', A, B }
+                 : { sens:'retour', why:'détecté à l’heure (après-midi) : active ta position pour plus de précision', A, B };
+}
+
+async function loadTripBoard(){
+  if (!tripReady()) return;
+  const A = findGroup(trip.a), B = findGroup(trip.b);
+  const ids = [...new Set(A.ids.concat(B.ids))];
+  const key = ids.join(',');
+  if (tripBoard.key === key && (tripBoard.data || tripBoard.loading)) return;
+  tripBoard = { key, data: null, loading: true };
+  renderTrip();
+  try { tripBoard.data = ids.length ? JSON.parse(await call('getStopBoard', ids)) : {}; }
+  catch(e){ tripBoard.data = {}; }
+  tripBoard.loading = false;
+  renderTrip();
+}
+
+/** Cars qui vont de « from » à « to » : heure de départ et d'arrivée (fiches + GTFS + temps réel). */
+function journeyRows(from, to){
+  const now = Date.now(), today = midnightMs(now), data = tripBoard.data || {};
+  const days = [today - 864e5, today, today + 864e5], active = days.map(d => activeServices(d));
+  const vehByTrip = {};
+  vehicles.forEach(v => { if (v.tripId) vehByTrip[v.tripId] = v; });
+  const at = ids => { const m = {}; ids.forEach(id => (data[id] || []).forEach(([tid, sec]) => { if (!m[tid] || sec < m[tid].sec) m[tid] = { sec, id }; })); return m; };
+  const atLast = ids => { const m = {}; ids.forEach(id => (data[id] || []).forEach(([tid, sec]) => { if (!m[tid] || sec > m[tid].sec) m[tid] = { sec, id }; })); return m; };
+  const A = at(from.ids), B = atLast(to.ids);
+  const pool = [];
+  Object.keys(A).forEach(tid => {
+    const b = B[tid], ti = S.trips[tid];
+    if (!b || !ti || b.sec <= A[tid].sec) return;                 // ce car ne va pas de A vers B
+    days.forEach((d, i) => {
+      if (active[i] && !active[i].has(ti[7])) return;
+      const dep = d + A[tid].sec * 1000, arr = d + b.sec * 1000;
+      if (dep < now - 60 * 60e3 || dep > now + 24 * 3600e3) return;
+      const tu = lastTus[tid];
+      const same = tu && (tu.trip.startDate ? serviceDayMs(tu.trip.startDate, 0) === d : Math.abs(dep - now) < 12 * 3600e3);
+      let rdep = null, rarr = null;
+      if (same){
+        const list = tu.stopTimeUpdate || [];
+        const sa = list.find(s => s.stopId === A[tid].id), sb = list.find(s => s.stopId === b.id);
+        rdep = sa ? stuTime(sa, 'departure', dep) : (tu.delay != null ? dep + tu.delay * 1000 : null);
+        rarr = sb ? stuTime(sb, 'arrival', arr) : (rdep != null ? arr + (rdep - dep) : null);
+      }
+      const eff = rdep != null ? rdep : dep;
+      if (eff < now - 60e3) return;
+      pool.push({ eff, sched: dep, real: rdep, arr, rarr, route: S.routes[ti[0]] || { s:'?', c:'F6BE00', t:'222222' },
+                  dest: to.name, veh: same ? vehByTrip[tid] : null, used: false });
+    });
+  });
+  // fiches carjaune.re : colonnes qui desservent A puis B
+  const out = [], covered = new Set();
+  Object.keys(FICHE_DATA).forEach(url => {
+    const lines = linesOfUrl(url);
+    days.forEach(d => {
+      const di = dayInfo(d);
+      FICHE_DATA[url].tables.forEach(t => {
+        const ia = t.stops.findIndex(s => sameStop(s, from.name));
+        const ib = ia < 0 ? -1 : t.stops.findIndex((s, i) => i > ia && sameStop(s, to.name));
+        if (ib < 0) return;
+        lines.forEach(l => covered.add(l));
+        if (!tableApplies(t, di)) return;
+        t.trips.forEach(col => {
+          if (col[ia] == null || col[ib] == null) return;
+          const dep = d + col[ia] * 60000, arr = d + col[ib] * 60000;
+          if (dep < now - 60 * 60e3 || dep > now + 24 * 3600e3) return;
+          let line = lines[0] || '?';
+          const xl = lines.find(l => /X$/i.test(l)), nl = lines.find(l => !/X$/i.test(l));
+          if (xl && nl){ const mid = col.slice(1, -1); line = mid.length && mid.filter(v => v == null).length / mid.length >= 0.5 ? xl : nl; }
+          const mt = pool.find(r => !r.used && r.route.s === line && Math.abs(r.sched - dep) <= 120e3)
+                  || pool.find(r => !r.used && lines.includes(r.route.s) && Math.abs(r.sched - dep) <= 120e3);
+          if (mt) mt.used = true;
+          const rdep = mt ? mt.real : null, rarr = mt ? (mt.rarr != null ? mt.rarr : (rdep != null ? arr + (rdep - dep) : null)) : null;
+          const eff = rdep != null ? rdep : dep;
+          if (eff < now - 60e3) return;
+          out.push({ eff, sched: dep, real: rdep, arr, rarr, route: mt ? mt.route : routeByShort(line), dest: to.name, veh: mt ? mt.veh : null, fiche: true });
+        });
+      });
+    });
+  });
+  pool.forEach(r => { if (!r.used && !covered.has(r.route.s)) out.push(r); });
+  const seen = new Set();
+  return out.filter(r => { const k = r.route.s + '|' + r.sched; if (seen.has(k)) return false; seen.add(k); return true; })
+            .sort((a, b) => a.eff - b.eff);
+}
+
+function renderTrip(){
+  const card = $('#tripCard');
+  if (!card) return;
+  document.querySelectorAll('#tripMode button').forEach(b => b.classList.toggle('on', b.dataset.m === trip.mode));
+  if (!tripReady()){
+    card.innerHTML = `<div class="placeholder"><div class="big">🧭</div>Indique ta gare de départ et ta gare d’arrivée pour l’aller.<br>Le retour est calculé automatiquement dans l’autre sens.</div>`;
+    return;
+  }
+  const s = detectSens();
+  const from = s.sens === 'aller' ? s.A : s.B, to = s.sens === 'aller' ? s.B : s.A;
+  if (lastSens && lastSens !== s.sens && alertCfg.on && alertCfg.journey)
+    notify(`🧭 C’est maintenant ton ${s.sens}`, `${from.name} → ${to.name} : les alertes suivent ce sens.`, 'none');
+  lastSens = s.sens;
+  let html = `<div class="sens-banner ${s.sens}"><div class="big">${s.sens === 'aller' ? '➡️ ALLER' : '⬅️ RETOUR'}</div>
+      <div><div class="route">${esc(from.name)} → ${esc(to.name)}</div><div class="why">${esc(s.why)}</div></div></div>`;
+  if (tripBoard.loading || !tripBoard.data){
+    card.innerHTML = html + `<div class="placeholder">Recherche des cars entre ces deux gares…</div>`;
+    loadTripBoard();
+    return;
+  }
+  const rows = journeyRows(from, to).slice(0, 12);
+  const now = Date.now();
+  if (!rows.length){
+    html += `<div class="placeholder"><div class="big">🤔</div>Aucun car direct de ${esc(from.name)} vers ${esc(to.name)} dans les prochaines 24 h.<br>Vérifie les noms des gares (elles doivent être sur la même ligne).</div>`;
+  } else {
+    let lastDay = midnightMs(now), t = '';
+    rows.forEach(r => {
+      const day = midnightMs(r.eff);
+      if (day !== lastDay){ t += `<tr class="sep"><td colspan="6">${dayLabel(r.eff).replace(/^./, c => c.toUpperCase())}</td></tr>`; lastDay = day; }
+      const mins = Math.round((r.eff - now) / 60000);
+      const when = mins <= 0 ? `<span class="when soon">À quai</span>` : mins < 60 ? `<span class="when${mins <= 2 ? ' soon' : ''}">${mins}<small>min</small></span>` : `<span class="when">${fmtHM(r.eff)}</span>`;
+      const arrEff = r.rarr != null ? r.rarr : r.arr;
+      t += `<tr><td>${when}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched)}</td>
+        <td class="arr">${fmtTime(r.rarr, r.arr, r.rarr != null && r.real != null)}</td>
+        <td><span class="dur">${Math.round((arrEff - r.eff) / 60000)} min</span></td>
+        <td>${r.real != null ? '<span class="rt">Temps réel</span>' : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>`}
+          ${r.veh ? `<br><button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}</td></tr>`;
+    });
+    html += `<table class="board jt"><thead><tr><th>Départ</th><th>Ligne</th><th>Part de ${esc(from.name)}</th><th>Arrive à ${esc(to.name)}</th><th>Durée</th><th>Info</th></tr></thead><tbody>${t}</tbody></table>`;
+  }
+  const on = alertCfg.on && alertCfg.journey;
+  html += `<div class="al-row" style="margin-top:14px"><button class="btn${on ? ' ghost' : ''}" id="tripAlert">${on ? '🔕 Arrêter les alertes du trajet' : '🔔 M’alerter pour ce trajet'}</button>
+    <span class="src-note" style="margin:0">Alerte ${alertCfg.lead} min avant chaque car vers ${esc(to.name)}, et quand il arrive à quai. Le sens change tout seul quand tu te déplaces.</span></div>`;
+  card.innerHTML = html;
+}
+
+$('#tripA').addEventListener('change', e => { trip.a = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; savePrefs(); renderTrip(); });
+$('#tripB').addEventListener('change', e => { trip.b = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; savePrefs(); renderTrip(); });
+$('#tripSwap').addEventListener('click', () => {
+  [trip.a, trip.b] = [trip.b, trip.a];
+  $('#tripA').value = trip.a; $('#tripB').value = trip.b;
+  savePrefs(); renderTrip();
+});
+$('#tripMode').addEventListener('click', e => {
+  const b = e.target.closest('[data-m]'); if (!b) return;
+  trip.mode = b.dataset.m; savePrefs(); renderTrip(); if (alertCfg.on) checkAlerts();
+});
+$('#tripGeo').addEventListener('click', () => {
+  if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    myPos = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
+    const n = nearestStop(myPos.lat, myPos.lon), pick = n.gare || n.stop;
+    if (!pick) return;
+    trip.a = pick.g.name; $('#tripA').value = trip.a;
+    tripBoard = { key:'', data:null, loading:false };
+    savePrefs(); renderTrip();
+  }, () => toast('Position refusée ou indisponible : choisis la gare à la main.'), { enableHighAccuracy:true, timeout:15000 });
+});
+$('#tripCard').addEventListener('click', e => {
+  const v = e.target.closest('[data-veh]'); if (v){ focusVehicle(v.dataset.veh); return; }
+  if (e.target.id === 'tripAlert'){
+    if (alertCfg.on && alertCfg.journey){ alertCfg.journey = false; toggleAlerts(); }
+    else {
+      alertCfg.journey = true;
+      if (!navigator.geolocation || alertCfg.follow) {} else setFollow(true);   // le sens suit ta position
+      $('#alFollow').checked = alertCfg.follow;
+      if (!alertCfg.on) toggleAlerts(); else { saveAlertCfg(); checkAlerts(); }
+    }
+    setTimeout(renderTrip, 50);
+  }
+});
+function fillStopList(){
+  $('#stopList').innerHTML = stopGroups.map(g => `<option value="${esc(g.name)}">`).join('');
+  $('#tripA').value = trip.a; $('#tripB').value = trip.b;
+}
+
+/* ====================== Alertes d'arrivée (selon ma position) ====================== */
+function distM(a, b, c, d){            // distance en mètres entre deux points GPS
+  const R = 6371e3, r = Math.PI / 180;
+  const x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r;
+  return Math.hypot(x, y) * R;
+}
+const isGare = g => /\b(gare|aeroport|pole d echanges)\b/.test(g.key);
+
+/** Gare (ou à défaut arrêt) la plus proche d'une position. */
+function nearestStop(lat, lon){
+  let bestG = null, bestS = null;
+  stopGroups.forEach(g => {
+    if (!isFinite(g.lat) || !isFinite(g.lon)) return;
+    const d = distM(lat, lon, g.lat, g.lon);
+    if (!bestS || d < bestS.d) bestS = { g, d };
+    if (isGare(g) && (!bestG || d < bestG.d)) bestG = { g, d };
+  });
+  return { gare: bestG, stop: bestS };
+}
+const fmtDist = d => d < 1000 ? `${Math.round(d / 10) * 10} m` : `${(d / 1000).toFixed(1).replace('.', ',')} km`;
+
+function useMyPosition(pos, auto){
+  myPos = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy };
+  const n = nearestStop(myPos.lat, myPos.lon);
+  if (!n.gare && !n.stop){ $('#geoInfo').textContent = 'Aucun arrêt trouvé autour de toi.'; return; }
+  const pick = n.gare || n.stop;
+  const other = n.stop && n.gare && n.stop.g !== n.gare.g && n.stop.d < n.gare.d
+    ? ` · arrêt le plus proche : <a href="#" data-near="${esc(n.stop.g.name)}">${esc(n.stop.g.name)}</a> (${fmtDist(n.stop.d)})` : '';
+  $('#geoInfo').innerHTML = `📍 Gare la plus proche : <b>${esc(pick.g.name)}</b> à ${fmtDist(pick.d)} (précision ± ${fmtDist(myPos.acc || 0)})${other}`;
+  if (view === 'trip' || (alertCfg.on && alertCfg.journey)){ renderTrip(); if (alertCfg.on) checkAlerts(); }
+  if (alertCfg.on && alertCfg.journey) return;            // en mode trajet, c'est le sens qui change, pas l'arrêt
+  if (!board.group || board.group.name !== pick.g.name){
+    if (auto && board.group && alertCfg.on) notify('📍 Nouvelle gare suivie', `Tu es maintenant plus près de ${pick.g.name} : les alertes la suivent.`, 'none');
+    $('#stopInput').value = pick.g.name;
+    selectStop(pick.g);
+  }
+}
+function geoError(e){
+  const msg = e && e.code === 1 ? 'Localisation refusée : autorise-la dans ton navigateur, ou choisis la gare à la main.'
+            : 'Position indisponible pour le moment.';
+  $('#geoInfo').textContent = msg;
+  $('#alFollow').checked = false; alertCfg.follow = false; saveAlertCfg();
+}
+function locateOnce(){
+  if (!navigator.geolocation){ geoError(); return; }
+  $('#geoInfo').textContent = 'Recherche de ta position…';
+  navigator.geolocation.getCurrentPosition(p => useMyPosition(p, false), geoError, { enableHighAccuracy:true, timeout:15000, maximumAge:30000 });
+}
+function setFollow(on){
+  alertCfg.follow = on; saveAlertCfg();
+  if (geoWatch != null){ navigator.geolocation.clearWatch(geoWatch); geoWatch = null; }
+  if (on && navigator.geolocation){
+    $('#geoInfo').textContent = 'Suivi de ta position…';
+    geoWatch = navigator.geolocation.watchPosition(p => useMyPosition(p, true), geoError, { enableHighAccuracy:true, maximumAge:20000, timeout:30000 });
+  }
+}
+
+/* ---------- envoi d'une alerte ---------- */
+let audioCtx = null;
+function beep(kind){
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const notes = kind === 'warn' ? [660, 520] : kind === 'none' ? [440] : [880, 1175];
+    notes.forEach((f, i) => {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = f; o.connect(g); g.connect(audioCtx.destination);
+      const t = audioCtx.currentTime + i * 0.18;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      o.start(t); o.stop(t + 0.17);
+    });
+  } catch(e){}
+}
+function notify(title, body, kind){
+  // 1. dans la page (toujours)
+  const el = document.createElement('div');
+  el.className = 'al-pop' + (kind ? ' ' + kind : '');
+  el.innerHTML = `<b>${esc(title)}</b>${esc(body)}<div class="muted" style="font-size:11px;margin-top:3px">${fmtHM(Date.now())}</div>`;
+  el.onclick = () => el.remove();
+  $('#alertFeed').prepend(el);
+  setTimeout(() => el.remove(), 60000);
+  while ($('#alertFeed').children.length > 4) $('#alertFeed').lastChild.remove();
+  beep(kind);
+  try { if (navigator.vibrate) navigator.vibrate(kind === 'warn' ? [200, 100, 200, 100, 200] : [250, 120, 250]); } catch(e){}
+  // 2. notification du navigateur (si autorisée)
+  try {
+    if ('Notification' in window && Notification.permission === 'granted'){
+      const opt = { body, tag: title + body.slice(0, 20), icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', vibrate: [250, 120, 250] };
+      if (swReg && swReg.showNotification) swReg.showNotification(title, opt); else new Notification(title, opt);
+    }
+  } catch(e){}
+  // 3. téléphone via ntfy (si configuré)
+  if (alertCfg.ntfy){
+    fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({
+      topic: alertCfg.ntfy, title, message: body, priority: kind === 'warn' ? 5 : 4, tags: [kind === 'warn' ? 'warning' : 'bus']
+    }) }).catch(() => {});
+  }
+}
+
+/* ---------- surveillance ---------- */
+/** Contexte des alertes : trajet perso (sens détecté) ou arrêt affiché. */
+function alertContext(){
+  if (alertCfg.journey && tripReady() && tripBoard.data){
+    const s = detectSens();
+    const from = s.sens === 'aller' ? s.A : s.B, to = s.sens === 'aller' ? s.B : s.A;
+    let rows = journeyRows(from, to);
+    if (alertCfg.line) rows = rows.filter(r => r.route.s === alertCfg.line);
+    return { stop: from.name, rows, sens: s.sens, to: to.name };
+  }
+  return { stop: board.group ? board.group.name : '', rows: alertRows() };
+}
+function alertRows(){
+  const g = board.group;
+  if (!g || board.loading) return [];
+  const pool = board.error ? [] : gtfsRows(g);
+  const rows = ficheRows(g, pool) || pool;
+  return alertCfg.line ? rows.filter(r => r.route.s === alertCfg.line) : rows;
+}
+function checkAlerts(){
+  if (!alertCfg.on) return;
+  if (alertCfg.journey && tripReady() && !tripBoard.data){ loadTripBoard(); return; }
+  const ctx = alertContext();
+  if (!ctx.stop) return;
+  const now = Date.now(), stop = ctx.stop, lead = alertCfg.lead, rows = ctx.rows;
+  rows.forEach(r => {
+    const key = stop + '|' + r.route.s + '|' + r.dest + '|' + r.sched;
+    const st = alertSent[key] || (alertSent[key] = {});
+    const mins = (r.eff - now) / 60000;
+    const delayMin = r.real != null ? Math.round((r.real - r.sched) / 60000) : null;
+    const dTxt = delayMin == null ? 'horaire de la fiche, pas encore suivi en temps réel'
+               : delayMin === 0 ? 'à l’heure' : delayMin > 0 ? `retard ${delayMin} min` : `avance ${-delayMin} min`;
+    const name = `${r.route.s} → ${r.dest}` + (ctx.sens ? ` (${ctx.sens})` : '');
+    const arrTxt = r.arr ? ` Arrivée à ${r.dest} vers ${fmtHM(r.rarr != null ? r.rarr : r.arr)}.` : '';
+    if (!st.lead && mins <= lead && mins > 1){
+      st.lead = true; st.delay = delayMin;
+      notify(`🚌 ${name}`, `Arrive à ${stop} dans ${Math.round(mins)} min, à ${fmtHM(r.eff)} (${dTxt}).${arrTxt}`);
+    } else if (alertCfg.late && st.lead && !st.quai && delayMin != null && st.delay != null && Math.abs(delayMin - st.delay) >= 2){
+      notify(`⏱️ ${name} : ${delayMin > st.delay ? 'plus de retard' : 'rattrape son retard'}`,
+             `Nouvelle heure d’arrivée à ${stop} : ${fmtHM(r.eff)} (${dTxt}), dans ${Math.max(0, Math.round(mins))} min.`, 'warn');
+      st.delay = delayMin;
+    } else if (alertCfg.late && st.lead && st.delay == null && delayMin != null && Math.abs(delayMin) >= 2){
+      notify(`⏱️ ${name}`, `Le car est maintenant suivi en temps réel : arrivée à ${stop} à ${fmtHM(r.eff)} (${dTxt}).`, 'warn');
+      st.delay = delayMin;
+    }
+    if (alertCfg.quai && !st.quai && r.real != null && mins <= 0.75 && mins > -2){
+      st.quai = true;
+      notify(`🚏 ${name} arrive à quai`, `Le car est en train d’arriver à ${stop} (${fmtHM(r.eff)}, ${dTxt}).`);
+    }
+  });
+  // aucun car dans l'heure
+  const nextRow = rows.find(r => r.eff > now);
+  const inHour = rows.some(r => r.eff > now && r.eff - now <= 60 * 60e3);
+  if (alertCfg.noBus && !inHour && now - noBusAt > 45 * 60e3){
+    noBusAt = now;
+    notify(`🚫 Aucun car jaune à ${stop} dans l’heure`,
+      nextRow ? `Prochain : ${nextRow.route.s} → ${nextRow.dest}, ${dayLabel(nextRow.eff)} à ${fmtHM(nextRow.eff)}.` : 'Aucun départ prévu dans les prochaines 24 h.', 'none');
+  }
+  if (inHour) noBusAt = 0;
+  renderAlertStatus(rows, ctx);
+}
+function renderAlertStatus(rows, ctx){
+  const box = $('#alStatus');
+  if (!alertCfg.on){ box.className = 'al-status'; box.textContent = ''; return; }
+  const now = Date.now();
+  ctx = ctx || alertContext();
+  const nx = (rows || ctx.rows).find(r => r.eff > now);
+  box.className = 'al-status on';
+  box.innerHTML = `✅ Alertes actives pour <b>${esc(ctx.stop || '—')}</b>${ctx.sens ? ` · ton <b>${ctx.sens}</b> vers ${esc(ctx.to)}` : ''}${alertCfg.line ? ' (ligne ' + esc(alertCfg.line) + ')' : ''}
+    ${nx ? ` · prochain car : <b>${esc(nx.route.s)}</b> → ${esc(nx.dest)} à <b>${fmtHM(nx.eff)}</b> (${fmtIn(nx.eff)})${nx.real != null ? ' · temps réel' : ''}` : ''}
+    <br><small>Garde cette page ouverte${alertCfg.ntfy ? ' : les alertes partent aussi sur ton téléphone (ntfy)' : ''}.</small>`;
+}
+function updateAlertUI(){
+  $('#alStop').textContent = board.group ? board.group.name : '— choisis un arrêt —';
+  const sel = $('#alLine'), cur = alertCfg.line;
+  const lines = board.group ? [...new Set(alertRows().concat([]).map(r => r.route.s))].sort((a, b) => a.localeCompare(b, 'fr', { numeric:true })) : [];
+  sel.innerHTML = `<option value="">toutes les lignes</option>` + lines.map(l => `<option value="${esc(l)}"${l === cur ? ' selected' : ''}>ligne ${esc(l)}</option>`).join('');
+  $('#alToggle').textContent = alertCfg.on ? '🔕 Désactiver les alertes' : '🔔 Activer les alertes';
+  $('#alToggle').classList.toggle('ghost', alertCfg.on);
+  renderAlertStatus();
+}
+async function toggleAlerts(){
+  if (!alertCfg.on && !board.group && !(alertCfg.journey && tripReady())){ toast('Choisis d’abord une gare (ou « Gare la plus proche de moi »).'); return; }
+  alertCfg.on = !alertCfg.on;
+  if (alertCfg.on){
+    try { if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); } catch(e){}
+    try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch(e){}
+    try { if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}   // garde l'écran allumé
+    noBusAt = 0;
+    if (mode === 'sleep') forceUntil = 0;
+    nextAt = 0;
+    const c0 = alertContext();
+    notify('🔔 Alertes activées', alertCfg.journey && c0.sens ? `Ton ${c0.sens} : je te préviens ${alertCfg.lead} min avant chaque car de ${c0.stop} vers ${c0.to}.`
+                                                             : `Je te préviens ${alertCfg.lead} min avant chaque car à ${c0.stop}.`, 'none');
+    setTimeout(checkAlerts, 500);
+  } else {
+    try { if (wakeLock) await wakeLock.release(); } catch(e){}
+    wakeLock = null;
+  }
+  saveAlertCfg(); updateAlertUI();
+}
+function saveAlertCfg(){ try { localStorage.setItem('cj_alerts', JSON.stringify(alertCfg)); } catch(e){} }
+function loadAlertCfg(){
+  try { Object.assign(alertCfg, JSON.parse(localStorage.getItem('cj_alerts') || '{}')); } catch(e){}
+  alertCfg.on = false;                               // réactivation volontaire à chaque ouverture (son, écran)
+  $('#alLead').value = String(alertCfg.lead);
+  $('#alQuai').checked = alertCfg.quai; $('#alLate').checked = alertCfg.late; $('#alNoBus').checked = alertCfg.noBus;
+  $('#alFollow').checked = alertCfg.follow; $('#ntfyTopic').value = alertCfg.ntfy || '';
+  if (alertCfg.follow) setFollow(true);
+}
+$('#geoBtn').addEventListener('click', locateOnce);
+$('#alFollow').addEventListener('change', e => setFollow(e.target.checked));
+$('#alLead').addEventListener('change', e => { alertCfg.lead = +e.target.value; saveAlertCfg(); renderAlertStatus(); });
+$('#alLine').addEventListener('change', e => { alertCfg.line = e.target.value; saveAlertCfg(); renderAlertStatus(); });
+['alQuai', 'alLate', 'alNoBus'].forEach(id => $('#' + id).addEventListener('change', e => {
+  alertCfg[{ alQuai:'quai', alLate:'late', alNoBus:'noBus' }[id]] = e.target.checked; saveAlertCfg();
+}));
+$('#ntfyTopic').addEventListener('change', e => { alertCfg.ntfy = e.target.value.trim().replace(/[^\w-]/g, ''); e.target.value = alertCfg.ntfy; saveAlertCfg(); });
+$('#ntfyTest').addEventListener('click', () => {
+  alertCfg.ntfy = $('#ntfyTopic').value.trim().replace(/[^\w-]/g, ''); $('#ntfyTopic').value = alertCfg.ntfy; saveAlertCfg();
+  if (!alertCfg.ntfy){ toast('Choisis d’abord un nom (le même que dans l’appli ntfy).'); return; }
+  notify('🧪 Test Car Jaune Live', 'Si tu lis ceci sur ton téléphone, les alertes fonctionnent.', 'none');
+});
+$('#alToggle').addEventListener('click', () => { if (!alertCfg.on) alertCfg.journey = false; toggleAlerts(); });
+$('#geoInfo').addEventListener('click', e => {
+  const a = e.target.closest('[data-near]'); if (!a) return;
+  e.preventDefault();
+  const g = stopGroups.find(x => x.name === a.dataset.near);
+  if (g){ $('#stopInput').value = g.name; selectStop(g); }
+});
+document.addEventListener('visibilitychange', async () => {
+  if (!document.hidden && alertCfg.on && navigator.wakeLock && (!wakeLock || wakeLock.released)){
+    try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+  }
+});
+
+/* ====================== Horaires de service & veille ====================== */
+/** Services GTFS actifs un jour donné (null = pas de calendrier, tout est accepté). */
+function activeServices(dayStart){
+  const sv = S.service;
+  if (!sv || !sv.cal || (!Object.keys(sv.cal).length && !Object.keys(sv.dates || {}).length)) return null;
+  const o = reuDate(dayStart), key = ymd(o), active = new Set();
+  Object.keys(sv.cal).forEach(sid => {
+    const c = sv.cal[sid];
+    if (c[1] <= key && key <= c[2] && c[0][o.wd] === '1') active.add(sid);
+  });
+  const ex = (sv.dates || {})[key];
+  if (ex){ ex.add.forEach(s => active.add(s)); ex.rem.forEach(s => active.delete(s)); }
+  return active;
+}
+
+/** Fenêtre de service d'une journée (premier départ → dernière arrivée), ou null si pas de service. */
+function windowForDay(dayStart){
+  const sv = S.service;
+  if (!sv || !sv.svc) return null;
+  const active = activeServices(dayStart);
+  if (!active) return null;
+  let s = Infinity, e = -Infinity;
+  active.forEach(sid => { const w = sv.svc[sid]; if (w){ s = Math.min(s, w[0]); e = Math.max(e, w[1]); } });
+  return isFinite(s) ? { s: dayStart + s * 1000, e: dayStart + e * 1000 } : null;
+}
+
+function computeSchedule(now){
+  const today = midnightMs(now);
+  let days = [], approx = false;
+  for (let i = -1; i <= 7; i++) days.push(windowForDay(today + i * 864e5));
+  if (days.every(w => !w)){ // GTFS absent ou périmé : horaires de secours
+    approx = true;
+    days = [];
+    for (let i = -1; i <= 7; i++){
+      const d0 = today + i * 864e5;
+      days.push({ s: d0 + FALLBACK_H[0] * 3600e3, e: d0 + FALLBACK_H[1] * 3600e3 });
+    }
+  }
+  const valid = days.filter(Boolean);
+  const cur  = valid.find(w => now >= w.s - MARGIN_BEFORE && now <= w.e + MARGIN_AFTER) || null;
+  const next = valid.find(w => w.s - MARGIN_BEFORE > now) || null;
+  const last = valid.filter(w => w.e + MARGIN_AFTER < now).pop() || null;
+  return { cur, next, last, approx };
+}
+
+function updateMode(){
+  const now = Date.now();
+  if (!sched || now - schedAt > 10000){ sched = computeSchedule(now); schedAt = now; }
+  const late = sched.last && now < sched.last.e + LATE_MAX && vehicles.length > 0;
+  const want = (sched.cur || late || now < forceUntil) ? 'live' : 'sleep';
+  if (want === mode) return;
+  mode = want;
+  $('#livePill').classList.toggle('asleep', mode === 'sleep');
+  if (mode === 'live'){ nextAt = 0; }                       // réveil : actualisation immédiate
+  else { vehicles = []; lastTus = {}; render(); }            // veille : on arrête le suivi
+}
+
+async function checkNow(){
+  forceUntil = Date.now() + 5 * 60 * 1000;
+  updateMode();
+  await refresh();
+  if (!vehicles.length){
+    forceUntil = 0;
+    updateMode();
+    toast('Aucun car jaune en circulation pour le moment.');
+  }
+}
+
+function renderSleep(){
+  markers.forEach(m => map.removeLayer(m)); markers.clear();
+  $('#count').textContent = '0';
+  $('#countLbl').textContent = 'car';
+  $('#countdown').textContent = '';
+  const n = sched && sched.next;
+  $('#list').innerHTML = `<div class="sleep">
+      <div class="moon">☾</div>
+      <h2>Réseau fermé</h2>
+      ${n ? `<p>Premier départ ${dayLabel(n.s)} à <b>${fmtHM(n.s)}</b>${sched.approx ? ' (horaire estimé)' : ''}.</p>
+             <p class="sleep-cd" id="sleepCd"></p>
+             <p>La carte se réactivera toute seule ${MARGIN_BEFORE / 60000} min avant.</p>`
+          : `<p>Aucun service prévu dans les 7 prochains jours.</p>`}
+      <button class="btn" id="checkNow">Vérifier quand même</button>
+    </div>`;
+  setStatus(n ? `En veille · reprise ${dayLabel(n.s)} à ${fmtHM(n.s)}` : 'En veille');
+  updateSleepCountdown();
+  renderAlerts();
+  if (view === 'board') renderBoard();
+}
+
+function updateSleepCountdown(){
+  const el = document.getElementById('sleepCd');
+  if (!el || !sched || !sched.next) return;
+  const ms = Math.max(0, sched.next.s - Date.now());
+  const h = Math.floor(ms / 3600e3), m = Math.floor(ms % 3600e3 / 60e3), s = Math.floor(ms % 60e3 / 1000);
+  el.textContent = h ? `dans ${h} h ${pad(m)} min` : `dans ${m} min ${pad(s)} s`;
+}
+
+/* ====================== Temps réel ====================== */
+async function refresh(){
+  if (busy) return;
+  busy = true;
+  $('#refresh').classList.add('spin');
+  try {
+    const r = await call('getRealtime');
+    const msg = FeedMessage.decode(b64ToBytes(r.b64));
+    const feed = FeedMessage.toObject(msg, { longs:Number, defaults:false });
+    parseFeed(feed);
+    render();
+    if (view === 'trip') renderTrip();
+    checkAlerts();
+  } catch(e){
+    toast('Erreur temps réel : ' + errMsg(e));
+    setStatus('Flux temps réel injoignable');
+  } finally {
+    busy = false;
+    nextAt = Date.now() + REFRESH_MS;
+    $('#refresh').classList.remove('spin');
+  }
+}
+
+function txt(ts){
+  if (!ts || !ts.translation || !ts.translation.length) return '';
+  const fr = ts.translation.find(t => (t.language || '').startsWith('fr'));
+  return (fr || ts.translation[0]).text || '';
+}
+
+function getDelay(tu, v){
+  if (!tu) return null;
+  const list = tu.stopTimeUpdate || [];
+  const su = list.find(s => v.stopId && s.stopId === v.stopId)
+          || list.find(s => v.currentStopSequence != null && s.stopSequence >= v.currentStopSequence)
+          || list[0];
+  const ev = su && (su.arrival || su.departure);
+  if (ev && ev.delay != null) return ev.delay;
+  if (tu.delay != null) return tu.delay;
+  return null;
+}
+
+/* ---------- heures de départ / arrivée ---------- */
+// Minuit (heure Réunion) du jour de service : start_date du flux, sinon le jour le plus plausible
+function serviceDayMs(startDate, depSec){
+  if (startDate && /^\d{8}$/.test(startDate))
+    return Date.UTC(+startDate.slice(0, 4), +startDate.slice(4, 6) - 1, +startDate.slice(6, 8)) - OFFSET_MS;
+  let base = midnightMs(Date.now());
+  if (base + depSec * 1000 - Date.now() > 12 * 3600e3) base -= 864e5; // trajet commencé la veille (après minuit)
+  return base;
+}
+
+// Heure réelle d'un passage : heure absolue du flux, sinon prévu + retard
+function stuTime(stu, kind, schedMs){
+  if (!stu) return null;
+  const ev = stu[kind] || stu[kind === 'arrival' ? 'departure' : 'arrival'];
+  if (!ev) return null;
+  if (ev.time) return ev.time * 1000;
+  if (ev.delay != null && schedMs != null) return schedMs + ev.delay * 1000;
+  return null;
+}
+
+/** { dep:{sched, real, stop, done}, arr:{sched, real, stop, estimated}, next:{eta} } */
+function tripTimes(v, tu, ti, trip){
+  const depSec = ti[3], arrSec = ti[4];
+  if (depSec == null || arrSec == null) return null;
+  const base = serviceDayMs(trip.startDate, depSec);
+  const schedDep = base + depSec * 1000, schedArr = base + arrSec * 1000;
+  const list = (tu && tu.stopTimeUpdate) || [];
+  const firstStu = list.find(s => s.stopId === ti[5]) || list.find(s => s.stopSequence === 1);
+  const lastStu  = list.find(s => s.stopId === ti[6]);
+  const nextStu  = list.find(s => v.stopId && s.stopId === v.stopId);
+
+  const realDep = stuTime(firstStu, 'departure', schedDep);
+  let realArr = stuTime(lastStu, 'arrival', schedArr), estimated = false;
+  if (realArr == null){
+    const d = getDelay(tu, v);
+    if (d != null){ realArr = schedArr + d * 1000; estimated = true; }
+  }
+  const atFirst = v.stopId ? v.stopId === ti[5] : (v.currentStopSequence || 1) <= 1;
+  const done = !atFirst || Date.now() > (realDep || schedDep) + 2 * 60e3;
+
+  return {
+    dep: { sched: schedDep, real: realDep, stop: (S.stops[ti[5]] || [])[0] || '', done },
+    arr: { sched: schedArr, real: realArr, stop: (S.stops[ti[6]] || [])[0] || '', estimated },
+    next: { eta: nextStu ? stuTime(nextStu, 'arrival', null) : null }
+  };
+}
+
+// "14:05" (+ horaire prévu barré et écart si le réel diffère)
+function fmtTime(real, sched, approx){
+  if (real == null) return `<b>${fmtHM(sched)}</b> <small class="muted">prévu</small>`;
+  const diff = Math.round((real - sched) / 60000);
+  const main = `<b>${approx ? '~' : ''}${fmtHM(real)}</b>`;
+  if (Math.abs(diff) < 1) return main;
+  return `${main} <s class="muted">${fmtHM(sched)}</s> <span class="${diff > 0 ? 'd-late' : 'd-early'}">${diff > 0 ? '+' : '−'}${Math.abs(diff)}</span>`;
+}
+
+function fmtIn(ms){
+  const m = Math.round((ms - Date.now()) / 60000);
+  if (m <= 0) return 'imminent';
+  if (m < 60) return `dans ${m} min`;
+  return `dans ${Math.floor(m / 60)} h ${pad(m % 60)}`;
+}
+
+function timesShort(t){
+  if (!t) return '';
+  const depLbl = t.dep.done ? 'Parti' : 'Départ';
+  return `<div class="times">${depLbl} ${fmtTime(t.dep.real, t.dep.sched)} · Arrivée ${fmtTime(t.arr.real, t.arr.sched, t.arr.estimated)}</div>`;
+}
+
+function timesTable(t, v){
+  if (!t) return '';
+  const depWhen = t.dep.done ? 'Parti à' : `Départ ${fmtIn(t.dep.real || t.dep.sched)} ·`;
+  const rows = [
+    `<tr><td>🚏</td><td>${esc(t.dep.stop || 'Départ')}<br><small class="muted">${depWhen}</small></td><td>${fmtTime(t.dep.real, t.dep.sched)}</td></tr>`
+  ];
+  if (v.stopName && t.next.eta)
+    rows.push(`<tr><td>➜</td><td>${esc(v.stopName)}<br><small class="muted">prochain arrêt · ${fmtIn(t.next.eta)}</small></td><td><b>${fmtHM(t.next.eta)}</b></td></tr>`);
+  rows.push(`<tr><td>🏁</td><td>${esc(t.arr.stop || 'Terminus')}<br><small class="muted">arrivée ${fmtIn(t.arr.real || t.arr.sched)}${t.arr.estimated ? ' · estimée' : ''}</small></td><td>${fmtTime(t.arr.real, t.arr.sched, t.arr.estimated)}</td></tr>`);
+  return `<table class="tt">${rows.join('')}</table>`;
+}
+
+function parseFeed(feed){
+  feedTime = feed.header && feed.header.timestamp ? feed.header.timestamp * 1000 : Date.now();
+  const tus = {}, raw = [];
+  alerts = [];
+
+  (feed.entity || []).forEach(ent => {
+    if (ent.isDeleted) return;
+    if (ent.tripUpdate && ent.tripUpdate.trip && ent.tripUpdate.trip.tripId) tus[ent.tripUpdate.trip.tripId] = ent.tripUpdate;
+    if (ent.vehicle && ent.vehicle.position) raw.push({ id: (ent.vehicle.vehicle && ent.vehicle.vehicle.id) || ent.id, v: ent.vehicle });
+    if (ent.alert){
+      const t = txt(ent.alert.headerText), d = txt(ent.alert.descriptionText);
+      if (t || d) alerts.push({ t, d });
+    }
+  });
+  lastTus = tus;
+
+  const now = Date.now();
+  vehicles = raw.map(({ id, v }) => {
+    const trip = v.trip || {};
+    const ti = S.trips[trip.tripId] || [];
+    const routeId = trip.routeId || ti[0] || '';
+    const route = S.routes[routeId] || { s: routeId || '?', l:'', c:'F6BE00', t:'222222' };
+    const ts = v.timestamp ? v.timestamp * 1000 : null;
+    const stop = S.stops[v.stopId];
+    return {
+      id: String(id), routeId, route, tripId: trip.tripId || '', svc: ti[7] || '',
+      headsign: ti[1] || route.l || '',
+      lat: v.position.latitude, lon: v.position.longitude,
+      bearing: v.position.bearing, speed: v.position.speed,
+      ts, age: ts ? Math.max(0, now - ts) : null,
+      stopName: stop ? stop[0] : '',
+      delay: getDelay(tus[trip.tripId], v),
+      label: (v.vehicle && (v.vehicle.label || v.vehicle.licensePlate)) || '',
+      times: tripTimes(v, tus[trip.tripId], ti, trip)
+    };
+  }).filter(v => isFinite(v.lat) && isFinite(v.lon) && (v.age == null || v.age < HIDE_MS));
+
+  // lignes présentes en temps réel mais absentes du GTFS
+  let added = false;
+  vehicles.forEach(v => { if (v.routeId && !S.routes[v.routeId]) { S.routes[v.routeId] = v.route; added = true; } });
+  if (added) buildChips();
+}
+
+/* ====================== Affichage carte + liste ====================== */
+function isVisible(v){
+  if (selected.size && !selected.has(v.routeId)) return false;
+  if (!query) return true;
+  const hay = (v.route.s + ' ' + v.route.l + ' ' + v.headsign + ' ' + v.stopName + ' ' + v.label).toLowerCase();
+  return hay.includes(query);
+}
+
+function fmtAge(ms){
+  if (ms == null) return 'heure inconnue';
+  const s = Math.round(ms / 1000);
+  if (s < 15) return 'à l’instant';
+  if (s < 60) return `il y a ${s} s`;
+  return `il y a ${Math.round(s / 60)} min`;
+}
+
+function fmtDelay(d){
+  if (d == null) return { t:'Pas d’info retard', c:'d-none' };
+  const m = Math.round(Math.abs(d) / 60);
+  if (Math.abs(d) < 60) return { t:'À l’heure', c:'d-ok' };
+  return d > 0 ? { t:`+${m} min`, c:'d-late' } : { t:`−${m} min`, c:'d-early' };
+}
+
+function badge(route){
+  return `<span class="badge" style="background:#${esc(route.c)};color:#${esc(route.t)}">${esc(route.s)}</span>`;
+}
+
+function iconFor(v){
+  const stale = v.age != null && v.age > STALE_MS;
+  const arrow = v.bearing != null && v.bearing !== 0
+    ? `<div class="arrow" style="transform:rotate(${Math.round(v.bearing)}deg)"></div>` : '';
+  const html = `<div class="bus-mk${stale ? ' stale' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div></div>`;
+  return { key: html, icon: L.divIcon({ className:'', html, iconSize:[0,0] }) };
+}
+
+function popupFor(v){
+  const d = fmtDelay(v.delay);
+  const speed = v.speed != null ? `${Math.round(v.speed * 3.6)} km/h` : '';
+  return `<div class="pop-h">${badge(v.route)}<b>${esc(v.headsign || 'Destination inconnue')}</b>${svcTag(v.svc)}</div>
+    ${v.times ? timesTable(v.times, v) : (v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b><br>` : '')}
+    <span class="delay ${d.c}">${d.t}</span>${speed ? ' · ' + speed : ''}<br>
+    <span style="opacity:.7">Position ${fmtAge(v.age)}${v.label ? ' · véhicule ' + esc(v.label) : ''}</span>
+    ${ficheLinks(v.route.s) ? `<div style="margin-top:8px">${ficheLinks(v.route.s)}</div>` : ''}`;
+}
+
+function animateTo(m, to){
+  const from = m.getLatLng();
+  const dist = from.distanceTo(to);
+  if (dist < 1 || dist > 5000) { m.setLatLng(to); return; }
+  const t0 = performance.now(), D = 900;
+  function step(t){
+    const k = Math.min(1, (t - t0) / D);
+    const e = k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2) / 2;
+    m.setLatLng([from.lat + (to.lat - from.lat) * e, from.lng + (to.lng - from.lng) * e]);
+    if (k < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function render(){
+  if (mode === 'sleep'){ renderSleep(); return; }
+  const vis = vehicles.filter(isVisible);
+  setPanel(panelOpen);
+  $('#count').textContent = vehicles.length;
+  $('#countLbl').textContent = vehicles.length > 1 ? 'cars' : 'car';
+
+  // marqueurs
+  const keep = new Set();
+  vis.forEach(v => {
+    keep.add(v.id);
+    const { key, icon } = iconFor(v);
+    let m = markers.get(v.id);
+    if (!m){
+      m = L.marker([v.lat, v.lon], { icon }).addTo(map);
+      m._key = key;
+      markers.set(v.id, m);
+    } else {
+      animateTo(m, L.latLng(v.lat, v.lon));
+      if (m._key !== key){ m.setIcon(icon); m._key = key; }
+    }
+    m.setZIndexOffset(v.age != null && v.age > STALE_MS ? 0 : 500);
+    if (m.getPopup()) m.setPopupContent(popupFor(v)); else m.bindPopup(popupFor(v));
+  });
+  markers.forEach((m, id) => { if (!keep.has(id)) { map.removeLayer(m); markers.delete(id); } });
+
+  // liste
+  const list = $('#list');
+  if (!vis.length){
+    const first = sched && sched.cur && Date.now() < sched.cur.s
+      ? `<br>Premier départ prévu à <b>${fmtHM(sched.cur.s)}</b>.` : '';
+    list.innerHTML = vehicles.length
+      ? `<div class="empty">Aucun car ne correspond au filtre.</div>`
+      : `<div class="empty">Aucun car jaune en circulation pour le moment.${first}</div>`;
+  } else {
+    vis.sort((a, b) => a.route.s.localeCompare(b.route.s, 'fr', { numeric:true }) || a.headsign.localeCompare(b.headsign));
+    list.innerHTML = vis.map(v => {
+      const d = fmtDelay(v.delay);
+      const stale = v.age != null && v.age > STALE_MS;
+      return `<div class="bus-item${stale ? ' stale' : ''}" data-id="${esc(v.id)}">
+        ${badge(v.route)}
+        <div class="info">
+          <div class="dest">→ ${esc(v.headsign || 'Destination inconnue')}${svcTag(v.svc)}</div>
+          <div class="meta">${v.stopName ? esc(v.stopName) + ' · ' : ''}${fmtAge(v.age)}</div>
+          ${timesShort(v.times)}
+          ${ficheLinks(v.route.s)}
+        </div>
+        <span class="delay ${d.c}">${d.t}</span>
+      </div>`;
+    }).join('');
+  }
+
+  renderAlerts();
+  if (view === 'board') renderBoard();
+
+  const now = Date.now();
+  const svc = sched && sched.cur ? `en service jusqu’à ~${fmtHM(sched.cur.e)}`
+            : (sched && sched.last && vehicles.length ? 'derniers cars en route' : 'vérification manuelle');
+  setStatus(`· ${svc} · ${feedTime ? fmtHM(feedTime) : '--:--'}${feedTime && now - feedTime > 10 * 60e3 ? ' (anciennes)' : ''}`);
+}
+
+function renderAlerts(){
+  const n = $('#alertCount');
+  n.hidden = !alerts.length;
+  n.textContent = alerts.length;
+  $('#alertsList').innerHTML = alerts.length
+    ? alerts.map(a => `<div class="alert"><b>${esc(a.t || 'Perturbation')}</b>${a.d ? `<p>${esc(a.d)}</p>` : ''}</div>`).join('')
+    : `<div class="card placeholder"><div class="big">✅</div>${mode === 'sleep'
+        ? 'Le réseau est fermé : les perturbations s’afficheront dès la reprise du service.'
+        : 'Aucune perturbation signalée en ce moment.'}</div>`;
+}
+
+function buildChips(){
+  const ids = Object.keys(S.routes).sort((a, b) => S.routes[a].s.localeCompare(S.routes[b].s, 'fr', { numeric:true }));
+  $('#chips').innerHTML = `<button class="chip${selected.size ? '' : ' on'}" data-r="">Toutes</button>` +
+    ids.map(id => `<button class="chip${selected.has(id) ? ' on' : ''}" data-r="${esc(id)}" title="${esc(S.routes[id].l)}">
+      <span class="dot" style="background:#${esc(S.routes[id].c)}"></span>${esc(S.routes[id].s)}</button>`).join('');
+}
+
+function drawShapes(){
+  shapeLayer.clearLayers();
+  if (!$('#showShapes').checked) return;
+  Object.keys(S.shapes || {}).forEach(rid => {
+    if (selected.size && !selected.has(rid)) return;
+    const col = '#' + ((S.routes[rid] && S.routes[rid].c) || 'F6BE00');
+    S.shapes[rid].forEach(line => {
+      L.polyline(line, { color:'#222', weight:8, opacity:.35, interactive:false }).addTo(shapeLayer);
+      L.polyline(line, { color:col, weight:5, opacity:.95, interactive:false }).addTo(shapeLayer);
+    });
+  });
+}
+
+function focusVehicle(id){
+  const m = markers.get(id);
+  if (!m){ toast('Ce car n’est pas visible sur la carte (filtre ou position trop ancienne).'); return; }
+  if (view !== 'map') setView('map');
+  setTimeout(() => {
+    map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 14), { duration:.8 });
+    setTimeout(() => m.openPopup(), 850);
+  }, 80);
+}
+
+/* ====================== Horaires à l'arrêt ====================== */
+function buildStopGroups(){
+  const byName = new Map();
+  Object.keys(S.stops || {}).forEach(id => {
+    const s = S.stops[id];
+    const key = norm(s[0]);
+    if (!key) return;
+    if (!byName.has(key)) byName.set(key, { name: s[0], key, ids: [], lat: s[1], lon: s[2] });
+    byName.get(key).ids.push(id);
+  });
+  stopGroups = [...byName.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+}
+
+function searchStops(q){
+  const words = norm(q).split(' ').filter(Boolean);
+  if (!words.length) return [];
+  return stopGroups
+    .filter(g => words.every(w => g.key.includes(w)))
+    .sort((a, b) => (b.key.startsWith(words[0]) - a.key.startsWith(words[0])) || (/gare/.test(b.key) - /gare/.test(a.key)) || a.name.localeCompare(b.name, 'fr'))
+    .slice(0, 8);
+}
+
+let sugIdx = -1, sugItems = [];
+function showSuggest(){
+  const q = $('#stopInput').value;
+  sugItems = searchStops(q);
+  sugIdx = -1;
+  const ul = $('#suggest');
+  if (!sugItems.length){ ul.hidden = true; return; }
+  ul.innerHTML = sugItems.map((g, i) => `<li data-i="${i}"><span>${esc(g.name)}</span>${favs.includes(g.name) ? '<small>★</small>' : ''}</li>`).join('');
+  ul.hidden = false;
+}
+function pickStop(g){
+  if (!g) return;
+  $('#suggest').hidden = true;
+  $('#stopInput').value = g.name;
+  selectStop(g);
+}
+$('#stopInput').addEventListener('input', showSuggest);
+$('#stopInput').addEventListener('focus', showSuggest);
+$('#stopInput').addEventListener('keydown', e => {
+  const ul = $('#suggest');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    if (!sugItems.length) return;
+    e.preventDefault();
+    sugIdx = (sugIdx + (e.key === 'ArrowDown' ? 1 : -1) + sugItems.length) % sugItems.length;
+    ul.querySelectorAll('li').forEach((li, i) => li.classList.toggle('act', i === sugIdx));
+  } else if (e.key === 'Enter'){
+    e.preventDefault();
+    pickStop(sugItems[sugIdx >= 0 ? sugIdx : 0]);
+  } else if (e.key === 'Escape'){ ul.hidden = true; }
+});
+$('#suggest').addEventListener('mousedown', e => {
+  const li = e.target.closest('li'); if (li){ e.preventDefault(); pickStop(sugItems[+li.dataset.i]); }
+});
+document.addEventListener('click', e => { if (!e.target.closest('.field-row')) $('#suggest').hidden = true; });
+
+async function selectStop(g){
+  board = { group: g, data: null, loading: true, at: 0 };
+  savePrefs();
+  updateFavBtn();
+  renderBoard();
+  try {
+    board.data = JSON.parse(await call('getStopBoard', g.ids));
+    board.at = Date.now();
+  } catch(e){
+    board.error = errMsg(e);
+  }
+  board.loading = false;
+  renderBoard();
+  updateAlertUI();
+  if (alertCfg.on) checkAlerts();
+}
+
+function restoreLastStop(){
+  try {
+    const name = localStorage.getItem('cj_stop');
+    const g = name && stopGroups.find(x => x.name === name);
+    if (g){ $('#stopInput').value = g.name; selectStop(g); }
+  } catch(e){}
+}
+
+/* favoris */
+function updateFavBtn(){
+  const on = board.group && favs.includes(board.group.name);
+  const b = $('#favBtn');
+  b.classList.toggle('on', !!on);
+  b.textContent = on ? '★' : '☆';
+  b.title = on ? 'Retirer des favoris' : 'Ajouter aux favoris';
+}
+function renderFavs(){
+  const box = $('#favs');
+  let names = favs.filter(n => stopGroups.some(g => g.name === n));
+  let lbl = 'Mes favoris :';
+  if (!names.length){
+    lbl = 'Gares principales :';
+    names = ['gare de st denis', 'gare de st pierre', 'gare de st benoit', 'gare de st paul', 'aeroport roland garros']
+      .map(k => (stopGroups.find(g => g.key === k) || stopGroups.find(g => g.key.startsWith(k)) || {}).name).filter(Boolean);
+  }
+  box.innerHTML = names.length ? `<span class="lbl">${lbl}</span>` + names.map(n => `<button class="chip" data-stop="${esc(n)}">${favs.includes(n) ? '★ ' : ''}${esc(n)}</button>`).join('') : '';
+}
+$('#favs').addEventListener('click', e => {
+  const b = e.target.closest('[data-stop]'); if (!b) return;
+  pickStop(stopGroups.find(g => g.name === b.dataset.stop));
+});
+$('#favBtn').addEventListener('click', () => {
+  if (!board.group){ toast('Choisis d’abord un arrêt.'); return; }
+  const n = board.group.name;
+  favs = favs.includes(n) ? favs.filter(x => x !== n) : [...favs, n];
+  savePrefs(); updateFavBtn(); renderFavs();
+});
+
+/** Passages GTFS à venir à l'arrêt (prévu + temps réel), triés par heure effective. */
+function gtfsRows(g){
+  const data = board.data || {};
+  const now = Date.now(), today = midnightMs(now);
+  const days = [today - 864e5, today, today + 864e5];
+  const active = days.map(d => activeServices(d));
+  const vehByTrip = {};
+  vehicles.forEach(v => { if (v.tripId) vehByTrip[v.tripId] = v; });
+  const rows = [];
+  g.ids.forEach(id => (data[id] || []).forEach(([tid, sec]) => {
+    const ti = S.trips[tid];
+    if (!ti || ti[6] === id) return;                              // terminus : pas un départ
+    days.forEach((d, i) => {
+      if (active[i] && !active[i].has(ti[7])) return;            // service non circulé ce jour-là
+      const schedMs = d + sec * 1000;
+      if (schedMs < now - 60 * 60e3 || schedMs > now + 24 * 3600e3) return;
+      let real = null;
+      const tu = lastTus[tid];
+      // le temps réel ne concerne qu'une seule circulation : celle du jour indiqué, sinon la plus proche de maintenant
+      const sameRun = tu && (tu.trip.startDate ? serviceDayMs(tu.trip.startDate, 0) === d : Math.abs(schedMs - now) < 12 * 3600e3);
+      if (sameRun){
+        const stu = (tu.stopTimeUpdate || []).find(s => s.stopId === id);
+        real = stu ? stuTime(stu, 'departure', schedMs) : (tu.delay != null ? schedMs + tu.delay * 1000 : null);
+      }
+      const eff = real != null ? real : schedMs;
+      if (eff < now - 60e3) return;                                // déjà parti
+      const runNow = tu ? sameRun : Math.abs(schedMs - now) < 12 * 3600e3;
+      const rt0 = S.routes[ti[0]] || { s:'?', c:'F6BE00', t:'222222' };
+      rows.push({ eff, sched: schedMs, real, route: rt0, sens: sensFor(rt0.s, ti[1] || '', ti[2]),
+                  dest: ti[1] || '', tag: svcTag(ti[7]), veh: runNow ? vehByTrip[tid] : null, used: false });
+    });
+  }));
+  return rows.sort((a, b) => a.eff - b.eff);
+}
+
+/**
+ * Passages lus dans les fiches carjaune.re : on prend automatiquement le tableau du jour
+ * (période scolaire, vacances, samedi, dimanche/férié), puis on y applique le temps réel du car correspondant.
+ * Renvoie null si aucune fiche lue ne dessert cet arrêt.
+ */
+function ficheRows(g, pool){
+  const urls = Object.keys(FICHE_DATA);
+  if (!urls.length) return null;
+  const now = Date.now(), today = midnightMs(now);
+  const out = [], seen = new Set(), coveredLines = new Set();
+  let covered = false;
+  urls.forEach(url => {
+    const lines = linesOfUrl(url);
+    [today - 864e5, today, today + 864e5].forEach(d => {
+      const di = dayInfo(d);
+      FICHE_DATA[url].tables.forEach(t => {
+        const idx = t.stops.map((s, i) => sameStop(s, g.name) ? i : -1).filter(i => i >= 0);
+        if (!idx.length) return;
+        covered = true;
+        lines.forEach(l => coveredLines.add(l));
+        if (!tableApplies(t, di)) return;
+        idx.forEach(i => t.trips.forEach(col => {
+          const m = col[i];
+          if (m == null || !col.slice(i + 1).some(v => v != null)) return;   // pas desservi, ou terminus de ce car
+          const sched = d + m * 60000;
+          if (sched < now - 60 * 60e3 || sched > now + 24 * 3600e3) return;
+          const k = url + '|' + t.dir + '|' + sched;
+          if (seen.has(k)) return;
+          seen.add(k);
+          // fiche commune (E1/E1X…) : une colonne qui saute la plupart des arrêts est le car express
+          let line = lines[0] || '?';
+          const xl = lines.find(l => /X$/i.test(l)), nl = lines.find(l => !/X$/i.test(l));
+          if (xl && nl){
+            const mid = col.slice(1, -1);
+            line = mid.length && mid.filter(v => v == null).length / mid.length >= 0.5 ? xl : nl;
+          }
+          // temps réel : car GTFS de la même ligne au même horaire (± 2 min)
+          const mt = pool.find(r => !r.used && r.route.s === line && Math.abs(r.sched - sched) <= 120e3)
+                  || pool.find(r => !r.used && lines.includes(r.route.s) && Math.abs(r.sched - sched) <= 120e3);
+          if (mt) mt.used = true;
+          const real = mt ? mt.real : null;
+          const eff = real != null ? real : sched;
+          if (eff < now - 60e3) return;
+          out.push({ eff, sched, real, route: mt ? mt.route : routeByShort(line), sens: ficheSens(url, t.dir),
+                     dest: t.dir, tag: '', veh: mt ? mt.veh : null, kind: tableKindLabel(t) });
+        }));
+      });
+    });
+  });
+  if (!covered) return null;
+  // lignes de cet arrêt dont la fiche n'est pas (encore) lue : horaires GTFS
+  pool.forEach(r => { if (!r.used && !coveredLines.has(r.route.s)) out.push(r); });
+  return out.sort((a, b) => a.eff - b.eff);
+}
+
+function renderBoard(){
+  const card = $('#boardCard');
+  const g = board.group;
+  renderLinesBox();
+  if (!g){
+    card.innerHTML = `<div class="placeholder"><div class="big">🚏</div>Choisis un arrêt (recherche ou boutons par ligne) pour voir ses prochains départs.</div>`;
+    return;
+  }
+  const pNow = (CAL.holidays || []).length ? periodOf(Date.now()) : null;
+  const pTxt = !pNow ? '' : pNow.type === 'ferie' ? `<span class="tag tag-f">Horaires de jour férié</span>`
+             : pNow.type === 'vacances' ? `<span class="tag tag-v">Horaires vacances scolaires</span>`
+             : `<span class="tag tag-s">Horaires période scolaire</span>`;
+  const head = `<div class="board-head"><h2>${esc(g.name)}${pTxt}</h2><span class="upd">${
+    mode === 'sleep' ? 'Réseau fermé · horaires théoriques'
+    : `Temps réel ${feedTime ? 'à ' + fmtHM(feedTime) : ''} · actualisation auto`}</span></div>`;
+  if (board.loading){ card.innerHTML = head + `<div class="placeholder">Chargement des passages…</div>`; return; }
+
+  const pool = board.error ? [] : gtfsRows(g);
+  const fr = ficheRows(g, pool);
+  const rows = (fr || pool).slice(0, BOARD_MAX);
+  const src = fr ? `<p class="src-note">📄 Horaires lus dans les fiches carjaune.re, tableau choisi automatiquement selon le jour · temps réel du flux Car Jaune</p>`
+                 : `<p class="src-note">Horaires du GTFS officiel${ficheJob.running ? ' (fiches carjaune.re en cours de lecture…)' : ''}</p>`;
+  if (!rows.length){
+    card.innerHTML = head + src + `<div class="placeholder"><div class="big">🌙</div>Aucun départ prévu à cet arrêt dans les prochaines 24 h.</div>`;
+    return;
+  }
+  const now = Date.now();
+  const groupBtns = `<span class="grp"><button data-grp="sens" class="${boardGroupBy === 'sens' ? 'on' : ''}">Aller / retour</button><button data-grp="heure" class="${boardGroupBy === 'heure' ? 'on' : ''}">Par heure</button></span>`;
+  const table = list => {
+    let lastDay = midnightMs(now), html = '';
+    list.forEach(r => {
+      const day = midnightMs(r.eff);
+      if (day !== lastDay){
+        const pd = (CAL.holidays || []).length ? periodOf(r.eff) : null;
+        const pdTxt = !pd ? '' : pd.type === 'ferie' ? ` · férié (${esc(pd.name)})` : pd.type === 'vacances' ? ' · vacances scolaires' : ' · période scolaire';
+        html += `<tr class="sep"><td colspan="5">${dayLabel(r.eff).replace(/^./, c => c.toUpperCase())}${pdTxt}</td></tr>`;
+        lastDay = day;
+      }
+      const mins = Math.round((r.eff - now) / 60000);
+      const when = mins <= 0 ? `<span class="when soon">À quai</span>`
+                 : mins < 60 ? `<span class="when${mins <= 2 ? ' soon' : ''}">${mins}<small>min</small></span>`
+                 : `<span class="when">${fmtHM(r.eff)}</span>`;
+      const status = r.real != null ? `<span class="rt">Temps réel</span>` : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>`;
+      const sensTag = boardGroupBy === 'heure' && r.sens ? `<span class="tag ${r.sens === 'aller' ? 'tag-s' : 'tag-v'}">${r.sens}</span>` : '';
+      html += `<tr>
+        <td>${when}</td>
+        <td>${badge(r.route)}</td>
+        <td class="b-dest">${esc(r.dest)}${sensTag}${r.tag}<small>${r.veh && r.veh.stopName ? 'vers ' + esc(r.veh.stopName) : ''}</small>
+          ${r.veh ? `<button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}</td>
+        <td>${fmtTime(r.real, r.sched)}</td>
+        <td>${status}</td>
+      </tr>`;
+    });
+    return `<table class="board"><thead><tr><th>Départ</th><th>Ligne</th><th>Direction</th><th>Horaire</th><th>Info</th></tr></thead><tbody>${html}</tbody></table>`;
+  };
+  const all = fr || pool;
+  let body = '';
+  if (boardGroupBy === 'sens'){
+    ['aller', 'retour'].forEach(s => {
+      const list = all.filter(r => (r.sens || 'aller') === s).slice(0, Math.ceil(BOARD_MAX / 2) + 3);
+      if (!list.length) return;
+      const dests = [...new Set(list.map(r => `${r.route.s} → ${r.dest}`))].slice(0, 4).join(' · ');
+      body += `<div class="sens-h sens-${s}"><span class="pillx">${s === 'aller' ? '➡️ Aller' : '⬅️ Retour'}</span><small>${esc(dests)}</small></div>` + table(list);
+    });
+  } else body = table(rows);
+  card.innerHTML = head + src.replace('</p>', ` ${groupBtns}</p>`) + body;
+}
+$('#boardCard').addEventListener('click', e => {
+  const gb = e.target.closest('[data-grp]');
+  if (gb){ boardGroupBy = gb.dataset.grp; savePrefs(); renderBoard(); return; }
+  const b = e.target.closest('[data-veh]'); if (b) focusVehicle(b.dataset.veh);
+});
+
+/* ====================== Interactions carte ====================== */
+$('#chips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  const r = b.dataset.r;
+  if (!r) selected.clear();
+  else if (selected.has(r)) selected.delete(r); else selected.add(r);
+  savePrefs(); buildChips(); drawShapes(); render();
+});
+
+$('#list').addEventListener('click', e => {
+  if (e.target.id === 'checkNow'){ checkNow(); return; }
+  if (e.target.closest('a')) return;        // clic sur un lien PDF : on laisse ouvrir
+  const it = e.target.closest('.bus-item'); if (!it) return;
+  const m = markers.get(it.dataset.id); if (!m) return;
+  if (isMobile()){ panelOpen = false; setPanel(false); }   // sur mobile, on referme la liste pour voir le car
+  map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 14), { duration:.8 });
+  setTimeout(() => m.openPopup(), 850);
+});
+
+$('#search').addEventListener('input', e => { query = e.target.value.trim().toLowerCase(); render(); });
+$('#showShapes').addEventListener('change', () => { savePrefs(); drawShapes(); });
+$('#refresh').addEventListener('click', () => mode === 'sleep' ? checkNow() : refresh());
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  schedAt = 0; updateMode();               // l'appareil a pu dormir : on recalcule
+  if (mode === 'live' && Date.now() >= nextAt) refresh();
+});
+
+let lastBoardTick = 0, lastAlertTick = 0;
+function tick(){
+  if (!FeedMessage) return;
+  updateMode();
+  if (lastPeriodKey && dayKey(Date.now()) !== lastPeriodKey){ renderPeriod(); buildFiches(); }   // passage à minuit
+  if ((view === 'board' || view === 'trip') && Date.now() - lastBoardTick > 15000){ lastBoardTick = Date.now(); if (view === 'board') renderBoard(); else renderTrip(); }
+  if (mode === 'sleep'){ updateSleepCountdown(); if (alertCfg.on && Date.now() - lastAlertTick > 15000){ lastAlertTick = Date.now(); checkAlerts(); } return; }
+  const left = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
+  $('#countdown').textContent = busy ? 'Actualisation…' : `Actualisation dans ${left} s`;
+  if (!busy && (!document.hidden || alertCfg.on) && Date.now() >= nextAt) refresh();
+  if (alertCfg.on && Date.now() - lastAlertTick > 15000){ lastAlertTick = Date.now(); checkAlerts(); }
+  if (vehicles.length && !busy){
+    const now = Date.now();
+    vehicles.forEach(v => { if (v.ts) v.age = Math.max(0, now - v.ts); });
+  }
+}
+
+/* ====================== Préférences & divers ====================== */
+function savePrefs(){
+  try {
+    localStorage.setItem('cj_prefs', JSON.stringify({ sel:[...selected], shapes:$('#showShapes').checked, view, favs, line: selLine }));
+    if (board.group) localStorage.setItem('cj_stop', board.group.name);
+    localStorage.setItem('cj_trip', JSON.stringify({ a: trip.a, b: trip.b, mode: trip.mode, grp: boardGroupBy }));
+  } catch(e){}
+}
+function loadPrefs(){
+  try {
+    const p = JSON.parse(localStorage.getItem('cj_prefs') || '{}');
+    if (Array.isArray(p.sel)) selected = new Set(p.sel);
+    if (typeof p.shapes === 'boolean') $('#showShapes').checked = p.shapes;
+    if (p.view) view = p.view;
+    if (Array.isArray(p.favs)) favs = p.favs;
+    const qv = new URLSearchParams(location.search).get('vue');   // raccourcis de l'appli installée
+    if (qv) view = qv;
+    if (typeof p.line === 'string') selLine = p.line;
+    const tp = JSON.parse(localStorage.getItem('cj_trip') || '{}');
+    if (tp.a) trip.a = tp.a; if (tp.b) trip.b = tp.b; if (tp.mode) trip.mode = tp.mode; if (tp.grp) boardGroupBy = tp.grp;
+  } catch(e){}
+}
+function setStatus(t){ $('#status').textContent = t; }
+let toastTimer;
+function toast(t){
+  const el = $('#toast'); el.textContent = t; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 6000);
+}
+
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!installEvt) return;
+  installEvt.prompt(); await installEvt.userChoice; installEvt = null;
+  document.getElementById('installBtn').hidden = true;
+});
+if (!IN_GAS){ document.getElementById('apiBtn').hidden = false; document.getElementById('apiBtn').addEventListener('click', setupApiScreen); }
+
+init();
+</script>
+</body>
+</html>

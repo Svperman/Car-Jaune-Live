@@ -6,7 +6,24 @@ mon trajet aller/retour, alertes d'arrivée selon ta position.
 L'appli (ce dossier, sur GitHub Pages) parle au serveur **Google Apps Script** (`Code.gs`)
 qui récupère les données officielles. Rien à payer, pas de carte bancaire.
 
-## 1. Mettre à jour le serveur Apps Script
+## 1. Le serveur Apps Script (Google Sheet « Car Jaune »)
+
+Les fichiers du serveur sont dans `apps-script/` : `Code.gs`, `Index.html`, `appsscript.json`
+(fuseau Indian/Reunion, application Web exécutée « en tant que moi », accès « Tout le monde »).
+
+**Avec clasp (une commande)** :
+
+```powershell
+cd apps-script
+.\deploy.ps1 -ScriptId "ID_DU_SCRIPT"
+```
+
+ID du script : Sheet « Car Jaune » → Extensions → Apps Script → ⚙️ Paramètres du projet → *ID du script*.
+Pour les mises à jour suivantes en gardant la même URL : `.\deploy.ps1 -ScriptId "…" -DeploymentId "AKfy…"`.
+
+**Ou à la main** : voir ci-dessous.
+
+### À la main
 
 1. Colle le nouveau `Code.gs` dans ton projet Apps Script (il ajoute l'API pour l'appli).
 2. **Déployer → Gérer les déploiements → Modifier → Nouvelle version**.
