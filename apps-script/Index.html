@@ -611,7 +611,7 @@ $('#btnFit').addEventListener('click', () => map.flyToBounds(REUNION, { duration
 /* ====================== Appels serveur ====================== */
 /* Adresse de ton Apps Script déployé (…/exec) pour l'appli installée sur le téléphone.
    Laisse vide pour la demander au premier lancement (elle est alors mémorisée). */
-const API_URL = '';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwp8BXvTf5oRuGE5MDVd7bS7vAyD3IBD7g0ug0EgF8Qp5u41Nmx3dokUTWVZ8RdU0s/exec';
 const IN_GAS = typeof google !== 'undefined' && !!(google.script && google.script.run);
 function apiUrl(){
   let u = API_URL;
