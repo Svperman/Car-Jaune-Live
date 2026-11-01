@@ -50,11 +50,22 @@ function doGet(e) {
     try { args = p.args ? JSON.parse(p.args) : []; } catch (err) { /* arguments invalides */ }
     return api_(p.action, args);
   }
-  return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Car Jaune Live')
+  let page;
+  try {
+    page = HtmlService.createHtmlOutputFromFile('Index');
+  } catch (err) {
+    // pas de fichier Index dans le projet : l'appli est servie par GitHub Pages
+    page = HtmlService.createHtmlOutput(
+      '<meta http-equiv="refresh" content="0;url=' + APP_URL + '">' +
+      '<p style="font-family:sans-serif">Ouverture de <a href="' + APP_URL + '" target="_top">Car Jaune Live</a>…</p>');
+  }
+  return page.setTitle('Car Jaune Live')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
+
+// Adresse de l'appli installable (GitHub Pages)
+const APP_URL = 'https://svperman.github.io/Car-Jaune-Live/';
 
 // Envois volumineux (fiches lues) : POST avec un corps JSON {action, args}
 function doPost(e) {
