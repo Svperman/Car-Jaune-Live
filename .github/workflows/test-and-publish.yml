@@ -43,7 +43,7 @@ jobs:
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site
-          cp -r manifest.webmanifest sw.js icons lib _site/
+          cp -r manifest.webmanifest sw.js icons lib data _site/
           npx html-minifier-terser --collapse-whitespace --conservative-collapse --remove-comments \
             --minify-css true --minify-js true index.html -o _site/index.html
           echo "index.html : $(wc -c < index.html) → $(wc -c < _site/index.html) octets"
