@@ -290,6 +290,20 @@
     .jt th:nth-child(5),.jt td:nth-child(5){display:none}
   }
 
+  /* ---------- autour de moi ---------- */
+  .near-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .near-btn{border:1.5px solid var(--ligne);background:#fff;border-radius:25px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:var(--titre);font-weight:600}
+  .near-btn:hover{border-color:var(--jaune)}
+  .near-btn.on{background:var(--jaune);border-color:var(--jaune)}
+  .near-btn small{color:var(--gris);font-weight:600;margin-left:4px}
+  .far-note{background:#FFF5D1;border-radius:10px;padding:8px 12px;margin-top:6px;color:#6B5200}
+  .me-dot{width:16px;height:16px;border-radius:50%;background:#1D6FD8;border:3px solid #fff;box-shadow:0 0 0 2px rgba(29,111,216,.35),0 2px 6px rgba(0,0,0,.35)}
+  .stop-dot{width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #222;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+  .stop-dot.gare{width:16px;height:16px;background:var(--jaune)}
+  table.board tr.toolate td{opacity:.45}
+  .walk{font-size:11.5px;color:var(--retard);font-weight:700}
+  .walk.ok{color:var(--ok)}
+
   /* ---------- fiches & infos trafic ---------- */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
   .fcard{background:#fff;border-radius:10px;box-shadow:var(--ombre);padding:16px;display:flex;flex-direction:column;gap:10px}
@@ -379,7 +393,7 @@
           <div><label for="tripB">Aller : j’arrive à</label><input id="tripB" class="search" list="stopList" placeholder="ex. Gare de St-Denis" autocomplete="off"></div>
         </div>
         <div class="al-row">
-          <button class="btn ghost small" id="tripGeo">📍 Départ = gare la plus proche</button>
+          <button class="btn ghost small" id="tripGeo">📍 Départ = arrêt le plus proche</button>
           <span>Sens :</span>
           <div class="seg" id="tripMode"><button data-m="auto">Automatique</button><button data-m="aller">Aller</button><button data-m="retour">Retour</button></div>
         </div>
@@ -406,7 +420,7 @@
       <div class="card" id="alertCard">
         <h2>🔔 Alertes d'arrivée en gare</h2>
         <div class="al-row">
-          <button class="btn" id="geoBtn">📍 Gare la plus proche de moi</button>
+          <button class="btn" id="geoBtn">📍 Arrêts autour de moi</button>
           <label><input type="checkbox" id="alFollow"> Suivre ma position</label>
         </div>
         <div class="src-note" id="geoInfo"></div>
@@ -586,7 +600,7 @@ const MapButtons = L.Control.extend({
   options:{ position:'topright' },
   onAdd(){
     const box = L.DomUtil.create('div', 'map-ctl');
-    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnFs">⛶ Plein écran</button><button id="btnFit">🏝️ Toute l'île</button>`;
+    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnMe">📍 Ma position</button><button id="btnFs">⛶ Plein écran</button><button id="btnFit">🏝️ Toute l'île</button>`;
     L.DomEvent.disableClickPropagation(box);
     return box;
   }
@@ -607,6 +621,7 @@ $('#btnFs').addEventListener('click', () => {
   $('#btnFs').textContent = on ? '⤡ Quitter' : '⛶ Plein écran';
 });
 $('#btnFit').addEventListener('click', () => map.flyToBounds(REUNION, { duration:.8 }));
+$('#btnMe').addEventListener('click', () => locateOnMap());
 
 /* ====================== Appels serveur ====================== */
 /* Adresse de ton Apps Script déployé (…/exec) pour l'appli installée sur le téléphone.
@@ -1269,14 +1284,19 @@ function tripReady(){ return trip.a && trip.b && fpNorm(trip.a) !== fpNorm(trip.
 function detectSens(){
   const A = findGroup(trip.a), B = findGroup(trip.b);
   if (trip.mode === 'aller' || trip.mode === 'retour') return { sens: trip.mode, why: 'choisi à la main', A, B };
+  const hr = reuDate(Date.now()).h, bySlot = hr < 13 ? 'aller' : 'retour';
   if (myPos && isFinite(A.lat) && isFinite(B.lat)){
     const da = distM(myPos.lat, myPos.lon, A.lat, A.lon), db = distM(myPos.lat, myPos.lon, B.lat, B.lon);
-    return da <= db ? { sens:'aller', why:`détecté : tu es à ${fmtDist(da)} de ${A.name}`, A, B }
-                    : { sens:'retour', why:`détecté : tu es à ${fmtDist(db)} de ${B.name}`, A, B };
+    const near = Math.min(da, db), ratio = Math.max(da, db) / Math.max(near, 1);
+    // nettement plus près d'une des deux gares (ou tout près) : c'est elle, ton point de départ
+    if (near <= NEAR_M || ratio >= 1.6)
+      return da <= db ? { sens:'aller', why:`détecté : tu es à ${fmtDist(da)} de ${A.name}`, A, B, dist: da }
+                      : { sens:'retour', why:`détecté : tu es à ${fmtDist(db)} de ${B.name}`, A, B, dist: db };
+    // loin des deux, à mi-chemin : on se fie à l'heure
+    return { sens: bySlot, why:`tu es loin des deux gares (${fmtDist(da)} / ${fmtDist(db)}) : sens choisi selon l’heure (${hr < 13 ? 'matin = aller' : 'après-midi = retour'})`, A, B,
+             dist: bySlot === 'aller' ? da : db };
   }
-  const hr = reuDate(Date.now()).h;
-  return hr < 13 ? { sens:'aller', why:'détecté à l’heure (matin) : active ta position pour plus de précision', A, B }
-                 : { sens:'retour', why:'détecté à l’heure (après-midi) : active ta position pour plus de précision', A, B };
+  return { sens: bySlot, why:`détecté à l’heure (${hr < 13 ? 'matin' : 'après-midi'}) : active ta position pour plus de précision`, A, B };
 }
 
 async function loadTripBoard(){
@@ -1383,6 +1403,11 @@ function renderTrip(){
   }
   const rows = journeyRows(from, to).slice(0, 12);
   const now = Date.now();
+  // à pied jusqu'à la gare de départ : on signale les cars que tu ne peux plus attraper
+  const dFrom = myPos && isFinite(from.lat) ? distM(myPos.lat, myPos.lon, from.lat, from.lon) : null;
+  const walk = dFrom != null && dFrom <= 6000 ? walkMin(dFrom) : null;
+  if (dFrom != null) html += `<p class="src-note">📍 Tu es à <b>${fmtDist(dFrom)}</b> de ${esc(from.name)} (${fmtWalk(dFrom)})${
+    dFrom > 6000 ? ' : prévois un autre moyen pour rejoindre la gare.' : walk > 1 ? ' : les cars que tu ne peux plus attraper à pied sont grisés.' : '.'}</p>`;
   if (!rows.length){
     html += `<div class="placeholder"><div class="big">🤔</div>Aucun car direct de ${esc(from.name)} vers ${esc(to.name)} dans les prochaines 24 h.<br>Vérifie les noms des gares (elles doivent être sur la même ligne).</div>`;
   } else {
@@ -1393,7 +1418,10 @@ function renderTrip(){
       const mins = Math.round((r.eff - now) / 60000);
       const when = mins <= 0 ? `<span class="when soon">À quai</span>` : mins < 60 ? `<span class="when${mins <= 2 ? ' soon' : ''}">${mins}<small>min</small></span>` : `<span class="when">${fmtHM(r.eff)}</span>`;
       const arrEff = r.rarr != null ? r.rarr : r.arr;
-      t += `<tr><td>${when}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched)}</td>
+      const late = walk != null && walk > 1 && mins < walk;
+      const leave = walk != null && walk > 1 && !late && mins - walk <= 30
+        ? `<br><span class="walk${mins - walk > 5 ? ' ok' : ''}">🚶 pars ${mins - walk <= 0 ? 'maintenant' : 'dans ' + (mins - walk) + ' min'}</span>` : '';
+      t += `<tr class="${late ? 'toolate' : ''}"><td>${when}${leave}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched)}</td>
         <td class="arr">${fmtTime(r.rarr, r.arr, r.rarr != null && r.real != null)}</td>
         <td><span class="dur">${Math.round((arrEff - r.eff) / 60000)} min</span></td>
         <td>${r.real != null ? '<span class="rt">Temps réel</span>' : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>`}
@@ -1422,8 +1450,11 @@ $('#tripGeo').addEventListener('click', () => {
   if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return; }
   navigator.geolocation.getCurrentPosition(p => {
     myPos = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
-    const n = nearestStop(myPos.lat, myPos.lon), pick = n.gare || n.stop;
-    if (!pick) return;
+    showMeOnMap();
+    const r = pickStopFor(myPos.lat, myPos.lon);
+    if (!r) return;
+    const pick = r.pick;
+    if (r.far) toast(`Tu es à ${fmtDist(pick.d)} de ${pick.g.name} : vérifie que c’est bien ta gare de départ.`);
     trip.a = pick.g.name; $('#tripA').value = trip.a;
     tripBoard = { key:'', data:null, loading:false };
     savePrefs(); renderTrip();
@@ -1467,22 +1498,82 @@ function nearestStop(lat, lon){
   return { gare: bestG, stop: bestS };
 }
 const fmtDist = d => d < 1000 ? `${Math.round(d / 10) * 10} m` : `${(d / 1000).toFixed(1).replace('.', ',')} km`;
+const NEAR_M = 1500;                                    // au-delà, tu n'es « à » aucun arrêt
+const walkMin = d => Math.max(1, Math.round(d * 1.3 / 80));   // à pied ~4,8 km/h, détours compris
+const fmtWalk = d => d > 6000 ? 'trop loin à pied' : `~${walkMin(d)} min à pied`;
+
+/** Arrêts les plus proches (tous arrêts, gares comprises), triés par distance. */
+function nearbyStops(lat, lon, n){
+  return stopGroups.filter(g => isFinite(g.lat) && isFinite(g.lon))
+    .map(g => ({ g, d: distM(lat, lon, g.lat, g.lon) })).sort((a, b) => a.d - b.d).slice(0, n || 6);
+}
+/** Arrêt à proposer : le plus proche, sauf si une gare est presque aussi près. */
+function pickStopFor(lat, lon){
+  const list = nearbyStops(lat, lon, 8);
+  if (!list.length) return null;
+  const st = list[0], gare = list.find(x => isGare(x.g));
+  const pick = gare && gare.d <= Math.max(st.d * 1.5, st.d + 400) ? gare : st;
+  return { pick, list: list.slice(0, 6), far: st.d > NEAR_M };
+}
+function nearButtons(list, cur){
+  return `<div class="near-list">` + list.map(x => `<button class="near-btn${cur && x.g.name === cur ? ' on' : ''}" data-near="${esc(x.g.name)}">${isGare(x.g) ? '🚉 ' : '🚏 '}${esc(x.g.name)}<small>${fmtDist(x.d)}</small></button>`).join('') + `</div>`;
+}
 
 function useMyPosition(pos, auto){
   myPos = { lat: pos.coords.latitude, lon: pos.coords.longitude, acc: pos.coords.accuracy };
-  const n = nearestStop(myPos.lat, myPos.lon);
-  if (!n.gare && !n.stop){ $('#geoInfo').textContent = 'Aucun arrêt trouvé autour de toi.'; return; }
-  const pick = n.gare || n.stop;
-  const other = n.stop && n.gare && n.stop.g !== n.gare.g && n.stop.d < n.gare.d
-    ? ` · arrêt le plus proche : <a href="#" data-near="${esc(n.stop.g.name)}">${esc(n.stop.g.name)}</a> (${fmtDist(n.stop.d)})` : '';
-  $('#geoInfo').innerHTML = `📍 Gare la plus proche : <b>${esc(pick.g.name)}</b> à ${fmtDist(pick.d)} (précision ± ${fmtDist(myPos.acc || 0)})${other}`;
+  showMeOnMap();
+  const r = pickStopFor(myPos.lat, myPos.lon);
+  if (!r){ $('#geoInfo').textContent = 'Aucun arrêt trouvé.'; return; }
+  const p = r.pick, prec = myPos.acc ? ` · précision ± ${fmtDist(myPos.acc)}` : '';
+  // loin de tout arrêt : l'appli fonctionne quand même, on ne change pas l'arrêt suivi tout seul
+  const keepCurrent = r.far && auto && board.group;
+  $('#geoInfo').innerHTML = (r.far
+      ? `<div class="far-note">📍 Tu es à <b>${fmtDist(r.list[0].d)}</b> de l’arrêt le plus proche (${esc(r.list[0].g.name)}, ${fmtWalk(r.list[0].d)}).
+         L’appli marche partout : ${board.group ? `je garde <b>${esc(board.group.name)}</b>, ` : ''}choisis un arrêt ci-dessous ou cherche-le.</div>`
+      : `📍 Arrêt le plus proche : <b>${esc(p.g.name)}</b> à ${fmtDist(p.d)} (${fmtWalk(p.d)})${prec}`)
+    + nearButtons(r.list, board.group && board.group.name);
   if (view === 'trip' || (alertCfg.on && alertCfg.journey)){ renderTrip(); if (alertCfg.on) checkAlerts(); }
   if (alertCfg.on && alertCfg.journey) return;            // en mode trajet, c'est le sens qui change, pas l'arrêt
-  if (!board.group || board.group.name !== pick.g.name){
-    if (auto && board.group && alertCfg.on) notify('📍 Nouvelle gare suivie', `Tu es maintenant plus près de ${pick.g.name} : les alertes la suivent.`, 'none');
-    $('#stopInput').value = pick.g.name;
-    selectStop(pick.g);
+  if (keepCurrent) return;
+  if (!board.group || board.group.name !== p.g.name){
+    if (auto && board.group && alertCfg.on) notify('📍 Nouvel arrêt suivi', `Tu es maintenant plus près de ${p.g.name} (${fmtDist(p.d)}) : les alertes le suivent.`, 'none');
+    $('#stopInput').value = p.g.name;
+    selectStop(p.g);
   }
+}
+
+/* ---------- ma position sur la carte ---------- */
+const meLayer = L.layerGroup().addTo(map);
+function showMeOnMap(){
+  meLayer.clearLayers();
+  if (!myPos) return;
+  if (myPos.acc && myPos.acc < 2000) L.circle([myPos.lat, myPos.lon], { radius: myPos.acc, color:'#1D6FD8', weight:1, fillOpacity:.08, interactive:false }).addTo(meLayer);
+  L.marker([myPos.lat, myPos.lon], { icon: L.divIcon({ className:'', html:'<div class="me-dot"></div>', iconSize:[16, 16], iconAnchor:[8, 8] }), zIndexOffset: 1000 })
+    .bindTooltip('Moi').addTo(meLayer);
+  nearbyStops(myPos.lat, myPos.lon, 6).forEach(x => {
+    const g = isGare(x.g);
+    L.marker([x.g.lat, x.g.lon], { icon: L.divIcon({ className:'', html:`<div class="stop-dot${g ? ' gare' : ''}"></div>`, iconSize: g ? [16, 16] : [12, 12] }) })
+      .bindPopup(`<b>${esc(x.g.name)}</b><br>${fmtDist(x.d)} · ${fmtWalk(x.d)}<br><button class="btn small" style="margin-top:6px" data-open-stop="${esc(x.g.name)}">🕒 Prochains départs</button>`)
+      .addTo(meLayer);
+  });
+}
+map.on('popupopen', e => {
+  const b = e.popup.getElement().querySelector('[data-open-stop]');
+  if (b) b.onclick = () => {
+    const g = stopGroups.find(x => x.name === b.dataset.openStop);
+    if (g){ $('#stopInput').value = g.name; selectStop(g); setView('board'); }
+  };
+});
+function locateOnMap(){
+  if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    myPos = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
+    showMeOnMap();
+    const near = nearbyStops(myPos.lat, myPos.lon, 3);
+    const pts = [[myPos.lat, myPos.lon]].concat(near.map(x => [x.g.lat, x.g.lon]));
+    map.flyToBounds(pts, { padding:[60, 60], maxZoom: 16, duration:.8 });
+    if (near[0] && near[0].d > NEAR_M) toast(`Tu es à ${fmtDist(near[0].d)} de l’arrêt le plus proche (${near[0].g.name}).`);
+  }, () => toast('Position refusée ou indisponible.'), { enableHighAccuracy:true, timeout:15000, maximumAge:30000 });
 }
 function geoError(e){
   const msg = e && e.code === 1 ? 'Localisation refusée : autorise-la dans ton navigateur, ou choisis la gare à la main.'
