@@ -388,30 +388,7 @@
   .me-head{position:absolute;left:0;top:0;width:44px;height:44px;transition:transform .4s}
   .me-head::before{content:'';position:absolute;left:15px;top:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:15px solid #1D6FD8}
   .me-wrap.onbus .me-dot{background:var(--jaune);border-color:#222}
-  #rideBanner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1000;background:var(--carte);border-radius:12px;
-              box-shadow:0 4px 18px rgba(0,0,0,.3);padding:10px 14px;font-size:13px;max-width:min(560px,calc(100% - 150px));line-height:1.45}
-  #rideBanner,#rideBanner[hidden]{display:none!important}
-  /* mode navigation (façon Waze / Google Maps) */
-  .nav-arrow{width:46px;height:46px;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
-  .nav-arrow svg{width:46px;height:46px;transition:transform .25s}
-  #rideBanner.nav{left:12px;right:12px;top:auto;bottom:14px;transform:none;max-width:none;width:auto;border-radius:16px;padding:12px 16px;
-                  background:#1F2937;color:#F3F4F6;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-  #rideBanner.nav b,#rideBanner.nav .rb-h{color:#fff}
-  #rideBanner.nav .muted{color:#9CA3AF}
-  .nav-grid{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-  .nav-big{font-size:28px;font-weight:800;line-height:1;color:#fff}
-  .nav-big small{font-size:13px;font-weight:600;color:#9CA3AF;margin-left:3px}
-  .nav-col{min-width:0;flex:1}
-  .nav-col .l1{font-size:15px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .nav-col .l2{font-size:12.5px;color:#D1D5DB}
-  .nav-speed{text-align:center;background:#111827;border-radius:12px;padding:6px 10px;min-width:62px}
-  .nav-speed .nav-big{font-size:24px}
-  #mapCard.navmode .leaflet-control-zoom,#mapCard.navmode .leaflet-control-layers{display:none}
-  #mapCard.navmode #btnList,#mapCard.navmode #btnFs,#mapCard.navmode #btnFit{display:none}
-  #rideBanner b{color:var(--titre)}
-  #rideBanner .rb-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--titre)}
   .bus-mk.mine .pill2{outline:3px solid #1D6FD8;outline-offset:2px}
-  @media (max-width:860px){ #rideBanner{top:auto;bottom:14px;max-width:calc(100% - 28px);width:calc(100% - 28px)} }
   .stop-dot{width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #222;box-shadow:0 1px 4px rgba(0,0,0,.35)}
   .stop-dot.gare{width:16px;height:16px;background:var(--jaune)}
   table.board tr.toolate td{opacity:.45}
@@ -494,6 +471,16 @@
   .pw .days button{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--ligne);background:var(--carte);color:var(--titre);font:700 12px 'Nunito Sans',sans-serif;cursor:pointer}
   .pw .days button.on{background:var(--jaune);border-color:var(--jaune);color:#1A1A1A}
   .pw .t{width:auto;padding:6px 8px}
+
+  /* ---------- arrêts sur la carte ---------- */
+  .sp-list{display:flex;flex-direction:column;gap:6px;margin:6px 0}
+  .sp-row{display:flex;align-items:center;gap:6px;font-size:13px}
+  .sp-d{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sp-t{white-space:nowrap;color:var(--titre)} .sp-t.soon{color:var(--retard)}
+  .sp-act{display:flex;gap:6px;margin-top:8px}
+  .pmr{font-size:11.5px;font-weight:700;color:var(--ok);white-space:nowrap} .pmr.no{color:var(--gris)}
+  .pmr-i{display:inline-block;margin-left:4px;font-size:13px}
+  .board-head h2 .pmr{font-size:12px;margin-left:6px;vertical-align:middle}
 
   /* ---------- correspondances ---------- */
   .tr-h{font-size:15px;color:var(--titre);margin:18px 0 8px}
@@ -665,7 +652,7 @@
       <div id="countdown"></div>
       <div id="list"></div>
     </aside>
-    <div id="mapCard"><div id="map"></div><div id="rideBanner" hidden></div>
+    <div id="mapCard"><div id="map"></div>
       <div class="tf-legend" id="tfLegend" hidden><span><i style="background:#2E9E44"></i>fluide</span><span><i style="background:#F2A100"></i>ralenti</span><span><i style="background:#D9480F"></i>bouchon</span><span><i style="background:#8B0000"></i>bloqué</span></div></div>
   </section>
 
@@ -834,7 +821,8 @@
     <div class="set-row" id="installRow" hidden><div class="set-l"><b>Installer l’appli</b><small>sur l’écran d’accueil, comme une vraie appli</small></div><button id="installBtn" class="btn small">📲 Installer</button></div>
     <div class="set-row"><div class="set-l"><b>Raccourci « Mon prochain car »</b><small>une icône qui ouvre directement ton prochain car</small></div><button class="btn small ghost" id="nextShortcut">➕ Créer</button></div>
     <div class="set-row" id="apkRow" hidden><div class="set-l"><b>Appli Android</b><small>position partagée même appli fermée, à pied comme en car</small></div><a class="btn small ghost" href="https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk">📥 APK</a></div>
-    <div class="set-row" id="apiRow" hidden><div class="set-l"><b>Serveur</b><small id="apiTxt">adresse Apps Script /exec</small></div><button id="apiBtn" class="btn small ghost">Modifier</button></div>
+    <div class="set-row col" id="apiRow" hidden><div class="set-l"><b>Serveur <span id="srvState"></span></b><small id="apiTxt">adresse Apps Script /exec</small></div>
+      <div class="set-ctl"><button class="btn small ghost" id="srvCheck">↻ Vérifier</button><button id="apiBtn" class="btn small ghost">Modifier l’adresse</button></div></div>
     <div class="set-row"><div class="set-l"><b>Mise à jour</b><small>automatique à chaque ouverture</small></div><button class="btn small ghost" id="reloadBtn">↻ Recharger</button></div>
     <div class="set-row"><div class="set-l"><b>Journal de trajet</b><small id="diagTxt">Enregistre ce que l’appli détecte (position, car repéré, retards, alertes) pour corriger les erreurs. Rien n’est envoyé.</small></div><label class="switch"><input type="checkbox" id="diagOn"><span></span></label></div>
     <div class="set-row"><div class="set-ctl"><button class="btn ghost small" id="diagShare">📤 Envoyer le journal</button><button class="btn ghost small" id="diagClear">🗑️ Effacer</button></div></div>
@@ -1148,6 +1136,7 @@ function applyStatic(){
   buildStopGroups();
   fillStopList();
   renderFavs();
+  stopDrawKey = ''; try { drawStops(); } catch(e){}
   if (!applyStatic.done){ applyStatic.done = true; loadFiches(); }   // en parallèle, sans bloquer la carte
   else { render(); if (view === 'trip') renderTrip(); if (view === 'board') renderBoard(); }
 }
@@ -1897,16 +1886,25 @@ function transferHubs(A, B){
     const ib = list.findIndex(id => B.ids.includes(id));
     if (ib > 0) list.slice(0, ib).forEach(id => { const g = grpOf[id]; if (g) toB.set(g.name, g); });
   }));
-  const det = g => (isFinite(A.lat) && isFinite(g.lat) ? distM(A.lat, A.lon, g.lat, g.lon) + distM(g.lat, g.lon, B.lat, B.lon) : 1e9);
-  return [...fromA.keys()].filter(n => toB.has(n) && n !== A.name && n !== B.name).map(n => fromA.get(n))
-    .sort((a, b) => (isGare(b) - isGare(a)) || det(a) - det(b)).slice(0, 3);
+  const det = (g1, g2) => (isFinite(A.lat) && isFinite(g1.lat) ? distM(A.lat, A.lon, g1.lat, g1.lon) + distM(g2.lat, g2.lon, B.lat, B.lon) : 1e9);
+  // paires (descente X1, montée X2) : le même arrêt, ou deux arrêts à moins de 450 m (on marche entre les deux)
+  const pairs = [];
+  const ups = [...toB.values()].filter(g => g.name !== A.name && g.name !== B.name && isFinite(g.lat));
+  [...fromA.values()].forEach(x1 => {
+    if (x1.name === A.name || x1.name === B.name || !isFinite(x1.lat)) return;
+    ups.forEach(x2 => {
+      const d = x1.name === x2.name ? 0 : distM(x1.lat, x1.lon, x2.lat, x2.lon);
+      if (d <= 450) pairs.push({ X1: x1, X2: x2, walkM: d, walk: d ? Math.ceil(d * 1.3 / 1.2 / 60) : 0 });
+    });
+  });
+  return pairs.sort((p, q) => (q.walkM === 0) - (p.walkM === 0) || (isGare(q.X1) - isGare(p.X1)) || det(p.X1, p.X2) - det(q.X1, q.X2)).slice(0, 4);
 }
 async function loadTransfers(A, B){
   const key = transferKey(A, B);
   if (transfer.loading && transfer.key === key) return;
   if (!tripBoard.data || !S.routeStops) return;
   transfer = { key, loading:true, done:false, hubs: transferHubs(A, B) };
-  const ids = [...new Set(transfer.hubs.flatMap(g => g.ids))].filter(id => !(id in tripBoard.data));
+  const ids = [...new Set(transfer.hubs.flatMap(p => p.X1.ids.concat(p.X2.ids)))].filter(id => !(id in tripBoard.data));
   try {
     for (let i = 0; i < ids.length; i += 60) Object.assign(tripBoard.data, JSON.parse(await call('getStopBoard', ids.slice(i, i + 60))));
   } catch(e){}
@@ -1918,15 +1916,16 @@ async function loadTransfers(A, B){
 function transferRows(A, B){
   if (transfer.key !== transferKey(A, B) || !transfer.done) return [];
   const out = [], seen = new Set();
-  transfer.hubs.forEach(X => {
-    const l1 = journeyRows(A, X).slice(0, 10), l2 = journeyRows(X, B);
+  transfer.hubs.forEach(p => {
+    const l1 = journeyRows(A, p.X1).slice(0, 10), l2 = journeyRows(p.X2, B);
+    const margin = (p.walk + (p.walk ? 2 : 3)) * 60e3;               // marche + 2 min de marge (3 min sur place)
     l1.forEach(a => {
       const arr1 = a.rarr != null ? a.rarr : a.arr;
-      const b = l2.find(r => r.eff >= arr1 + 3 * 60e3 && r.route.s !== a.route.s);
+      const b = l2.find(r => r.eff >= arr1 + margin && r.route.s !== a.route.s);
       if (!b || b.eff - arr1 > 60 * 60e3) return;
       const arrive = b.rarr != null ? b.rarr : b.arr, k = a.eff + '|' + arrive;
       if (seen.has(k)) return; seen.add(k);
-      out.push({ a, b, X, arr1, wait: b.eff - arr1, arrive });
+      out.push({ a, b, X: p.X1, X2: p.X2, walk: p.walk, walkM: p.walkM, arr1, wait: b.eff - arr1, arrive });
     });
   });
   // pour une même heure d'arrivée, on garde le départ le plus tardif (moins d'attente)
@@ -1996,8 +1995,8 @@ function renderTrip(){
         <div class="tr-when">${mins <= 0 ? 'À quai' : mins < 60 ? mins + '<small>min</small>' : fmtHM(dep)}</div>
         <div class="tr-legs">
           <div>${badge(x.a.route)} ${esc(from.name)} <b>${fmtHM(dep)}</b> → ${esc(x.X.name)} <b>${fmtHM(x.arr1)}</b>${x.a.real != null ? ' ' + delayChip(x.a.real - x.a.sched, x.a.approx).split('<br>')[0] : ''}</div>
-          <div class="tr-wait">🚶 changement à ${esc(x.X.name)} · ${Math.round(x.wait / 60000)} min d’attente</div>
-          <div>${badge(x.b.route)} ${esc(x.X.name)} <b>${fmtHM(x.b.eff)}</b> → ${esc(to.name)} <b>${fmtHM(x.arrive)}</b></div>
+          <div class="tr-wait">${x.walk ? `🚶 ${x.walk} min à pied (${fmtDist(x.walkM)}) jusqu’à ${esc(x.X2.name)} · départ ${Math.max(0, Math.round(x.wait / 60000) - x.walk)} min après` : `🔄 changement à ${esc(x.X.name)} · ${Math.round(x.wait / 60000)} min d’attente`}</div>
+          <div>${badge(x.b.route)} ${esc(x.X2.name)} <b>${fmtHM(x.b.eff)}</b> → ${esc(to.name)} <b>${fmtHM(x.arrive)}</b></div>
         </div>
         <div class="tr-dur">${Math.round((x.arrive - dep) / 60000)} min</div></div>`;
     }).join('');
@@ -2126,9 +2125,6 @@ let lastFix = null, nearAt = 0, nearPos = null, onBus = null, busCand = null, bu
 
 function meIcon(){
   const h = myPos && myPos.heading, moving = myPos && (myPos.speed || 0) > 1;
-  if (navOn) return L.divIcon({ className:'', iconSize:[46, 46], iconAnchor:[23, 23], html:
-    `<div class="nav-arrow"><svg viewBox="0 0 46 46" style="transform:rotate(${Math.round((navHead || 0) + mapBearing())}deg)">
-       <circle cx="23" cy="23" r="21" fill="#fff" opacity=".9"/><path d="M23 6 L36 37 L23 30 L10 37 Z" fill="${onBus ? '#F6BE00' : '#1D6FD8'}" stroke="#0B3B8C" stroke-width="1.5" stroke-linejoin="round"/></svg></div>` });
   const head = h != null && isFinite(h) && moving ? `<div class="me-head" style="transform:rotate(${Math.round(h + mapBearing())}deg)"></div>` : '';
   return L.divIcon({ className:'', iconSize:[44, 44], iconAnchor:[22, 22],
     html:`<div class="me-wrap${meWatch != null ? ' live' : ''}${onBus ? ' onbus' : ''}">${head}<div class="me-dot"></div></div>` });
@@ -2185,7 +2181,7 @@ function onLiveFix(p){
   myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed, heading };
   diag('gps', { lat: +c.latitude.toFixed(5), lon: +c.longitude.toFixed(5), acc: Math.round(c.accuracy), kmh: speed != null ? Math.round(speed * 3.6) : null });
   showMeOnMap();
-  if (meFollow && !userPanned && !navOn) map.panTo([myPos.lat, myPos.lon], { animate: true, duration: .8 });
+  if (meFollow && !userPanned) map.panTo([myPos.lat, myPos.lon], { animate: true, duration: .8 });
   detectMyBus();
   if (view === 'trip') renderTrip();
 }
@@ -2219,176 +2215,9 @@ function detectMyBus(){
   }
   renderRide();
 }
-function renderRide(){
-  const box = $('#rideBanner');
-  const v = onBus && vehicles.find(x => x.id === onBus);
-  box.classList.toggle('nav', navOn);
-  if (navOn){
-    const kmh = Math.round(((onBus && motion[onBus] ? motion[onBus].speed : 0) || (myPos && myPos.speed) || 0) * 3.6);
-    const spd = `<div class="nav-speed"><div class="nav-big">${kmh}</div><small class="muted">km/h</small></div>`;
-    box.hidden = false;
-    if (v){
-      const t = v.times, eta = t && t.next.eta, arr = t && (t.arr.real || t.arr.sched);
-      box.innerHTML = `<div class="nav-grid">${badge(v.route)}
-        <div class="nav-col"><div class="l1">→ ${esc(v.headsign || '')}</div>
-          <div class="l2">${v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b>` : ''}${arr ? ` · arrivée <b>${t.arr.estimated ? '~' : ''}${fmtHM(arr)}</b>` : ''}${
-            v.delay != null ? ` · <span class="delay ${fmtDelay(v.delay, v.delayEst).c}">${fmtDelay(v.delay, v.delayEst).t}</span>` : ''}</div></div>
-        ${eta ? `<div class="nav-big">${Math.max(0, Math.round((eta - Date.now()) / 60000))}<small>min</small></div>` : ''}${spd}</div>`;
-    } else {
-      const near = myPos ? nearbyStops(myPos.lat, myPos.lon, 1)[0] : null;
-      box.innerHTML = `<div class="nav-grid"><div class="nav-col"><div class="l1">${gpsWeak ? '📡 Signal GPS faible…' : '🧭 Navigation'}</div>
-          <div class="l2">${near ? `Arrêt le plus proche : <b>${esc(near.g.name)}</b> (${fmtDist(near.d)})` : 'Recherche de ta position…'}${
-            kmh > 11 ? '<br>Je cherche le car jaune où tu te trouves…' : ''}</div></div>${spd}</div>`;
-    }
-    return;
-  }
-  if (!v){
-    if (meWatch != null && myPos){
-      const kmh = Math.round((myPos.speed || 0) * 3.6);
-      box.hidden = false;
-      box.innerHTML = `<div class="rb-h">🧭 Suivi de ta position</div>${gpsWeak ? '📡 Signal GPS faible, j’attends ta position… · ' : ''}${kmh > 3 ? `${kmh} km/h · ` : ''}précision ± ${fmtDist(myPos.acc || 0)}${
-        kmh > 11 ? '<br><span class="muted">Je cherche le car jaune où tu te trouves…</span>' : ''}`;
-    } else box.hidden = true;
-    return;
-  }
-  const t = v.times, kmh = Math.round((myPos && myPos.speed || 0) * 3.6);
-  box.hidden = false;
-  box.innerHTML = `<div class="rb-h">${badge(v.route)} Tu es dans ce car → ${esc(v.headsign || '')}</div>
-    ${v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b>${t && t.next.eta ? ` à <b>${fmtHM(t.next.eta)}</b> (${fmtIn(t.next.eta)})` : ''}<br>` : ''}
-    ${t ? `Arrivée à ${esc(t.arr.stop || 'terminus')} : <b>${t.arr.estimated ? '~' : ''}${fmtHM(t.arr.real || t.arr.sched)}</b> (${fmtIn(t.arr.real || t.arr.sched)})` : ''}
-    ${kmh ? ` · ${kmh} km/h` : ''}
-    ${v.delay != null ? `<br><span class="delay ${fmtDelay(v.delay, v.delayEst).c}">${esc(fmtDelay(v.delay, v.delayEst).long)}</span>` : ''}`;
-}
-
-/** Bouton « Ma position » : suivi en direct (la carte te suit), recentrer, ou arrêter. */
-async function toggleLiveTracking(){
-  if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return; }
-  if (meWatch != null && userPanned){            // carte déplacée à la main : on recentre
-    userPanned = false; updateMeBtn();
-    if (myPos) map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 15), { duration:.6 });
-    return;
-  }
-  if (meWatch != null){ stopLiveTracking(); return; }
-  meFollow = true; userPanned = false;
-  let first = true;
-  meWatch = navigator.geolocation.watchPosition(p => {
-    onLiveFix(p);
-    if (first){
-      first = false;
-      if (!navOn) map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 15), { duration:.8 });
-      const near = nearbyStops(myPos.lat, myPos.lon, 1)[0];
-      if (near && near.d > NEAR_M) toast(`Tu es à ${fmtDist(near.d)} de l’arrêt le plus proche (${near.g.name}).`);
-    }
-  }, e => {
-    // refus : on arrête ; perte de signal passagère (tunnel, ravine…) : on continue d'attendre la position
-    if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour cette appli.'); stopLiveTracking(); return; }
-    gpsWeak = true; renderRide();
-  }, { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 });
-  try { if (navigator.wakeLock) meWake = await navigator.wakeLock.request('screen'); } catch(e){}   // écran allumé pendant le trajet
-  updateMeBtn(); renderRide();
-  if (mode === 'sleep') toast('Réseau fermé : ta position s’affiche, les cars reviendront au premier départ.');
-}
-function stopLiveTracking(){
-  if (meWatch != null) navigator.geolocation.clearWatch(meWatch);
-  if (navOn) stopNav();
-  meWatch = null; meFollow = false; userPanned = false; onBus = null; busCand = null;
-  try { if (meWake) meWake.release(); } catch(e){}
-  meWake = null;
-  if (meMarker) meMarker.setIcon(meIcon());
-  updateMeBtn(); renderRide(); render();
-}
-function updateMeBtn(){
-  const n = $('#btnNav');
-  if (n){
-    n.classList.toggle('on', navOn);
-    n.textContent = !navOn ? '🚘 Navigation' : userPanned ? '🎯 Recentrer' : '🚘 Quitter la navigation';
-    n.onclick = null;
-  }
-  const b = $('#btnMe'); if (!b) return;
-  b.classList.toggle('on', meWatch != null);
-  b.textContent = meWatch == null ? '📍 Ma position' : userPanned ? '🎯 Recentrer' : '🧭 Suivi actif';
-  b.title = meWatch == null ? 'Afficher et suivre ma position' : userPanned ? 'Revenir sur ma position' : 'Arrêter le suivi';
-}
-map.on('dragstart', () => { if (meWatch != null && meFollow){ userPanned = true; updateMeBtn(); } });
-
-/* ====================== Mode navigation (façon Waze / Google Maps) ======================
-   La carte tourne pour que ta direction soit en haut, tu es une flèche qui glisse en douceur
-   (sur la route du car quand tu es dedans), le zoom suit ta vitesse et la vue montre la route devant toi. */
-let navFs = false, navOn = false, navHead = 0, navZoom = 16.5, navLast = 0, navArrowAt = 0;
-const angDiff = (a, b) => ((b - a + 540) % 360) - 180;          // écart signé le plus court
-function navTargetZoom(kmh){ return kmh < 8 ? 17.5 : kmh < 30 ? 16.75 : kmh < 60 ? 16 : 15.25; }
-/** Où je suis « maintenant » : dans le car = position animée du car sur sa route ; sinon prolongement du dernier GPS. */
-function navPose(now){
-  if (onBus && motion[onBus] && motion[onBus].disp){
-    const st = motion[onBus], p = predictedPos(st, now);
-    return { lat: st.disp[0], lon: st.disp[1], head: p[2] != null ? p[2] : (myPos && myPos.heading), speed: st.speed || (myPos && myPos.speed) || 0 };
-  }
-  if (!myPos) return null;
-  const sp = myPos.speed || 0, hd = myPos.heading;
-  let lat = myPos.lat, lon = myPos.lon;
-  if (lastFix && sp > 1.5 && hd != null){                         // entre deux positions GPS : on avance tout droit (3 s maxi)
-    const d = sp * Math.min((now - lastFix.t) / 1000, 3), b = hd * Math.PI / 180;
-    lat += d * Math.cos(b) / 110540; lon += d * Math.sin(b) / (111320 * Math.cos(lat * Math.PI / 180));
-  }
-  return { lat, lon, head: hd, speed: sp };
-}
-function navLoop(t){
-  if (!navOn) return;
-  requestAnimationFrame(navLoop);
-  if (document.hidden || t - navLast < 33) return;               // ~30 images/s
-  navLast = t;
-  const now = Date.now(), pose = navPose(now);
-  if (!pose) return;
-  if (pose.head != null && isFinite(pose.head) && pose.speed > 1) navHead = (navHead + angDiff(navHead, pose.head) * 0.12 + 360) % 360;
-  const tz = navTargetZoom(pose.speed * 3.6);
-  if (Math.abs(tz - navZoom) > 0.01) navZoom += (tz - navZoom) * 0.03;
-  if (meMarker){
-    meMarker.setLatLng([pose.lat, pose.lon]);
-    const svg = meMarker._icon && meMarker._icon.querySelector('.nav-arrow svg');
-    if (svg) svg.style.transform = `rotate(${Math.round(navHead + mapBearing())}deg)`;
-  }
-  if (userPanned) return;                                        // l'utilisateur regarde ailleurs : on ne bouge pas la vue
-  // centre décalé vers l'avant : tu es dans le tiers bas de l'écran, la route devant toi est visible
-  const h = map.getSize().y, mpp = 156543.03 * Math.cos(pose.lat * Math.PI / 180) / Math.pow(2, navZoom);
-  const ahead = h * 0.22 * mpp, b = navHead * Math.PI / 180;
-  const c = [pose.lat + ahead * Math.cos(b) / 110540, pose.lon + ahead * Math.sin(b) / (111320 * Math.cos(pose.lat * Math.PI / 180))];
-  map.setView(c, navZoom, { animate: false });
-  if (map.setBearing) map.setBearing(-navHead);                  // ta direction vers le haut
-}
-async function toggleNav(){
-  if (navOn && userPanned){ userPanned = false; updateMeBtn(); return; }   // recentrer
-  navOn ? stopNav() : startNav();
-}
-async function startNav(){
-  if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return; }
-  if (meWatch == null) await toggleLiveTracking();
-  if (meWatch == null) return;
-  navOn = true; userPanned = false;
-  navHead = (myPos && myPos.heading) || 0;
-  navZoom = map.getZoom() < 14 ? 16 : map.getZoom();
-  if (isMobile()){ panelOpen = false; setPanel(false); }
-  $('#mapCard').classList.add('navmode');
-  if (isMobile()){ document.body.classList.add('fs'); navFs = true; }   // plein écran sur téléphone, comme une appli GPS
-  if (meMarker) meMarker.setIcon(meIcon());
-  updateMeBtn(); renderRide();
-  requestAnimationFrame(navLoop);
-}
-function stopNav(){
-  if (!navOn) return;
-  navOn = false;
-  $('#mapCard').classList.remove('navmode');
-  if (navFs){ document.body.classList.remove('fs'); navFs = false; }
-  if (map.setBearing) map.setBearing(0);                         // retour nord en haut
-  if (meMarker) meMarker.setIcon(meIcon());
-  updateMeBtn(); renderRide();
-}
-map.on('rotatestart', () => { if (navOn){ userPanned = true; updateMeBtn(); } });
-function locateOnMap(){ toggleLiveTracking(); }
-document.addEventListener('visibilitychange', async () => {
-  if (!document.hidden && meWatch != null && navigator.wakeLock && (!meWake || meWake.released)){
-    try { meWake = await navigator.wakeLock.request('screen'); } catch(e){}
-  }
-});
+// (ancien mode navigation et bandeau « dans le car » retirés : ta position n'est plus affichée sur la carte)
+function renderRide(){}
+const navOn = false;
 
 function geoError(e){
   const msg = e && e.code === 1 ? 'Localisation refusée : autorise-la dans ton navigateur, ou choisis la gare à la main.'
@@ -2789,6 +2618,38 @@ $('#pushTest').addEventListener('click', async () => {
 setInterval(() => { if (pushCfg.on && alertCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); }, 120e3);
 document.addEventListener('visibilitychange', () => { if (pushCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); });
 
+/* ---------- voyant du serveur : est-il à la dernière version ? ---------- */
+const SERVER_WANTED = '2026-11-02.3';                 // version de Code.gs attendue par cette version de l'appli
+const srv = { state:'', version:'', trigger:false, at:0 };
+async function checkServer(){
+  if (IN_GAS) return;
+  srv.state = 'checking'; renderServer();
+  try {
+    const o = JSON.parse(await rawCall('getVersion'));
+    srv.version = o.version || ''; srv.trigger = !!o.trigger;
+    srv.state = srv.version >= SERVER_WANTED ? 'ok' : 'old';
+  } catch(e){
+    srv.state = /Action inconnue/i.test(errMsg(e)) ? 'old' : 'down';
+    srv.err = errMsg(e).slice(0, 80);
+  }
+  srv.at = Date.now();
+  renderServer(); try { renderNotif(); } catch(e){}
+}
+function renderServer(){
+  if (!$('#srvState')) return;
+  const url = API_URL ? '…' + API_URL.slice(-30) : 'pas encore réglé';
+  $('#srvState').textContent = { ok:'✅ à jour', old:'⚠️ ancienne version', down:'❌ injoignable', checking:'…' }[srv.state] || '';
+  $('#apiTxt').innerHTML = srv.state === 'ok'
+      ? `Version ${esc(srv.version)}${pushCfg.on ? (srv.trigger ? ' · alertes appli fermée actives' : ' · ⚠️ exécute « installPushTrigger » une fois dans Apps Script') : ''}<br><span class="muted">${esc(url)}</span>`
+    : srv.state === 'old'
+      ? `Les nouveautés (alertes appli fermée, temps de parcours appris, ♿) ont besoin du nouveau Code.gs.<br>
+         <b>Sur ton PC :</b> <code>apps-script\\setup-auto-deploy.ps1</code> (une fois, ensuite c’est automatique) — ou copie <a href="https://github.com/Svperman/Car-Jaune-Live/blob/main/apps-script/Code.gs" target="_blank" rel="noopener">Code.gs</a> dans Apps Script puis Déployer → Gérer les déploiements → ✏️ → Nouvelle version.`
+    : srv.state === 'down' ? `Le serveur ne répond pas (${esc(srv.err || '')}). Les horaires gardés sur ton téléphone restent utilisables.<br><span class="muted">${esc(url)}</span>`
+    : esc(url);
+}
+$('#srvCheck').addEventListener('click', checkServer);
+setTimeout(checkServer, 8000);
+
 /* ---------- raccourci d'écran d'accueil ---------- */
 $('#nextShortcut').addEventListener('click', async () => {
   const url = SHARE_BASE + '?vue=next';
@@ -2883,7 +2744,7 @@ function renderSettings(){
   $('#alFollow').checked = alertCfg.follow;
   renderShareUI(); renderCityUI(); renderDiag(); renderPushUI(); renderTfKey(); renderEcoUI();
   $('#apkRow').hidden = NATIVE || !/Android/i.test(navigator.userAgent);
-  if (!IN_GAS){ $('#apiRow').hidden = false; $('#apiTxt').textContent = API_URL ? '…' + API_URL.slice(-34) : 'pas encore réglé'; }
+  if (!IN_GAS){ $('#apiRow').hidden = false; renderServer(); }
   renderNotif();
 }
 $('#gearBtn').addEventListener('click', openSettings);
@@ -2930,7 +2791,7 @@ function notifStatus(){
 }
 function renderNotif(){
   const s = notifStatus(), box = $('#notifBox'), btn = $('#notifBtn');
-  $('#gearDot').classList.toggle('show', s.k === 'ask' || s.k === 'denied');
+  $('#gearDot').classList.toggle('show', s.k === 'ask' || s.k === 'denied' || srv.state === 'old');
   $('#notifState').innerHTML = s.t;
   box.className = 'notif-box' + (s.k === 'ok' ? ' ok' : s.k === 'denied' || s.k === 'install' ? ' ko' : '');
   btn.hidden = !(s.k === 'ask' || s.k === 'ok');
@@ -3360,7 +3221,7 @@ function estimateDelay(v){
   if (atStop && d < 0 && (v.speed == null || v.speed < 2)) d = 0;    // arrêté en avance : il attend l'heure
   if (Math.abs(d) > 20 * 60) return null;                            // > 20 min : car garé ou mauvais trajet, pas fiable
   const next = b.s - s < 60 && k + 2 < n ? k + 2 : k + 1;
-  return { delay: Math.round(d), base, next, stops: st };
+  return { delay: Math.round(d), base, next, stops: st, k, f, t };
 }
 const lastMoved = {};                  // car immobile depuis longtemps (garé, pause) : son « retard » n'a pas de sens
 function applyEstimates(){
@@ -3370,6 +3231,7 @@ function applyEstimates(){
     if (!lm || distM(lm.lat, lm.lon, v.lat, v.lon) > 150) lastMoved[v.id] = { lat: v.lat, lon: v.lon, t: now };
     v.est = estimateDelay(v);
     if (v.est && now - lastMoved[v.id].t > 6 * 60e3 && Math.abs(v.est.delay) > 5 * 60) v.est = null;
+    if (v.est) try { learnPass(v); } catch(e){}
     if (v.delay == null && v.est){ v.delay = v.est.delay; v.delayEst = true; }
     if (v.times && v.delay != null && v.times.arr.real == null){
       v.times.arr.real = v.times.arr.sched + Math.max(0, v.delay) * 1000;  // un car en avance attend aux points d'arrêt
@@ -3382,8 +3244,135 @@ function vehEta(v, stopId, d, schedMs){
   if (!v || v.delay == null || !v.est || v.est.base !== d) return null;
   const i = v.est.stops.findIndex(x => x.id === stopId);
   if (i >= 0 && i < v.est.next) return 'passed';
+  const learned = i >= 0 ? learnedEta(v, i) : null;                  // vrais temps de parcours observés
+  if (learned) return Math.max(learned, Date.now() + 30e3);
   return schedMs + Math.max(v.delay, v.delay < 0 ? -120 : 0) * 1000;
 }
+
+/* ====================== Arrêts sur la carte ======================
+   En zoomant (niveau 15+), chaque arrêt apparaît ; touche-le : ses prochains départs s'affichent dans une bulle. */
+const stopRenderer = L.canvas({ padding: .3 });
+const stopLayer = L.layerGroup().addTo(map);
+let stopDrawKey = '';
+function drawStops(){
+  const z = map.getZoom();
+  if (z < 15 || !stopGroups.length){ if (stopDrawKey){ stopLayer.clearLayers(); stopDrawKey = ''; } return; }
+  const b = map.getBounds().pad(0.2);
+  const list = stopGroups.filter(g => isFinite(g.lat) && b.contains([g.lat, g.lon])).slice(0, 300);
+  const key = z + '|' + list.map(g => g.key).join(',');
+  if (key === stopDrawKey) return;
+  stopDrawKey = key;
+  stopLayer.clearLayers();
+  const dark = document.documentElement.classList.contains('dark');
+  list.forEach(g => {
+    const gare = isGare(g);
+    L.circleMarker([g.lat, g.lon], { renderer: stopRenderer, radius: gare ? 8 : (z >= 16 ? 6 : 5), weight: gare ? 3 : 2.5,
+      color: dark ? '#F2F4F7' : '#222', fillColor: gare ? '#F6BE00' : (dark ? '#1E2228' : '#fff'), fillOpacity: 1 })
+      .bindTooltip(g.name, { direction:'top', offset:[0, -6] })
+      .on('click', e => openStopPopup(g, e.latlng))
+      .addTo(stopLayer);
+  });
+}
+map.on('zoomend moveend', drawStops);
+async function openStopPopup(g, ll){
+  const pop = L.popup({ maxWidth: 300, minWidth: 230 }).setLatLng(ll || [g.lat, g.lon])
+    .setContent(`<div class="pop-h"><b>🚏 ${esc(g.name)}</b>${g.wb === '1' ? ' <span title="Accessible en fauteuil roulant">♿</span>' : ''}</div><div class="muted">Chargement des départs…</div>`).openOn(map);
+  let data = {};
+  try { data = JSON.parse(await call('getStopBoard', g.ids.slice(0, 60))); } catch(e){}
+  const saved = board.data; board.data = data;
+  let rows = [];
+  try { const pool = gtfsRows(g); rows = ficheRows(g, pool) || pool; } catch(e){}
+  board.data = saved;
+  const now = Date.now();
+  const next = rows.filter(r => r.eff > now - 60e3).slice(0, 4);
+  pop.setContent(`<div class="pop-h"><b>🚏 ${esc(g.name)}</b>${stopPmr(g)}</div>
+    ${next.length ? '<div class="sp-list">' + next.map(r => { const m = Math.round((r.eff - now) / 60000);
+      return `<div class="sp-row">${badge(r.route)}<span class="sp-d">${esc(r.dest)}</span><b class="sp-t${m <= 2 ? ' soon' : ''}">${m <= 0 ? 'À quai' : m < 60 ? m + ' min' : fmtHM(r.eff)}</b>${
+        r.real != null ? `<span class="delay ${fmtDelay((r.real - r.sched) / 1000, r.approx).c}">${fmtDelay((r.real - r.sched) / 1000, r.approx).t}</span>` : ''}</div>`; }).join('') + '</div>'
+      : '<div class="muted">Aucun départ dans les prochaines heures.</div>'}
+    <div class="sp-act"><button class="btn small" data-sp-board="${esc(g.name)}">🕒 Tous les départs</button><button class="btn small ghost" data-sp-watch="${esc(g.name)}">🔔 Surveiller</button></div>`);
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-sp-board]'), w = e.target.closest('[data-sp-watch]');
+  const name = a ? a.dataset.spBoard : w ? w.dataset.spWatch : null; if (!name) return;
+  const g = stopGroups.find(x => x.name === name); if (!g) return;
+  map.closePopup();
+  $('#stopInput').value = g.name; selectStop(g);
+  if (a) setView('board');
+  else { if (!alertCfg.on) setAlertsOn(true, true); alertCfg.journey = false; saveAlertCfg(); updateAlertUI(); toast(`🔔 Je surveille ${g.name} : prévenu ${alertCfg.lead} min avant chaque car.`); }
+});
+function stopPmr(g){ return g.wb === '1' ? ' <span class="pmr" title="Arrêt accessible en fauteuil roulant">♿ accessible</span>' : g.wb === '2' ? ' <span class="pmr no" title="Arrêt non accessible en fauteuil roulant">♿ non accessible</span>' : ''; }
+
+/* ====================== Temps de parcours appris ======================
+   Chaque fois qu'un car passe un arrêt, on note l'heure. Entre deux arrêts consécutifs, on obtient le vrai
+   temps de parcours (arrêts compris), selon le moment de la journée (tranches de 3 h). Gardé sur le téléphone
+   et mis en commun sur ton serveur : plus l'appli sert, plus les heures d'arrivée sont justes. */
+let LEARN = {}, learnDirty = {}, learnSaveT = null;
+const passLog = {};
+idb.get('learn').then(v => { if (v && typeof v === 'object') LEARN = Object.assign(v, LEARN); });
+const hourSlot = ms => Math.floor(reuDate(ms).h / 3);                 // 8 tranches de 3 h
+function learnPass(v){
+  const e = v.est, key = v.id + '|' + v.tripId, now = e.t * 1000;
+  const prev = passLog[key];
+  if (!prev){ passLog[key] = { k: e.k, at: {} }; return; }
+  if (e.k === prev.k) return;
+  if (e.k === prev.k + 1){
+    // un seul arrêt passé depuis la dernière position : heure de passage ≈ maintenant moins le bout de tronçon déjà fait
+    const a = e.stops[e.k], b = e.stops[e.k + 1] || a;
+    const passAt = now - e.f * Math.max(30, (b.sec - a.sec)) * 1000;
+    prev.at[e.k] = passAt;
+    const before = prev.at[e.k - 1];
+    if (before){
+      const dur = (passAt - before) / 1000, sched = e.stops[e.k].sec - e.stops[e.k - 1].sec;
+      if (dur >= 15 && dur <= Math.max(3 * sched, sched + 600) && dur >= 0.3 * sched) addLearn(e.stops[e.k - 1].id, e.stops[e.k].id, before, dur);
+    }
+  } else prev.at = {};                                                 // plusieurs arrêts sautés : mesure pas assez précise
+  prev.k = e.k;
+}
+function addLearn(a, b, at, dur){
+  const k = a + '>' + b, slot = hourSlot(at);
+  const row = LEARN[k] || (LEARN[k] = []);
+  const cell = row[slot] || [dur, 0];
+  const n = Math.min(cell[1] + 1, 30);
+  cell[0] = Math.round(cell[0] + (dur - cell[0]) / n); cell[1] = n;   // moyenne glissante (30 dernières mesures)
+  row[slot] = cell;
+  learnDirty[k] = row;
+  clearTimeout(learnSaveT); learnSaveT = setTimeout(() => idb.set('learn', LEARN), 5000);
+}
+/** Temps appris pour un tronçon (même tranche horaire, sinon moyenne de la journée), ou null. */
+function learnedSeg(a, b, at){
+  const row = LEARN[a + '>' + b]; if (!row) return null;
+  const c = row[hourSlot(at)];
+  if (c && c[1] >= 2) return c[0];
+  let s = 0, n = 0;
+  row.forEach(x => { if (x && x[1]){ s += x[0] * x[1]; n += x[1]; } });
+  return n >= 3 ? s / n : null;
+}
+/** Arrivée prévue à l'arrêt n° i grâce aux temps appris (si au moins la moitié des tronçons sont connus). */
+function learnedEta(v, i){
+  const e = v.est; if (!e || i <= e.k) return null;
+  let t = e.t * 1000, known = 0, total = 0;
+  for (let j = e.k; j < i; j++){
+    const a = e.stops[j], b = e.stops[j + 1];
+    const sched = Math.max(20, b.sec - a.sec);
+    const l = learnedSeg(a.id, b.id, t);
+    total++; if (l != null) known++;
+    const seg = l != null ? l : sched;
+    t += (j === e.k ? (1 - e.f) : 1) * seg * 1000;
+  }
+  return total && known / total >= 0.5 ? t : null;
+}
+// mise en commun avec le serveur : on récupère ce que les autres ont appris, on envoie nos nouvelles mesures
+async function syncLearn(){
+  try {
+    const dirty = learnDirty; learnDirty = {};
+    if (Object.keys(dirty).length) await call('saveTravel', JSON.stringify(dirty));
+    const all = JSON.parse(await call('getTravel') || '{}');
+    Object.keys(all).forEach(k => { if (!LEARN[k]) LEARN[k] = all[k]; else all[k].forEach((c, i) => { const m = LEARN[k][i]; if (c && (!m || c[1] > m[1])) LEARN[k][i] = c; }); });
+    idb.set('learn', LEARN);
+  } catch(e){}
+}
+setTimeout(syncLearn, 20000); setInterval(() => { if (document.visibilityState === 'visible') syncLearn(); }, 10 * 60e3);
 
 /* ====================== Affichage carte + liste ====================== */
 function isVisible(v){
@@ -3693,8 +3682,10 @@ function buildStopGroups(){
     const s = S.stops[id];
     const key = norm(s[0]);
     if (!key) return;
-    if (!byName.has(key)) byName.set(key, { name: s[0], key, ids: [], lat: s[1], lon: s[2] });
-    byName.get(key).ids.push(id);
+    if (!byName.has(key)) byName.set(key, { name: s[0], key, ids: [], lat: s[1], lon: s[2], wb: '' });
+    const g = byName.get(key);
+    g.ids.push(id);
+    if (s[3] === '1') g.wb = '1'; else if (s[3] === '2' && !g.wb) g.wb = '2';   // ♿ accessible si au moins un quai l'est
   });
   stopGroups = [...byName.values()].sort((a, b) => a.name.localeCompare(b.name, 'fr'));
 }
@@ -3833,7 +3824,7 @@ function gtfsRows(g){
       if (eff < now - 60e3) return;                                // déjà parti
       const runNow = estVeh ? true : tu ? sameRun : Math.abs(schedMs - now) < 12 * 3600e3 && !(vehByTrip[tid] && vehByTrip[tid].est);
       const rt0 = S.routes[ti[0]] || { s:'?', c:'F6BE00', t:'222222' };
-      rows.push({ eff, sched: schedMs, real, approx, route: rt0, sens: sensFor(rt0.s, ti[1] || '', ti[2]),
+      rows.push({ eff, sched: schedMs, real, approx, pmr: ti[8] || '', route: rt0, sens: sensFor(rt0.s, ti[1] || '', ti[2]),
                   dest: ti[1] || '', tag: svcTag(ti[7]), veh: runNow ? vehByTrip[tid] : null, used: false });
     });
   }));
@@ -3883,7 +3874,7 @@ function ficheRows(g, pool){
           const real = mt && mt.real != null ? sched + (mt.real - mt.sched) : null;
           const eff = real != null ? real : sched;
           if (eff < now - 60e3) return;
-          out.push({ eff, sched, real, approx: !!(mt && mt.approx), route: mt ? mt.route : routeByShort(line), sens: ficheSens(url, t.dir),
+          out.push({ eff, sched, real, approx: !!(mt && mt.approx), pmr: mt ? mt.pmr : '', route: mt ? mt.route : routeByShort(line), sens: ficheSens(url, t.dir),
                      dest: t.dir, tag: '', veh: mt ? mt.veh : null, kind: tableKindLabel(t) });
         }));
       });
@@ -3907,7 +3898,7 @@ function renderBoard(){
   const pTxt = !pNow ? '' : pNow.type === 'ferie' ? `<span class="tag tag-f">Horaires de jour férié</span>`
              : pNow.type === 'vacances' ? `<span class="tag tag-v">Horaires vacances scolaires</span>`
              : `<span class="tag tag-s">Horaires période scolaire</span>`;
-  const head = `<div class="board-head"><h2>${esc(g.name)}${pTxt}</h2><span class="upd">${
+  const head = `<div class="board-head"><h2>${esc(g.name)}${stopPmr(g)}${pTxt}</h2><span class="upd">${
     mode === 'sleep' ? 'Réseau fermé · horaires théoriques'
     : `Temps réel ${feedTime ? 'à ' + fmtHM(feedTime) : ''} · actualisation auto`}</span></div>`;
   if (board.loading){ card.innerHTML = head + `<div class="placeholder">Chargement des passages…</div>`; return; }
@@ -3941,7 +3932,7 @@ function renderBoard(){
       const sensTag = boardGroupBy === 'heure' && r.sens ? `<span class="tag ${r.sens === 'aller' ? 'tag-s' : 'tag-v'}">${r.sens}</span>` : '';
       html += `<tr>
         <td>${when}</td>
-        <td>${badge(r.route)}</td>
+        <td>${badge(r.route)}${r.pmr === '1' ? '<span class="pmr-i" title="Car accessible en fauteuil roulant">♿</span>' : ''}</td>
         <td class="b-dest">${esc(r.dest)}${sensTag}${r.tag}<small>${r.veh && r.veh.stopName ? 'vers ' + esc(r.veh.stopName) : ''}</small>
           ${r.veh ? `<button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}</td>
         <td>${fmtTime(r.real, r.sched, r.approx)}</td>

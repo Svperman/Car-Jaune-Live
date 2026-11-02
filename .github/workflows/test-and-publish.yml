@@ -40,6 +40,25 @@ jobs:
           sleep 2
           node tests/smoke.mjs
           node tests/scenarios.mjs
+      - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
+        run: |
+          npm install --no-save html-minifier-terser@7.2.0
+          mkdir -p _site
+          cp -r manifest.webmanifest sw.js icons lib _site/
+          npx html-minifier-terser --collapse-whitespace --conservative-collapse --remove-comments \
+            --minify-css true --minify-js true index.html -o _site/index.html
+          echo "index.html : $(wc -c < index.html) → $(wc -c < _site/index.html) octets"
+      - name: Tester aussi la version compressée
+        run: |
+          cp -r tests _site/
+          (cd _site && python3 -m http.server 8766 >/dev/null 2>&1 &)
+          sleep 2
+          cd _site
+          BASE=http://localhost:8766 node ../tests/smoke.mjs
+          rm -rf tests _test.html test-*.png
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
       - name: Captures d'écran du test
         if: always()
         uses: actions/upload-artifact@v4
@@ -55,14 +74,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Préparer les fichiers publiés
-        run: |
-          mkdir -p _site
-          cp -r index.html manifest.webmanifest sw.js icons lib _site/
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
       - id: deploy
         uses: actions/deploy-pages@v4

@@ -87,7 +87,10 @@ const API_ = {
   setPushAlert:      function (cfg) { return setPushAlert(cfg); },
   deletePushAlert:   function (topic) { return deletePushAlert(String(topic || '')); },
   testPush:          function (topic) { return testPush(String(topic || '')); },
-  pushSeen:          function (topic) { return pushSeen(String(topic || '')); }
+  pushSeen:          function (topic) { return pushSeen(String(topic || '')); },
+  saveTravel:        function (json) { return saveTravel(json); },
+  getTravel:         function () { return getTravel(); },
+  getVersion:        function () { return getVersion(); }
 };
 
 function api_(action, args) {
@@ -128,7 +131,7 @@ function getRealtime() {
 function getStatic(force) {
   const cache = CacheService.getScriptCache();
   if (!force) {
-    const cached = cacheGet_(cache, 'static_v5');
+    const cached = cacheGet_(cache, 'static_v6');
     if (cached && cache.get(BOARD_PREFIX + 'ready')) return cached;
   }
 
@@ -151,9 +154,10 @@ function getStatic(force) {
 
   // shape le plus utilisé par ligne + sens
   const shapeUse = {};
-  const tripService = {};
+  const tripService = {}, tripPmr = {};
   readCsv_(files['trips.txt']).forEach(function (t) {
     trips[t.trip_id] = [t.route_id, t.trip_headsign || '', t.direction_id || ''];
+    if (t.wheelchair_accessible === '1' || t.wheelchair_accessible === '2') tripPmr[t.trip_id] = t.wheelchair_accessible;
     tripService[t.trip_id] = t.service_id;
     if (t.shape_id) {
       const k = t.route_id + '|' + (t.direction_id || '0');
@@ -164,6 +168,8 @@ function getStatic(force) {
 
   readCsv_(files['stops.txt']).forEach(function (s) {
     stops[s.stop_id] = [s.stop_name, round5_(s.stop_lat), round5_(s.stop_lon)];
+    // accessibilité fauteuil roulant (GTFS) : '1' oui, '2' non, sinon inconnu
+    if (s.wheelchair_boarding === '1' || s.wheelchair_boarding === '2') stops[s.stop_id][3] = s.wheelchair_boarding;
   });
 
   if (files['shapes.txt']) {
@@ -192,11 +198,12 @@ function getStatic(force) {
   }
 
   const built = buildServiceHours_(files, tripService, trips);
+  Object.keys(tripPmr).forEach(function (id) { if (trips[id]) trips[id][8] = tripPmr[id]; });   // ♿ car accessible
   putBoardIndex_(cache, built.board);
 
   const json = JSON.stringify({ routes: routes, trips: trips, stops: stops, shapes: shapes, service: built.service,
                                 routeStops: built.routeStops, builtAt: Date.now() });
-  cachePut_(cache, 'static_v5', json, STATIC_TTL);
+  cachePut_(cache, 'static_v6', json, STATIC_TTL);
   return json;
 }
 
@@ -885,3 +892,56 @@ function pbVar_(b, i) {
 }
 function pbInt_(v) { return Number(BigInt.asIntN(64, v)); }
 function pbStr_(b, r) { return Utilities.newBlob(b.slice(r.s, r.e).map(function (x) { return x > 127 ? x - 256 : x; })).getDataAsString('UTF-8'); }
+
+
+/* ------------------------------------------------------------------ */
+/*  Temps de parcours appris (mis en commun entre les téléphones)      */
+/*  { "arrêtA>arrêtB": [ [moyenne_s, nb], ... 8 tranches de 3 h ] }    */
+/* ------------------------------------------------------------------ */
+const TRAVEL_PROP = 'travel_v1';
+
+function getTravel() {
+  return propGet_(PropertiesService.getScriptProperties().getProperties(), TRAVEL_PROP) || '{}';
+}
+
+function saveTravel(json) {
+  const add = typeof json === 'string' ? JSON.parse(json) : json;
+  if (!add || typeof add !== 'object') throw new Error('données invalides');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const cur = JSON.parse(propGet_(props.getProperties(), TRAVEL_PROP) || '{}');
+    Object.keys(add).slice(0, 3000).forEach(function (k) {
+      if (!/^[\w.:-]{1,40}>[\w.:-]{1,40}$/.test(k) || !Array.isArray(add[k])) return;
+      const row = cur[k] || (cur[k] = []);
+      add[k].slice(0, 8).forEach(function (c, i) {
+        if (!c || !(c[0] > 0) || !(c[1] > 0)) return;
+        const m = row[i];
+        if (!m) { row[i] = [Math.round(c[0]), Math.min(30, c[1])]; return; }
+        const n = Math.min(60, m[1] + c[1]);
+        row[i] = [Math.round((m[0] * m[1] + c[0] * c[1]) / (m[1] + c[1])), n];   // moyenne pondérée
+      });
+    });
+    let s = JSON.stringify(cur);
+    if (s.length > 350000) {                          // trop gros pour PropertiesService : on garde les mieux connus
+      const keys = Object.keys(cur).sort(function (a, b) { return weight_(cur[b]) - weight_(cur[a]); });
+      const keep = {}; keys.slice(0, Math.floor(keys.length * 0.8)).forEach(function (k) { keep[k] = cur[k]; });
+      s = JSON.stringify(keep);
+    }
+    propPut_(props, TRAVEL_PROP, s);
+  } finally { lock.releaseLock(); }
+  return '1';
+}
+function weight_(row) { return (row || []).reduce(function (a, c) { return a + (c ? c[1] : 0); }, 0); }
+
+/* ------------------------------------------------------------------ */
+/*  Version du serveur (l'appli affiche un voyant « à jour »)          */
+/* ------------------------------------------------------------------ */
+const SERVER_VERSION = '2026-11-02.3';
+function getVersion() {
+  let trigger = false;
+  try { trigger = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'pushTick'; }); } catch (e) {}
+  return JSON.stringify({ version: SERVER_VERSION, trigger: trigger,
+    features: ['api', 'push', 'travel', 'pmr'] });
+}
