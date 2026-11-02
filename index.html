@@ -308,7 +308,7 @@
   .me-wrap.onbus .me-dot{background:var(--jaune);border-color:#222}
   #rideBanner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1000;background:#fff;border-radius:12px;
               box-shadow:0 4px 18px rgba(0,0,0,.3);padding:10px 14px;font-size:13px;max-width:min(560px,calc(100% - 150px));line-height:1.45}
-  #rideBanner[hidden]{display:none}
+  #rideBanner,#rideBanner[hidden]{display:none!important}
   /* mode navigation (façon Waze / Google Maps) */
   .nav-arrow{width:46px;height:46px;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
   .nav-arrow svg{width:46px;height:46px;transition:transform .25s}
@@ -658,7 +658,7 @@ const MapButtons = L.Control.extend({
   options:{ position:'topright' },
   onAdd(){
     const box = L.DomUtil.create('div', 'map-ctl');
-    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnNav">🚘 Navigation</button><button id="btnMe">📍 Ma position</button><button id="btnFs">⛶ Plein écran</button><button id="btnFit">🏝️ Toute l'île</button>`;
+    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnFs">⛶ Plein écran</button><button id="btnFit">🏝️ Toute l'île</button>`;
     L.DomEvent.disableClickPropagation(box);
     return box;
   }
@@ -679,8 +679,7 @@ $('#btnFs').addEventListener('click', () => {
   $('#btnFs').textContent = on ? '⤡ Quitter' : '⛶ Plein écran';
 });
 $('#btnFit').addEventListener('click', () => map.flyToBounds(REUNION, { duration:.8 }));
-$('#btnMe').addEventListener('click', () => { if (navOn){ stopNav(); return; } locateOnMap(); });   // quitter la navigation garde le suivi
-$('#btnNav').addEventListener('click', () => toggleNav());
+// ma position n'est plus affichée sur la carte (boutons « Ma position » et « Navigation » retirés)
 
 /* ====================== Appels serveur ====================== */
 /* Adresse de ton Apps Script déployé (…/exec) pour l'appli installée sur le téléphone.
@@ -1612,8 +1611,8 @@ function useMyPosition(pos, auto){
 }
 
 /* ---------- ma position sur la carte (suivi en direct) ---------- */
-const meLayer = L.layerGroup().addTo(map);      // moi + précision
-const nearLayer = L.layerGroup().addTo(map);    // arrêts autour de moi
+const meLayer = L.layerGroup();      // moi + précision : pas affiché sur la carte
+const nearLayer = L.layerGroup();    // arrêts autour de moi : pas affichés sur la carte
 let meMarker = null, meCircle = null, meWatch = null, meFollow = false, userPanned = false;
 let lastFix = null, nearAt = 0, nearPos = null, onBus = null, busCand = null, busMiss = 0, meWake = null, gpsWeak = false;
 
