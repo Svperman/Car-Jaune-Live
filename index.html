@@ -427,11 +427,29 @@
   .set-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;background:var(--jaune,#F6BE00);padding:14px 18px}
   .set-head h2{margin:0;font-size:19px;color:#1A1A1A;display:flex;gap:8px;align-items:center}
   .set-head .x{border:none;background:rgba(0,0,0,.08);border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer}
-  .set-sec{padding:6px 18px 14px;border-bottom:8px solid var(--fond)}
-  .set-sec h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris);margin:14px 0 4px}
+  .set-sec{padding:4px 18px 12px;border-bottom:8px solid var(--fond);scroll-margin-top:110px}
+  .set-sec h3{font-size:17px;color:var(--titre);margin:16px 0 2px;display:flex;align-items:center;gap:8px}
+  .set-intro{margin:0 0 6px;font-size:12.5px;color:var(--gris)}
+  .set-sub{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--gris);margin:16px 0 0;padding-top:10px;border-top:1px dashed var(--ligne)}
+  .set-nav{position:sticky;top:62px;z-index:2;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 18px;background:var(--carte);border-bottom:1px solid var(--ligne)}
+  .set-nav::-webkit-scrollbar{display:none}
+  .set-nav button{flex:none;border:1.5px solid var(--ligne);background:var(--carte);color:var(--titre);border-radius:25px;padding:6px 12px;font:700 12.5px 'Nunito Sans',sans-serif;cursor:pointer}
+  .set-nav button.on{background:var(--jaune);border-color:var(--jaune);color:#1A1A1A}
+  .set-l{flex:1;min-width:0}
+  .set-row.col{flex-direction:column;align-items:stretch;gap:8px}
+  .set-ctl{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .set-ctl.col{flex-direction:column;align-items:flex-end;gap:2px}
+  .set-sel{font:inherit;font-size:14px;border:1px solid var(--ligne);border-radius:25px;padding:7px 12px;background:var(--carte);color:var(--titre);min-width:96px}
+  .set-wide{width:100%}
+  .set-note{font-size:12.5px;color:var(--gris)}
+  .sh-code.sm{font-size:14px;letter-spacing:.02em;margin-right:auto}
+  .set-row.col .set-ctl{justify-content:flex-start}
   .set-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--ligne)}
   .set-row:last-child{border-bottom:none}
   .set-row b{display:block;font-size:15px;color:var(--titre)}
+  .set-row[hidden]{display:none}
+  .set-row small b{display:inline;font-size:inherit}
+  #pauseSeg{max-width:none}
   .set-row small{display:block;font-size:12.5px;color:var(--gris);margin-top:2px;line-height:1.4}
   .set-row select{font:inherit;border:1px solid var(--ligne);border-radius:25px;padding:6px 10px;background:var(--carte)}
   .switch{position:relative;flex:none;width:50px;height:30px;cursor:pointer}
@@ -441,6 +459,7 @@
   .switch input:checked + span{background:var(--ok)}
   .switch input:checked + span::before{transform:translateX(20px)}
   .pseg{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:58%}
+  .set-row.col .pseg{justify-content:flex-start;max-width:none}
   .pseg button{border:1.5px solid var(--ligne);background:var(--carte);border-radius:25px;padding:6px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
   .pseg button:active{background:var(--fond)}
   .set-sec .notif-box{margin:10px 0 4px}
@@ -744,117 +763,85 @@
 </div></div>
 <div class="modal" id="settingsModal" hidden><div class="modal-box set-box" role="dialog" aria-label="Paramètres">
   <div class="set-head"><h2>⚙️ Paramètres</h2><button class="x" id="setClose" aria-label="Fermer">✕</button></div>
+  <nav class="set-nav" aria-label="Sections des paramètres">
+    <button data-sec="sec-alertes">🔔 Alertes</button><button data-sec="sec-proches">👥 Proches</button><button data-sec="citySec">🏙️ Ma ville</button><button data-sec="sec-carte">🗺️ Carte</button><button data-sec="sec-appli">📲 Appli</button>
+  </nav>
 
-  <div class="set-sec"><h3>🔔 Notifications</h3>
-    <div class="set-row"><div><b>Notifications</b><small id="setOnTxt">Toujours actives, même après avoir fermé l’appli.</small></div>
-      <label class="switch"><input type="checkbox" id="setOn"><span></span></label></div>
-    <div class="set-row"><div><b>Pause</b><small id="pauseTxt">Coupe-les un moment, elles reviennent toutes seules.</small></div>
-      <div class="pseg" id="pauseSeg"><button data-pause="60">1 h</button><button data-pause="180">3 h</button><button data-pause="tomorrow">Jusqu’à demain</button><button data-pause="0" id="pauseOff" hidden>▶ Reprendre</button></div></div>
+  <section class="set-sec" id="sec-alertes"><h3>🔔 Alertes</h3>
+    <p class="set-intro">Être prévenu avant chaque car, à l’arrêt surveillé ou sur Mon trajet.</p>
+    <div class="set-row"><div class="set-l"><b>Notifications</b><small id="setOnTxt">Toujours actives, même après avoir fermé l’appli.</small></div><label class="switch"><input type="checkbox" id="setOn"><span></span></label></div>
+    <div class="set-row col"><div class="set-l"><b>Pause</b><small id="pauseTxt">Coupe-les un moment, elles reviennent toutes seules.</small></div><div class="pseg" id="pauseSeg"><button data-pause="60">1 h</button><button data-pause="180">3 h</button><button data-pause="tomorrow">Jusqu’à demain</button><button data-pause="0" id="pauseOff" hidden>▶ Reprendre</button></div></div>
     <div class="notif-box" id="notifBox">
       <div class="st" id="notifState">Notifications du téléphone : …</div>
       <button class="btn small" id="notifBtn">🔔 Activer les notifications</button>
     </div>
-  </div>
-
-  <div class="set-sec"><h3>⏰ Quand me prévenir</h3>
-    <div class="set-row"><div><b>Avant chaque car</b><small>à l’arrêt surveillé ou sur Mon trajet</small></div>
-      <select id="alLead"><option value="2">2 min</option><option value="5" selected>5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></div>
-    <div class="set-row"><div><b>Arrivée à quai</b><small>quand le car arrive à l’arrêt</small></div><label class="switch"><input type="checkbox" id="alQuai" checked><span></span></label></div>
-    <div class="set-row"><div><b>Avance / retard</b><small>si le retard du car change de 2 min ou plus</small></div><label class="switch"><input type="checkbox" id="alLate" checked><span></span></label></div>
-    <div class="set-row"><div><b>Aucun car dans l’heure</b><small>prévenir quand il n’y a plus de car</small></div><label class="switch"><input type="checkbox" id="alNoBus" checked><span></span></label></div>
-  </div>
-
-  <div class="set-sec"><h3>🚦 Trafic routier</h3>
-    <div class="set-row" style="display:block"><b>Clé TomTom (gratuite)</b>
-      <small>Pour le trafic en direct (routes vertes / orange / rouges, accidents, travaux). Crée une clé sur <a href="https://developer.tomtom.com/" target="_blank" rel="noopener">developer.tomtom.com</a> (gratuit, sans carte bancaire). Elle reste sur ton téléphone. Sans clé, tu vois quand même les bouchons repérés par les cars jaunes.</small>
-      <div class="tf-key"><input class="set-in" id="tfKey" placeholder="colle ta clé ici" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div>
-      <small id="tfKeyTxt"></small></div>
-  </div>
-
-  <div class="set-sec"><h3>🎨 Apparence</h3>
-    <div class="set-row"><div><b>Thème</b><small id="themeTxt">automatique : sombre le soir et selon ton téléphone</small></div>
-      <select id="themeSel" aria-label="Thème"><option value="auto">automatique</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
-    <div class="set-row"><div><b>Taille du texte</b><small>pages, listes et réglages</small></div>
-      <select id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
-  </div>
-
-  <div class="set-sec" id="pushSec"><h3>📴 Alertes appli fermée</h3>
-    <div class="set-row"><div><b>Prévenir même appli fermée</b><small id="pushStatus">Ton serveur surveille ton car pendant tes créneaux et t’envoie la notification par l’appli ntfy, téléphone verrouillé.</small></div>
-      <label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
-    <div class="set-row" style="display:block"><b id="pushW0Lbl">Créneau aller</b><small id="pushW0Txt"></small>
+    <h4 class="set-sub">Quand me prévenir</h4>
+    <div class="set-row"><div class="set-l"><b>Avant chaque car</b><small>délai avant le départ</small></div><select class="set-sel" id="alLead" aria-label="Délai"><option value="2">2 min</option><option value="5" selected>5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></div>
+    <div class="set-row"><div class="set-l"><b>Arrivée à quai</b><small>quand le car arrive à l’arrêt</small></div><label class="switch"><input type="checkbox" id="alQuai" checked><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>Avance / retard</b><small>si le retard du car change de 2 min ou plus</small></div><label class="switch"><input type="checkbox" id="alLate" checked><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>Aucun car dans l’heure</b><small>quand il n’y a plus de car</small></div><label class="switch"><input type="checkbox" id="alNoBus" checked><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>Arrêt le plus proche</b><small>choisi tout seul selon ta position (rien n’est affiché sur la carte)</small></div><label class="switch"><input type="checkbox" id="alFollow"><span></span></label></div>
+    <h4 class="set-sub">Son</h4>
+    <div class="set-row"><div class="set-l"><b>Son</b><small>petit bip à chaque alerte</small></div><label class="switch"><input type="checkbox" id="alSound" checked><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>Vibration</b><small>Android uniquement (l’iPhone ne le permet pas aux sites)</small></div><label class="switch"><input type="checkbox" id="alVibe" checked><span></span></label></div>
+    <h4 class="set-sub" id="pushSec">Même appli fermée</h4>
+    <div class="set-row"><div class="set-l"><b>Alertes appli fermée</b><small id="pushStatus">Ton serveur surveille ton car pendant tes créneaux et t’envoie la notification par l’appli ntfy, téléphone verrouillé.</small></div><label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
+    <div class="set-row col"><div class="set-l"><b id="pushW0Lbl">Créneau aller</b><small id="pushW0Txt"></small></div>
       <div class="pw" data-w="0"><div class="days"></div><span>de <input type="time" class="set-in t" data-k="from"> à <input type="time" class="set-in t" data-k="to"></span></div></div>
-    <div class="set-row" style="display:block"><b id="pushW1Lbl">Créneau retour</b><small id="pushW1Txt"></small>
+    <div class="set-row col"><div class="set-l"><b id="pushW1Lbl">Créneau retour</b><small id="pushW1Txt"></small></div>
       <div class="pw" data-w="1"><div class="days"></div><span>de <input type="time" class="set-in t" data-k="from"> à <input type="time" class="set-in t" data-k="to"></span></div></div>
-    <div class="set-row" style="display:block"><b>Canal ntfy</b><small>installe l’appli gratuite <b>ntfy</b> et abonne-toi à ce nom :</small>
-      <div class="al-row"><code id="pushTopic" class="sh-code" style="font-size:14px"></code>
-        <button class="btn ghost small" id="pushCopy">Copier</button><button class="btn ghost small" id="pushTest">🧪 Tester</button></div></div>
-  </div>
+    <div class="set-row col"><div class="set-l"><b>Canal ntfy</b><small>installe l’appli gratuite <b>ntfy</b> et abonne-toi à ce nom</small></div>
+      <div class="set-ctl"><code id="pushTopic" class="sh-code sm"></code><button class="btn ghost small" id="pushCopy">Copier</button><button class="btn ghost small" id="pushTest">🧪 Tester</button></div></div>
+  </section>
 
-  <div class="set-sec"><h3>🔊 Son et écran</h3>
-    <div class="set-row"><div><b>Son</b><small>petit bip à chaque alerte</small></div><label class="switch"><input type="checkbox" id="alSound" checked><span></span></label></div>
-    <div class="set-row"><div><b>Vibration</b><small>Android (l’iPhone ne permet pas aux sites de vibrer)</small></div><label class="switch"><input type="checkbox" id="alVibe" checked><span></span></label></div>
-    <div class="set-row"><div><b>Garder l’écran allumé</b><small>alertes plus sûres, mais use la batterie</small></div><label class="switch"><input type="checkbox" id="alWake"><span></span></label></div>
-  </div>
-
-  <div class="set-sec"><h3>📍 Position</h3>
-    <div class="set-row"><div><b>Suivre ma position</b><small>choisit tout seul l’arrêt le plus proche (rien n’est affiché sur la carte)</small></div><label class="switch"><input type="checkbox" id="alFollow"><span></span></label></div>
-  </div>
-
-  <div class="set-sec" id="citySec"><h3>🏙️ Cars dans ma ville</h3>
-    <div class="set-row"><div><b>M’annoncer les cars autour de moi</b><small id="cityStatus">Arrivées et départs des cars jaunes là où tu te trouves, et seulement là.</small></div>
-      <label class="switch"><input type="checkbox" id="cityOn"><span></span></label></div>
-    <div class="set-row"><div><b>Secteur</b><small>suit ta position tout seul</small></div>
-      <select id="citySector"><option value="city">ma ville (commune)</option><option value="1000">1 km autour de moi</option><option value="2000">2 km autour de moi</option><option value="5000">5 km autour de moi</option></select></div>
-    <div class="set-row" style="display:block"><b>M’annoncer</b>
-      <div class="chk-row">
-        <label><input type="checkbox" id="cityGareIn" checked> 🚏 arrivée en gare</label>
-        <label><input type="checkbox" id="cityGareOut" checked> 🚌 départ de la gare</label>
-        <label><input type="checkbox" id="cityEnter"> ➡️ entre dans le secteur</label>
-        <label><input type="checkbox" id="cityLeave"> ⬅️ quitte le secteur</label>
-      </div></div>
-    <div class="set-row" style="display:block"><b>Lignes</b><small>aucune cochée = toutes les lignes</small>
-      <div class="chk-row" id="cityLines"></div></div>
-    <div class="set-row"><div><b>Voir le secteur sur la carte</b><small>contour en pointillés</small></div>
-      <label class="switch"><input type="checkbox" id="cityShow" checked><span></span></label></div>
-  </div>
-
-  <div class="set-sec" id="shareSec"><h3>👥 Mes proches</h3>
-    <div class="set-row"><div><b>Partager ma position et mon car</b><small id="shStatus">Tes proches voient où tu es et dans quel car jaune tu es monté.</small></div>
-      <label class="switch"><input type="checkbox" id="shOn"><span></span></label></div>
-    <div class="set-row"><div style="flex:1"><b>Mon prénom</b><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel" style="margin-top:6px"></div></div>
-    <div class="set-row"><div><b>Mon code secret</b><small>avec ton prénom, il protège ta position : seuls ceux qui l’ont te voient</small></div>
-      <div style="text-align:right"><div class="sh-code" id="shCode">——</div><button class="al-link" id="shNew" style="font-size:12px">↻ nouveau code</button></div></div>
-    <div class="set-row"><div><b>Automatique dans les cars jaunes</b><small>dès que tu montes dans un car, tes proches te voient (et jusqu’à 10 min après ta descente), sans rien toucher</small></div>
-      <label class="switch"><input type="checkbox" id="shAuto" checked><span></span></label></div>
-    <div class="set-row"><div><b>Prévenir mes proches</b><small>quand j’attends en gare, quand je pars, peu avant d’arriver et à mon arrivée</small></div>
-      <label class="switch"><input type="checkbox" id="shEvents" checked><span></span></label></div>
-    <div class="set-row"><button class="btn" id="shSend" style="width:100%">📤 Envoyer le lien à mes proches</button></div>
-    <div class="set-row" style="display:block"><b>Suivre un proche</b><small>son prénom et son code (ou ouvre simplement le lien qu’il t’a envoyé)</small>
+  <section class="set-sec" id="sec-proches"><div id="shareSec"></div><h3>👥 Mes proches</h3>
+    <p class="set-intro">Tes proches voient où tu es et dans quel car jaune tu es, avec ton prénom.</p>
+    <div class="set-row col"><div class="set-l"><b>Mon prénom</b></div><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel"></div>
+    <div class="set-row"><div class="set-l"><b>Mon code secret</b><small>avec ton prénom, il protège ta position : seuls ceux qui l’ont te voient</small></div><div class="set-ctl col"><span class="sh-code" id="shCode">——</span><button class="al-link" id="shNew">↻ nouveau code</button></div></div>
+    <div class="set-row"><div class="set-l"><b>Automatique dans les cars jaunes</b><small>dès que tu montes dans un car, et jusqu’à 10 min après ta descente</small></div><label class="switch"><input type="checkbox" id="shAuto" checked><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>Partager tout le temps</b><small id="shStatus">même hors des cars, tant que l’appli est ouverte</small></div><label class="switch"><input type="checkbox" id="shOn"><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>Messages à mes proches</b><small>j’attends en gare, je pars, j’arrive bientôt, je suis descendu</small></div><label class="switch"><input type="checkbox" id="shEvents" checked><span></span></label></div>
+    <div class="set-row"><button class="btn set-wide" id="shSend">📤 Envoyer le lien à mes proches</button></div>
+    <h4 class="set-sub">Suivre un proche</h4>
+    <div class="set-row col"><div class="set-l"><small>son prénom et son code (ou ouvre simplement le lien qu’il t’a envoyé)</small></div>
       <div class="fr-add"><input class="set-in" id="frName" placeholder="Prénom"><input class="set-in" id="frCode" inputmode="numeric" maxlength="7" placeholder="Code"><button class="btn small" id="frAdd">Ajouter</button></div>
       <div class="fr-list" id="frList"></div></div>
-  </div>
+  </section>
 
-  <div class="set-sec"><h3>📱 Appli fermée</h3>
-    <details class="ntfy"><summary>Recevoir les alertes même appli fermée (ntfy, gratuit, sans compte)</summary>
-      <p>Installe l’appli gratuite <b>ntfy</b> (Android / iPhone), abonne-toi au nom ci-dessous, et les alertes arriveront en vraies notifications sur ton téléphone.</p>
-      <div class="al-row"><input id="ntfyTopic" placeholder="nom secret, ex. carjaune-samuel-7f3k"> <button class="btn ghost small" id="ntfyTest">Tester</button></div>
-    </details>
-  </div>
+  <section class="set-sec" id="citySec"><h3>🏙️ Cars dans ma ville</h3>
+    <p class="set-intro">Arrivées et départs des cars jaunes là où tu te trouves, et seulement là.</p>
+    <div class="set-row"><div class="set-l"><b>M’annoncer les cars autour de moi</b><small id="cityStatus"></small></div><label class="switch"><input type="checkbox" id="cityOn"><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>Secteur</b><small>suit ta position tout seul</small></div><select class="set-sel" id="citySector" aria-label="Secteur"><option value="city">ma ville</option><option value="1000">1 km</option><option value="2000">2 km</option><option value="5000">5 km</option></select></div>
+    <div class="set-row"><div class="set-l"><b>🚏 Arrivée en gare</b></div><label class="switch"><input type="checkbox" id="cityGareIn" checked><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>🚌 Départ de la gare</b></div><label class="switch"><input type="checkbox" id="cityGareOut" checked><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>➡️ Entre dans le secteur</b></div><label class="switch"><input type="checkbox" id="cityEnter"><span></span></label></div>
+    <div class="set-row"><div class="set-l"><b>⬅️ Quitte le secteur</b></div><label class="switch"><input type="checkbox" id="cityLeave"><span></span></label></div>
+    <div class="set-row col"><div class="set-l"><b>Lignes</b><small>aucune cochée = toutes les lignes</small></div>
+      <div class="chk-row" id="cityLines"></div></div>
+    <div class="set-row"><div class="set-l"><b>Voir le secteur sur la carte</b><small>contour en pointillés</small></div><label class="switch"><input type="checkbox" id="cityShow" checked><span></span></label></div>
+  </section>
 
-  <div class="set-sec"><h3>🛠️ Diagnostic</h3>
-    <div class="set-row"><div><b>Journal de trajet</b><small id="diagTxt">Enregistre ce que l’appli détecte (position, car repéré, retards, alertes) pour corriger les erreurs. Rien n’est envoyé.</small></div>
-      <label class="switch"><input type="checkbox" id="diagOn"><span></span></label></div>
-    <div class="set-row"><button class="btn ghost small" id="diagShare">📤 Envoyer le journal</button><button class="btn ghost small" id="diagClear">🗑️ Effacer</button></div>
-  </div>
+  <section class="set-sec" id="sec-carte"><h3>🗺️ Carte et affichage</h3>
+    <p class="set-intro">Trafic routier, thème et confort de lecture.</p>
+    <div class="set-row"><div class="set-l"><b>Trafic sur la carte</b><small>routes colorées, accidents, travaux et bouchons repérés par les cars</small></div><label class="switch"><input type="checkbox" id="tfOn" checked><span></span></label></div>
+    <div class="set-row col"><div class="set-l"><b>Clé TomTom (gratuite)</b><small>pour les couleurs de circulation et les incidents. Crée-la sur <a href="https://developer.tomtom.com/" target="_blank" rel="noopener">developer.tomtom.com</a> (sans carte bancaire). Elle reste sur ton téléphone.</small></div>
+      <div class="tf-key"><input class="set-in" id="tfKey" placeholder="colle ta clé ici" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div>
+      <small class="set-note" id="tfKeyTxt"></small></div>
+    <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt">automatique : sombre le soir et selon ton téléphone</small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
+    <div class="set-row"><div class="set-l"><b>Taille du texte</b><small>pages, listes et réglages</small></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
+    <div class="set-row"><div class="set-l"><b>Garder l’écran allumé</b><small>pendant les alertes ; use la batterie</small></div><label class="switch"><input type="checkbox" id="alWake"><span></span></label></div>
+  </section>
 
-  <div class="set-sec"><h3>📲 Application</h3>
-    <div class="set-row"><div><b>Raccourci « Mon prochain car »</b><small>une icône qui ouvre directement ton prochain car</small></div><button class="btn small ghost" id="nextShortcut">➕ Créer</button></div>
-    <div class="set-row" id="installRow" hidden><div><b>Installer l’appli</b><small>sur l’écran d’accueil, comme une vraie appli</small></div><button id="installBtn" class="btn small">📲 Installer</button></div>
-    <div class="set-row" id="apiRow" hidden><div><b>Serveur</b><small id="apiTxt">adresse Apps Script /exec</small></div><button id="apiBtn" class="btn small ghost">Modifier</button></div>
-    <div class="set-row" id="apkRow" hidden><div><b>Appli Android</b><small>partage de ta position même appli fermée, à pied comme en car</small></div>
-      <a class="btn small" href="https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk">📥 APK</a></div>
-    <div class="set-row"><div><b>Mise à jour</b><small>automatique à chaque ouverture</small></div><button class="btn small ghost" id="reloadBtn">↻ Recharger</button></div>
-  </div>
+  <section class="set-sec" id="sec-appli"><h3>📲 Application</h3>
+    <p class="set-intro">Installation, raccourcis, serveur et dépannage.</p>
+    <div class="set-row" id="installRow" hidden><div class="set-l"><b>Installer l’appli</b><small>sur l’écran d’accueil, comme une vraie appli</small></div><button id="installBtn" class="btn small">📲 Installer</button></div>
+    <div class="set-row"><div class="set-l"><b>Raccourci « Mon prochain car »</b><small>une icône qui ouvre directement ton prochain car</small></div><button class="btn small ghost" id="nextShortcut">➕ Créer</button></div>
+    <div class="set-row" id="apkRow" hidden><div class="set-l"><b>Appli Android</b><small>position partagée même appli fermée, à pied comme en car</small></div><a class="btn small ghost" href="https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk">📥 APK</a></div>
+    <div class="set-row" id="apiRow" hidden><div class="set-l"><b>Serveur</b><small id="apiTxt">adresse Apps Script /exec</small></div><button id="apiBtn" class="btn small ghost">Modifier</button></div>
+    <div class="set-row"><div class="set-l"><b>Mise à jour</b><small>automatique à chaque ouverture</small></div><button class="btn small ghost" id="reloadBtn">↻ Recharger</button></div>
+    <div class="set-row"><div class="set-l"><b>Journal de trajet</b><small id="diagTxt">Enregistre ce que l’appli détecte (position, car repéré, retards, alertes) pour corriger les erreurs. Rien n’est envoyé.</small></div><label class="switch"><input type="checkbox" id="diagOn"><span></span></label></div>
+    <div class="set-row"><div class="set-ctl"><button class="btn ghost small" id="diagShare">📤 Envoyer le journal</button><button class="btn ghost small" id="diagClear">🗑️ Effacer</button></div></div>
+  </section>
   <div class="set-foot">Car Jaune Live · application personnelle, non affiliée à Car Jaune<br>Données : Région Réunion · réseau Car Jaune (Licence Ouverte)</div>
 </div></div>
 
@@ -2773,7 +2760,7 @@ function renderPushUI(){
     : pushState.ok === false ? '⚠️ ' + pushState.msg
     : !alertCfg.on ? '🔕 Notifications coupées : le serveur ne t’enverra rien.' : 'Enregistrement…';
 }
-$('#pushOn').addEventListener('change', e => { pushCfg.on = e.target.checked; savePush(); pushState.ok = null; renderPushUI(); syncPush();
+$('#pushOn').addEventListener('change', e => { pushCfg.on = e.target.checked; savePush(); pushState.ok = null; alertCfg.ntfy = pushCfg.on ? pushCfg.topic : ''; saveAlertCfg(); renderPushUI(); syncPush();
   if (pushCfg.on) toast('Installe l’appli ntfy et abonne-toi au nom affiché pour recevoir les alertes appli fermée.'); });
 $('#pushSec').addEventListener('click', e => {
   const d = e.target.closest('[data-day]'); if (!d) return;
@@ -2788,7 +2775,11 @@ $('#pushSec').addEventListener('change', e => {
 $('#pushCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(pushCfg.topic); toast('Nom copié : colle-le dans ntfy → « S’abonner ».'); } catch(e){ prompt('Nom du canal ntfy :', pushCfg.topic); } });
 $('#pushTest').addEventListener('click', async () => {
   try { const r = JSON.parse(await call('testPush', pushCfg.topic)); toast(r.trigger === false ? 'Test envoyé · ⚠️ exécute « installPushTrigger » une fois dans Apps Script.' : '🧪 Test envoyé par ton serveur : regarde l’appli ntfy.'); }
-  catch(e){ toast('Test impossible : ' + errMsg(e).slice(0, 80)); }
+  catch(e){
+    // serveur pas encore à jour : test direct depuis le téléphone
+    fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic: pushCfg.topic, title:'🧪 Test Car Jaune Live', message:'Le canal ntfy fonctionne. (Le serveur, lui, n’a pas répondu : ' + errMsg(e).slice(0, 60) + ')', tags:['bus'] }) })
+      .then(() => toast('🧪 Test envoyé depuis le téléphone (serveur pas encore à jour).')).catch(() => toast('Test impossible : pas de réseau.'));
+  }
 });
 // appli ouverte à l'écran : le serveur se tait (pas de notification en double)
 setInterval(() => { if (pushCfg.on && alertCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); }, 120e3);
@@ -2884,6 +2875,17 @@ function renderSettings(){
   renderNotif();
 }
 $('#gearBtn').addEventListener('click', openSettings);
+$('.set-nav').addEventListener('click', e => {
+  const b = e.target.closest('[data-sec]'); if (!b) return;
+  document.getElementById(b.dataset.sec).scrollIntoView({ behavior:'smooth', block:'start' });   // scroll-margin-top : sous l'en-tête
+});
+$('.set-box').addEventListener('scroll', () => {          // section visible = bouton en surbrillance
+  const box = $('.set-box'), lim = box.getBoundingClientRect().top + $('.set-head').offsetHeight + $('.set-nav').offsetHeight + 30;
+  let cur = 'sec-alertes';
+  document.querySelectorAll('.set-nav [data-sec]').forEach(b => { const s = document.getElementById(b.dataset.sec); if (s && s.getBoundingClientRect().top <= lim) cur = b.dataset.sec; });
+  if (box.scrollTop + box.clientHeight >= box.scrollHeight - 4) cur = 'sec-appli';     // tout en bas
+  document.querySelectorAll('.set-nav [data-sec]').forEach(b => b.classList.toggle('on', b.dataset.sec === cur));
+}, { passive:true });
 $('#setClose').addEventListener('click', closeSettings);
 $('#settingsModal').addEventListener('click', e => { if (e.target.id === 'settingsModal') closeSettings(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#settingsModal').hidden) closeSettings(); });
@@ -2953,10 +2955,13 @@ $('#bellBtn').addEventListener('click', () => toggleBellMenu());
 function saveAlertCfg(){ try { localStorage.setItem('cj_alerts', JSON.stringify(alertCfg)); } catch(e){} try { syncPush(); } catch(e){} }
 function loadAlertCfg(){
   try { Object.assign(alertCfg, JSON.parse(localStorage.getItem('cj_alerts') || '{}')); } catch(e){}
+  // un seul canal ntfy : celui des alertes appli fermée (on reprend l'ancien nom s'il existait)
+  if (alertCfg.ntfy && alertCfg.ntfy !== pushCfg.topic && !pushCfg.registered){ pushCfg.topic = alertCfg.ntfy; pushCfg.on = true; savePush(); }
+  alertCfg.ntfy = pushCfg.on ? pushCfg.topic : '';
   if (alertCfg.muteUntil && Date.now() >= alertCfg.muteUntil) alertCfg.muteUntil = 0;   // pause terminée
   $('#alLead').value = String(alertCfg.lead);
   $('#alQuai').checked = alertCfg.quai; $('#alLate').checked = alertCfg.late; $('#alNoBus').checked = alertCfg.noBus;
-  $('#alFollow').checked = alertCfg.follow; $('#ntfyTopic').value = alertCfg.ntfy || '';
+  $('#alFollow').checked = alertCfg.follow;
   if (alertCfg.follow) setFollow(true);
 }
 $('#geoBtn').addEventListener('click', locateOnce);
@@ -2966,12 +2971,6 @@ $('#alLine').addEventListener('change', e => { alertCfg.line = e.target.value; s
 ['alQuai', 'alLate', 'alNoBus'].forEach(id => $('#' + id).addEventListener('change', e => {
   alertCfg[{ alQuai:'quai', alLate:'late', alNoBus:'noBus' }[id]] = e.target.checked; saveAlertCfg();
 }));
-$('#ntfyTopic').addEventListener('change', e => { alertCfg.ntfy = e.target.value.trim().replace(/[^\w-]/g, ''); e.target.value = alertCfg.ntfy; saveAlertCfg(); });
-$('#ntfyTest').addEventListener('click', () => {
-  alertCfg.ntfy = $('#ntfyTopic').value.trim().replace(/[^\w-]/g, ''); $('#ntfyTopic').value = alertCfg.ntfy; saveAlertCfg();
-  if (!alertCfg.ntfy){ toast('Choisis d’abord un nom (le même que dans l’appli ntfy).'); return; }
-  notify('🧪 Test Car Jaune Live', 'Si tu lis ceci sur ton téléphone, les alertes fonctionnent.', 'none', { show:true, ntfy:true, force:true });
-});
 $('#alToggle').addEventListener('click', () => { if (!alertCfg.on) alertCfg.journey = false; toggleAlerts(); });
 $('#geoInfo').addEventListener('click', e => {
   const a = e.target.closest('[data-near]'); if (!a) return;
@@ -4042,6 +4041,7 @@ function tfUrl(kind){
 function applyTraffic(){
   const btn = $('#btnTraffic');
   if (btn){ btn.classList.toggle('on', TF.on); btn.setAttribute('aria-pressed', TF.on); }
+  if ($('#tfOn')) $('#tfOn').checked = TF.on;
   $('#tfLegend').hidden = !TF.on;
   [tfFlow, tfInc].forEach(l => { if (l) map.removeLayer(l); });
   tfFlow = tfInc = null;
@@ -4195,6 +4195,7 @@ document.addEventListener('click', e => {
   if (j){ const jam = TF.jams[j.dataset.jam]; if (jam){ setView('map'); if (!TF.on) toggleTraffic(true); setTimeout(() => { fixMapSize(); map.flyTo([jam.lat, jam.lon], 15, { duration:.8 }); }, 120); } }
 });
 $('#btnTraffic').addEventListener('click', () => toggleTraffic());
+$('#tfOn').addEventListener('change', e => toggleTraffic(e.target.checked));
 
 function renderTfKey(){
   if (!$('#tfKey')) return;
@@ -4339,7 +4340,7 @@ function renderCityUI(){
   $('#cityOn').checked = cityCfg.on; $('#citySector').value = cityCfg.sector; $('#cityShow').checked = cityCfg.show;
   [['cityGareIn','gareIn'],['cityGareOut','gareOut'],['cityEnter','enter'],['cityLeave','leave']].forEach(([id, k]) => $('#' + id).checked = cityCfg[k]);
   const n = myPos ? vehicles.filter(v => inSector(v.lat, v.lon)).length : 0;
-  $('#cityStatus').textContent = !cityCfg.on ? 'Arrivées et départs des cars jaunes là où tu te trouves, et seulement là.'
+  $('#cityStatus').textContent = !cityCfg.on ? 'désactivé'
     : !myPos ? '📍 Recherche de ta position…'
     : `📍 ${cityCfg.sector === 'city' ? 'Tu es à ' + (city.name || '… (recherche de la commune)') : sectorName()} · ${n} car${n > 1 ? 's' : ''} dans le secteur${alertCfg.on ? '' : ' · ⚠️ notifications coupées'}`;
   const all = [...new Set(Object.values(S.routes || {}).map(r => r.s))].sort((a, b) => a.localeCompare(b, 'fr', { numeric:true }));
@@ -4615,7 +4616,7 @@ function renderShareUI(){
   $('#shEvents').checked = shareCfg.events !== false;
   $('#shAuto').checked = shareCfg.auto !== false;
   $('#shStatus').textContent = autoActive && !shareCfg.on ? `🚌 Partage automatique en cours (dans le car)${shareLast.t ? ' · envoyé à ' + fmtHM(shareLast.t) : ''}`
-    : !shareCfg.on ? (shareCfg.auto && shareCfg.name.trim() ? '🟡 En veille : le partage démarre tout seul quand tu montes dans un car jaune.' : 'Tes proches voient où tu es et dans quel car jaune tu es monté.')
+    : !shareCfg.on ? (shareCfg.auto && shareCfg.name.trim() ? '🟡 Partage auto en veille : il démarre tout seul quand tu montes dans un car jaune.' : 'même hors des cars, tant que l’appli est ouverte')
     : shareErr ? '⚠️ Partage actif, mais ' + shareErr + '.'
     : shareLast.t ? `✅ Partage actif · envoyé à ${fmtHM(shareLast.t)}${shareLast.bus ? ' · dans le car' : ''} · ${BGGEO ? 'continue même appli fermée' : 's’arrête si tu fermes l’appli'}`
     : '✅ Partage actif · en attente de ta position…';
