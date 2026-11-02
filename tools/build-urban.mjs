@@ -44,6 +44,17 @@ function parseCsv(text){
 }
 const toMin = t => { if (!t) return null; const p = t.split(':'); return +p[0] * 60 + +p[1] + Math.round((+p[2] || 0) / 60); };
 const r5 = v => Math.round(parseFloat(v) * 1e5) / 1e5;
+// « HOTEL DE VILLE DE SAINT-DENIS » → « Hotel de Ville de Saint-Denis » (seulement les noms tout en majuscules)
+const SMALL = new Set(['d', 'l', 'de', 'du', 'des', 'la', 'le', 'les', 'et', 'à', 'au', 'aux', 'en', 'sur']);
+const nice = s => {
+  s = (s || '').trim();
+  if (!/[A-ZÀ-Ý]/.test(s) || s !== s.toUpperCase()) return s;
+  return s.toLowerCase().replace(/[^\s\-'’()\/]+/g, (w, i) => {
+    if (i > 0 && SMALL.has(w)) return w;
+    if (/^(ii|iii|iv|zac|zi|za|cfa|ces|edf|cgss|caf|chu|chor|gr|rn\d*|rd\d*)$/.test(w)) return w.toUpperCase();
+    return w[0].toUpperCase() + w.slice(1);
+  }).replace(/'/g, '’');
+};
 const hex = (c, d) => (/^[0-9a-f]{6}$/i.test((c || '').replace('#', '')) ? c.replace('#', '').toUpperCase() : d);
 
 /* ---------- tracés : simplification + polyligne encodée (format Google, 5 décimales) ---------- */
@@ -85,7 +96,7 @@ export function buildNet(net, zipBytes, today = new Date()){
   rr.forEach(r => {
     routeIdx[r.route_id] = routes.length;
     const c = hex(r.route_color, net.color);
-    routes.push([r.route_id, r.route_short_name || r.route_id, r.route_long_name || '', c,
+    routes.push([r.route_id, r.route_short_name || r.route_id, nice(r.route_long_name), c,
       hex(r.route_text_color, (parseInt(c.slice(0, 2), 16) * .3 + parseInt(c.slice(2, 4), 16) * .59 + parseInt(c.slice(4), 16) * .11) > 160 ? '1A1A1A' : 'FFFFFF')]);
   });
 
@@ -95,7 +106,7 @@ export function buildNet(net, zipBytes, today = new Date()){
   parseCsv(files['trips.txt']).forEach(t => {
     if (!(t.route_id in routeIdx)) return;
     if (!(t.service_id in svcIdx)){ svcIdx[t.service_id] = svcs.length; svcs.push(t.service_id); }
-    const h = t.trip_headsign || '';
+    const h = /^\d*$/.test(t.trip_headsign || '') ? '' : nice(t.trip_headsign);   // numéro de course (Car’Sud) : on prendra le terminus
     if (!(h in headIdx)){ headIdx[h] = heads.length; heads.push(h); }
     tripInfo[t.trip_id] = { r: routeIdx[t.route_id], h: headIdx[h], s: svcIdx[t.service_id], d: t.direction_id === '1' ? 1 : 0, sh: t.shape_id || '' };
   });
@@ -113,7 +124,7 @@ export function buildNet(net, zipBytes, today = new Date()){
     if (id in stopIdx) return stopIdx[id];
     const s = allStops[id]; if (!s) return -1;
     stopIdx[id] = stops.length;
-    const row = [s.stop_name, r5(s.stop_lat), r5(s.stop_lon)];
+    const row = [nice(s.stop_name), r5(s.stop_lat), r5(s.stop_lon)];
     if (s.wheelchair_boarding === '1' || s.wheelchair_boarding === '2') row[3] = +s.wheelchair_boarding;
     stops.push(row);
     return stopIdx[id];

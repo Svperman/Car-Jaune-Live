@@ -1,5 +1,5 @@
 /* Car Jaune Live — service worker : appli utilisable hors ligne (coquille), données toujours fraîches */
-const VERSION = 'cj-v29';
+const VERSION = 'cj-v30';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png',
@@ -41,7 +41,9 @@ self.addEventListener('fetch', e => {
     return;
   }
   // données en direct (serveur Apps Script, trafic, PDF) : jamais mises en cache ici
-  if (/script\.google|googleusercontent|ntfy\.sh|tomtom\.com|geo\.api\.gouv/.test(url.host)) return;
+  if (/script\.google|googleusercontent|ntfy\.sh|tomtom\.com|geo\.api\.gouv|zenbus\.net|transport\.data\.gouv/.test(url.host)) return;
+  // horaires des bus urbains : gardés par l'appli elle-même (mémoire du téléphone)
+  if (url.pathname.includes('/data/urbain/')) return;
 
   // page : réseau d'abord (pour recevoir les mises à jour), cache si hors ligne
   if (req.mode === 'navigate'){
