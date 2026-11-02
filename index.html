@@ -408,6 +408,15 @@
   .set-foot{padding:14px 18px 22px;font-size:12px;color:var(--gris);text-align:center}
   .al-link{border:none;background:none;color:var(--titre);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
 
+  /* ---------- cars dans ma ville ---------- */
+  .city-chip{display:flex;align-items:center;gap:8px;background:#fff;border:none;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.2);
+    padding:7px 11px;font:inherit;font-size:12.5px;text-align:left;cursor:pointer;color:var(--texte)}
+  .city-chip b{color:var(--titre)} .city-chip small{display:block;color:var(--gris)}
+  .chk-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chk-row label{display:flex;align-items:center;gap:6px;border:1.5px solid var(--ligne);border-radius:25px;padding:6px 11px;font-size:13px;cursor:pointer}
+  .chk-row label:has(input:checked){border-color:var(--jaune);background:#FFF7DA}
+  .chk-row input{accent-color:#B58A00}
+
   /* ---------- proches ---------- */
   .fr-mk{position:relative;display:flex;align-items:center;gap:5px;transform:translate(-50%, calc(-100% - 22px));width:max-content;
     background:#fff;border-radius:999px;padding:3px 9px 3px 3px;box-shadow:0 3px 12px rgba(0,0,0,.3);font:800 12.5px/1 'Nunito Sans',sans-serif;color:var(--titre)}
@@ -669,6 +678,24 @@
 
   <div class="set-sec"><h3>📍 Position</h3>
     <div class="set-row"><div><b>Suivre ma position</b><small>choisit tout seul l’arrêt le plus proche (rien n’est affiché sur la carte)</small></div><label class="switch"><input type="checkbox" id="alFollow"><span></span></label></div>
+  </div>
+
+  <div class="set-sec" id="citySec"><h3>🏙️ Cars dans ma ville</h3>
+    <div class="set-row"><div><b>M’annoncer les cars autour de moi</b><small id="cityStatus">Arrivées et départs des cars jaunes là où tu te trouves, et seulement là.</small></div>
+      <label class="switch"><input type="checkbox" id="cityOn"><span></span></label></div>
+    <div class="set-row"><div><b>Secteur</b><small>suit ta position tout seul</small></div>
+      <select id="citySector"><option value="city">ma ville (commune)</option><option value="1000">1 km autour de moi</option><option value="2000">2 km autour de moi</option><option value="5000">5 km autour de moi</option></select></div>
+    <div class="set-row" style="display:block"><b>M’annoncer</b>
+      <div class="chk-row">
+        <label><input type="checkbox" id="cityGareIn" checked> 🚏 arrivée en gare</label>
+        <label><input type="checkbox" id="cityGareOut" checked> 🚌 départ de la gare</label>
+        <label><input type="checkbox" id="cityEnter"> ➡️ entre dans le secteur</label>
+        <label><input type="checkbox" id="cityLeave"> ⬅️ quitte le secteur</label>
+      </div></div>
+    <div class="set-row" style="display:block"><b>Lignes</b><small>aucune cochée = toutes les lignes</small>
+      <div class="chk-row" id="cityLines"></div></div>
+    <div class="set-row"><div><b>Voir le secteur sur la carte</b><small>contour en pointillés</small></div>
+      <label class="switch"><input type="checkbox" id="cityShow" checked><span></span></label></div>
   </div>
 
   <div class="set-sec" id="shareSec"><h3>👥 Mes proches</h3>
@@ -2351,7 +2378,7 @@ function renderSettings(){
   $('#pauseOff').hidden = !muted;
   $('#alSound').checked = alertCfg.sound; $('#alVibe').checked = alertCfg.vibe; $('#alWake').checked = alertCfg.wake;
   $('#alFollow').checked = alertCfg.follow;
-  renderShareUI();
+  renderShareUI(); renderCityUI();
   if (!IN_GAS){ $('#apiRow').hidden = false; $('#apiTxt').textContent = API_URL ? '…' + API_URL.slice(-34) : 'pas encore réglé'; }
   renderNotif();
 }
@@ -2720,6 +2747,7 @@ function parseFeed(feed){
   Object.keys(motion).forEach(id => { if (!vehicles.some(v => v.id === id)) delete motion[id]; });
   applyEstimates();
   loadTripSchedules();          // horaires arrêt par arrêt des cars en circulation (une fois par ligne)
+  try { cityTick(); renderCityChip(); } catch(e){}
 }
 
 /* ====================== Avance / retard estimés ======================
@@ -3473,6 +3501,167 @@ function loadPrefs(){
   } catch(e){}
 }
 function setStatus(t){ $('#status').textContent = t; }
+/* ====================== Cars dans ma ville ======================
+   Secteur = la commune où tu es (contour officiel, geo.api.gouv.fr) ou un rayon autour de toi.
+   À chaque mise à jour du temps réel, on repère pour chaque car : entrée / sortie du secteur,
+   arrivée / départ d'une gare du secteur. Plusieurs cars en même temps = une seule notification. */
+const cityCfg = Object.assign({ on:false, sector:'city', gareIn:true, gareOut:true, enter:false, leave:false, lines:[], show:true },
+  (() => { try { return JSON.parse(localStorage.getItem('cj_city') || '{}'); } catch(e){ return {}; } })());
+let city = { name:'', poly:null, at:0, loading:false }, cityWatch = null, cityState = {}, cityLayer = L.layerGroup().addTo(map);
+function saveCity(){ try { localStorage.setItem('cj_city', JSON.stringify(cityCfg)); } catch(e){} }
+/** Point dans un polygone GeoJSON (Polygon ou MultiPolygon), coordonnées [lon, lat]. */
+function inPoly(geo, lat, lon){
+  const polys = geo.type === 'MultiPolygon' ? geo.coordinates : [geo.coordinates];
+  return polys.some(rings => {
+    let inside = false;
+    rings.forEach((ring, ri) => {
+      let c = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++){
+        const [xi, yi] = ring[i], [xj, yj] = ring[j];
+        if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c;
+      }
+      if (ri === 0) inside = c; else if (c) inside = false;      // trous
+    });
+    return inside;
+  });
+}
+function inSector(lat, lon){
+  if (!myPos) return false;
+  if (cityCfg.sector === 'city' && city.poly) return inPoly(city.poly, lat, lon);
+  const r = cityCfg.sector === 'city' ? 3000 : +cityCfg.sector;    // ville inconnue : 3 km
+  return distM(myPos.lat, myPos.lon, lat, lon) <= r;
+}
+async function updateCity(){
+  if (!myPos || cityCfg.sector !== 'city' || city.loading) return;
+  if (city.poly && inPoly(city.poly, myPos.lat, myPos.lon)) return;   // toujours dans la même commune
+  city.loading = true;
+  try {
+    const r = await fetch(`https://geo.api.gouv.fr/communes?lat=${myPos.lat}&lon=${myPos.lon}&fields=nom,contour&format=json`);
+    const c = (await r.json())[0];
+    if (c && c.contour){
+      const changed = city.name && city.name !== c.nom;
+      city = { name: c.nom, poly: c.contour, at: Date.now(), loading:false };
+      cityState = {};                                         // nouveau secteur : on repart de zéro (pas d'annonce en rafale)
+      if (changed && cityCfg.on && alertCfg.on) notify(`🏙️ Tu es maintenant à ${c.nom}`, 'Je t’annonce les cars jaunes de cette ville.', 'none');
+    }
+  } catch(e){ city.name = city.name || ''; }
+  city.loading = false;
+  drawSector(); renderCityUI();
+}
+function drawSector(){
+  cityLayer.clearLayers();
+  if (!cityCfg.on || !cityCfg.show || !myPos) return;
+  const style = { color:'#B58A00', weight:2, dashArray:'6 6', fillColor:'#F6BE00', fillOpacity:.05, interactive:false };
+  if (cityCfg.sector === 'city' && city.poly) L.geoJSON(city.poly, { style }).addTo(cityLayer);
+  else if (cityCfg.sector !== 'city') L.circle([myPos.lat, myPos.lon], Object.assign({ radius: +cityCfg.sector }, style)).addTo(cityLayer);
+}
+function sectorName(){ return cityCfg.sector === 'city' ? (city.name || 'ton secteur') : `${+cityCfg.sector / 1000} km autour de toi`; }
+function onCityFix(p){
+  const c = p.coords;
+  if (meWatch == null) myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed: c.speed > 0 ? c.speed : 0, heading: null };
+  if (cityCfg.sector === 'city') updateCity(); else drawSector();
+  renderCityUI();
+}
+function startCity(){
+  if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return false; }
+  if (cityWatch == null) cityWatch = navigator.geolocation.watchPosition(onCityFix, e => {
+    if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour « Cars dans ma ville ».'); setCityOn(false); }
+  }, { enableHighAccuracy:false, maximumAge:60000, timeout:30000 });
+  return true;
+}
+function stopCity(){ if (cityWatch != null) navigator.geolocation.clearWatch(cityWatch); cityWatch = null; cityState = {}; cityLayer.clearLayers(); }
+function setCityOn(on){
+  cityCfg.on = on && startCity(); saveCity();
+  if (!cityCfg.on) stopCity();
+  else toast('🏙️ Je t’annonce les cars jaunes de ton secteur.');
+  renderCityUI(); drawSector();
+}
+/** Gare du secteur où se trouve le car (moins de 150 m), sinon null. */
+function gareAt(v){
+  let best = null;
+  stopGroups.forEach(g => {
+    if (!isGare(g) || !isFinite(g.lat)) return;
+    const d = distM(v.lat, v.lon, g.lat, g.lon);
+    if (d < 150 && (!best || d < best.d)) best = { g, d };
+  });
+  return best && inSector(best.g.lat, best.g.lon) ? best.g : null;
+}
+/** Appelé après chaque mise à jour du temps réel. */
+function cityTick(){
+  if (!cityCfg.on || !myPos || !vehicles.length) return;
+  if (cityCfg.sector === 'city' && !city.poly && !city.loading) updateCity();
+  const evs = [], seen = new Set(), wanted = cityCfg.lines || [];
+  vehicles.forEach(v => {
+    if (v.age != null && v.age > 3 * 60e3) return;
+    seen.add(v.id);
+    const inS = inSector(v.lat, v.lon), g = gareAt(v), prev = cityState[v.id];
+    cityState[v.id] = { inS, gare: g ? g.name : '', gt: g ? (prev && prev.gare === g.name ? prev.gt : Date.now()) : 0 };
+    if (!prev) return;                                          // 1re fois : on observe seulement
+    if (wanted.length && !wanted.includes(v.route.s)) return;
+    const who = { v, l: v.route.s, d: v.headsign };
+    if (!prev.inS && inS && cityCfg.enter) evs.push({ k:'enter', ...who });
+    if (prev.inS && !inS && cityCfg.leave) evs.push({ k:'leave', ...who });
+    if (!prev.gare && g && cityCfg.gareIn) evs.push({ k:'gareIn', gare: g.name, ...who });
+    if (prev.gare && !g && cityCfg.gareOut && distM(v.lat, v.lon, ...(() => { const pg = stopGroups.find(x => x.name === prev.gare); return pg ? [pg.lat, pg.lon] : [v.lat, v.lon]; })()) > 150)
+      evs.push({ k:'gareOut', gare: prev.gare, ...who });
+  });
+  Object.keys(cityState).forEach(id => { if (!seen.has(id)) delete cityState[id]; });
+  if (!evs.length || !alertCfg.on) return;
+  const dl = v => { const k = punctOf(v.delay); return k === 'late' ? ` (retard ${Math.round(v.delay / 60)} min)` : k === 'early' ? ` (avance ${Math.round(-v.delay / 60)} min)` : ''; };
+  const one = e => ({
+    enter:  [`➡️ Le ${e.l} arrive à ${sectorName()}`, `Direction ${e.d}${e.v.stopName ? ' · prochain arrêt ' + e.v.stopName : ''}${dl(e.v)}.`],
+    leave:  [`⬅️ Le ${e.l} quitte ${sectorName()}`, `Direction ${e.d}.`],
+    gareIn: [`🚏 Le ${e.l} arrive à ${e.gare}`, `Direction ${e.d}${dl(e.v)}.`],
+    gareOut:[`🚌 Le ${e.l} part de ${e.gare}`, `Direction ${e.d}${dl(e.v)}.`]
+  })[e.k];
+  if (evs.length === 1){ const [t, b] = one(evs[0]); notify(t, b); return; }
+  // plusieurs cars en même temps : une seule notification groupée
+  const verb = { enter:'arrivent à ' + sectorName(), leave:'quittent ' + sectorName(), gareIn:'arrivent en gare', gareOut:'partent de la gare' };
+  const kinds = [...new Set(evs.map(e => e.k))];
+  const title = kinds.length === 1 ? `🚌 ${evs.length} cars ${verb[kinds[0]]}` : `🚌 ${evs.length} cars à ${sectorName()}`;
+  const tag = { enter:'arrive', leave:'part', gareIn:'en gare', gareOut:'quitte la gare' };
+  notify(title, evs.map(e => `${e.l} → ${e.d}${kinds.length > 1 || e.gare ? ` (${e.gare ? e.gare + ', ' : ''}${tag[e.k]})` : ''}`).join(' · '));
+}
+function renderCityUI(){
+  if (!$('#cityOn')) return;
+  $('#cityOn').checked = cityCfg.on; $('#citySector').value = cityCfg.sector; $('#cityShow').checked = cityCfg.show;
+  [['cityGareIn','gareIn'],['cityGareOut','gareOut'],['cityEnter','enter'],['cityLeave','leave']].forEach(([id, k]) => $('#' + id).checked = cityCfg[k]);
+  const n = myPos ? vehicles.filter(v => inSector(v.lat, v.lon)).length : 0;
+  $('#cityStatus').textContent = !cityCfg.on ? 'Arrivées et départs des cars jaunes là où tu te trouves, et seulement là.'
+    : !myPos ? '📍 Recherche de ta position…'
+    : `📍 ${cityCfg.sector === 'city' ? 'Tu es à ' + (city.name || '… (recherche de la commune)') : sectorName()} · ${n} car${n > 1 ? 's' : ''} dans le secteur${alertCfg.on ? '' : ' · ⚠️ notifications coupées'}`;
+  const all = [...new Set(Object.values(S.routes || {}).map(r => r.s))].sort((a, b) => a.localeCompare(b, 'fr', { numeric:true }));
+  const box = $('#cityLines');
+  if (box.dataset.n !== String(all.length) + cityCfg.lines.join()){
+    box.dataset.n = String(all.length) + cityCfg.lines.join();
+    box.innerHTML = all.map(l => `<label><input type="checkbox" data-cline="${esc(l)}"${cityCfg.lines.includes(l) ? ' checked' : ''}> ${esc(l)}</label>`).join('');
+  }
+  renderCityChip();
+}
+function renderCityChip(){
+  const box = $('#frCtl'); if (!box) return;
+  let chip = $('#cityChip');
+  if (!cityCfg.on){ if (chip) chip.remove(); return; }
+  if (!chip){ chip = document.createElement('button'); chip.className = 'city-chip'; chip.id = 'cityChip'; box.prepend(chip); chip.onclick = () => {
+    const l = cityLayer.getLayers()[0];
+    if (l && l.getBounds) map.flyToBounds(l.getBounds(), { padding:[30, 30], duration:.8 }); else openSettings();
+  }; }
+  const n = myPos ? vehicles.filter(v => inSector(v.lat, v.lon)).length : 0;
+  chip.innerHTML = `<span>🏙️</span><span><b>${esc(cityCfg.sector === 'city' ? (city.name || 'Ma ville') : sectorName())}</b><small>${myPos ? n + ' car' + (n > 1 ? 's' : '') + ' dans le secteur' : 'recherche de ta position…'}</small></span>`;
+}
+$('#cityOn').addEventListener('change', e => setCityOn(e.target.checked));
+$('#citySector').addEventListener('change', e => { cityCfg.sector = e.target.value; saveCity(); cityState = {}; if (cityCfg.sector === 'city'){ city.poly = null; updateCity(); } drawSector(); renderCityUI(); });
+$('#cityShow').addEventListener('change', e => { cityCfg.show = e.target.checked; saveCity(); drawSector(); });
+[['cityGareIn','gareIn'],['cityGareOut','gareOut'],['cityEnter','enter'],['cityLeave','leave']].forEach(([id, k]) =>
+  $('#' + id).addEventListener('change', e => { cityCfg[k] = e.target.checked; saveCity(); }));
+$('#cityLines').addEventListener('change', e => {
+  const c = e.target.closest('[data-cline]'); if (!c) return;
+  const l = c.dataset.cline;
+  cityCfg.lines = c.checked ? [...new Set(cityCfg.lines.concat(l))] : cityCfg.lines.filter(x => x !== l);
+  saveCity();
+});
+if (cityCfg.on) setTimeout(() => { if (!startCity()) { cityCfg.on = false; saveCity(); } renderCityUI(); }, 2000);
+
 /* ====================== Proches : partage de position ======================
    Celui qui partage envoie sa position (et le car où il est) toutes les 45 s à 10 min selon qu'il roule,
    CHIFFRÉE (AES-GCM) avec une clé tirée de « prénom + code secret », via ntfy.sh (gratuit, sans compte).
@@ -3833,10 +4022,12 @@ const FriendCtl = L.Control.extend({ options:{ position:'bottomleft' }, onAdd(){
 new FriendCtl().addTo(map);
 function renderFriendChips(){
   const box = $('#frCtl'); if (!box) return;
+  const cc = $('#cityChip');
   box.innerHTML = friends.map((f, i) => {
     const st = friendState(f);
     return `<button class="fr-chip" data-fr="${i}"><span class="av"${st.old ? ' style="background:#9AA0A6"' : ''}>${esc(f.name[0].toUpperCase())}</span><span><b>${esc(f.name)}</b><small>${esc(st.t)}</small></span></button>`;
   }).join('');
+  if (cc) box.prepend(cc);
 }
 document.addEventListener('click', e => {
   const c = e.target.closest('[data-fr]'); if (!c) return;
