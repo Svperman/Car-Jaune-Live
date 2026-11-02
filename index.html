@@ -336,6 +336,15 @@
   .walk{font-size:11.5px;color:var(--retard);font-weight:700}
   .walk.ok{color:var(--ok)}
 
+  /* ---------- avance / retard ---------- */
+  .dchip{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .dchip.late{background:#FDE8DD;color:var(--retard)} .dchip.early{background:#E3EEFC;color:var(--avance)} .dchip.ok{background:#E6F5EC;color:var(--ok)}
+  .dchip small{font-weight:600;opacity:.8}
+  .bus-mk .dly{position:absolute;left:50%;top:13px;transform:translateX(-50%);font:800 10.5px/1 'Nunito Sans',sans-serif;color:#fff;border-radius:6px;padding:2px 4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .bus-mk .dly.late{background:var(--retard)} .bus-mk .dly.early{background:var(--avance)}
+  .punct{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--ligne);font-size:12.5px}
+  .punct .dchip{cursor:pointer;border:1.5px solid transparent} .punct .dchip.sel{border-color:currentColor}
+
   /* ---------- notifications du téléphone ---------- */
   .notif-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1.5px solid var(--ligne);border-radius:12px;padding:12px 14px;margin:12px 0}
   .notif-box .st{flex:1;min-width:200px;font-size:13.5px;line-height:1.45}
@@ -1392,10 +1401,16 @@ function journeyRows(from, to){
         rdep = sa ? stuTime(sa, 'departure', dep) : (tu.delay != null ? dep + tu.delay * 1000 : null);
         rarr = sb ? stuTime(sb, 'arrival', arr) : (rdep != null ? arr + (rdep - dep) : null);
       }
+      let approx = false, estVeh = null;
+      if (!tu){
+        const ea = vehEta(vehByTrip[tid], A[tid].id, d, dep);
+        if (ea === 'passed') return;
+        if (ea != null){ rdep = ea; rarr = arr + (ea - dep); approx = true; estVeh = vehByTrip[tid]; }
+      }
       const eff = rdep != null ? rdep : dep;
       if (eff < now - 60e3) return;
-      pool.push({ eff, sched: dep, real: rdep, arr, rarr, route: S.routes[ti[0]] || { s:'?', c:'F6BE00', t:'222222' },
-                  dest: to.name, veh: same ? vehByTrip[tid] : null, used: false });
+      pool.push({ eff, sched: dep, real: rdep, arr, rarr, approx, route: S.routes[ti[0]] || { s:'?', c:'F6BE00', t:'222222' },
+                  dest: to.name, veh: same ? vehByTrip[tid] : estVeh, used: false });
     });
   });
   // fiches carjaune.re : colonnes qui desservent A puis B
@@ -1420,10 +1435,11 @@ function journeyRows(from, to){
           const mt = pool.find(r => !r.used && r.route.s === line && Math.abs(r.sched - dep) <= 120e3)
                   || pool.find(r => !r.used && lines.includes(r.route.s) && Math.abs(r.sched - dep) <= 120e3);
           if (mt) mt.used = true;
-          const rdep = mt ? mt.real : null, rarr = mt ? (mt.rarr != null ? mt.rarr : (rdep != null ? arr + (rdep - dep) : null)) : null;
+          const shift = mt && mt.real != null ? mt.real - mt.sched : null;
+          const rdep = shift != null ? dep + shift : null, rarr = mt && mt.rarr != null ? arr + (mt.rarr - mt.arr) : (rdep != null ? arr + shift : null);
           const eff = rdep != null ? rdep : dep;
           if (eff < now - 60e3) return;
-          out.push({ eff, sched: dep, real: rdep, arr, rarr, route: mt ? mt.route : routeByShort(line), dest: to.name, veh: mt ? mt.veh : null, fiche: true });
+          out.push({ eff, sched: dep, real: rdep, arr, rarr, approx: !!(mt && mt.approx), route: mt ? mt.route : routeByShort(line), dest: to.name, veh: mt ? mt.veh : null, fiche: true });
         });
       });
     });
@@ -1474,10 +1490,10 @@ function renderTrip(){
       const late = walk != null && walk > 1 && mins < walk;
       const leave = walk != null && walk > 1 && !late && mins - walk <= 30
         ? `<br><span class="walk${mins - walk > 5 ? ' ok' : ''}">🚶 pars ${mins - walk <= 0 ? 'maintenant' : 'dans ' + (mins - walk) + ' min'}</span>` : '';
-      t += `<tr class="${late ? 'toolate' : ''}"><td>${when}${leave}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched)}</td>
+      t += `<tr class="${late ? 'toolate' : ''}"><td>${when}${leave}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched, r.approx)}</td>
         <td class="arr">${fmtTime(r.rarr, r.arr, r.rarr != null && r.real != null)}</td>
         <td><span class="dur">${Math.round((arrEff - r.eff) / 60000)} min</span></td>
-        <td>${r.real != null ? '<span class="rt">Temps réel</span>' : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>`}
+        <td>${r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>`}
           ${r.veh ? `<br><button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}</td></tr>`;
     });
     html += `<table class="board jt"><thead><tr><th>Départ</th><th>Ligne</th><th>Part de ${esc(from.name)}</th><th>Arrive à ${esc(to.name)}</th><th>Durée</th><th>Info</th></tr></thead><tbody>${t}</tbody></table>`;
@@ -1704,7 +1720,8 @@ function renderRide(){
       const t = v.times, eta = t && t.next.eta, arr = t && (t.arr.real || t.arr.sched);
       box.innerHTML = `<div class="nav-grid">${badge(v.route)}
         <div class="nav-col"><div class="l1">→ ${esc(v.headsign || '')}</div>
-          <div class="l2">${v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b>` : ''}${arr ? ` · arrivée <b>${t.arr.estimated ? '~' : ''}${fmtHM(arr)}</b>` : ''}</div></div>
+          <div class="l2">${v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b>` : ''}${arr ? ` · arrivée <b>${t.arr.estimated ? '~' : ''}${fmtHM(arr)}</b>` : ''}${
+            v.delay != null ? ` · <span class="delay ${fmtDelay(v.delay, v.delayEst).c}">${fmtDelay(v.delay, v.delayEst).t}</span>` : ''}</div></div>
         ${eta ? `<div class="nav-big">${Math.max(0, Math.round((eta - Date.now()) / 60000))}<small>min</small></div>` : ''}${spd}</div>`;
     } else {
       const near = myPos ? nearbyStops(myPos.lat, myPos.lon, 1)[0] : null;
@@ -1728,7 +1745,8 @@ function renderRide(){
   box.innerHTML = `<div class="rb-h">${badge(v.route)} Tu es dans ce car → ${esc(v.headsign || '')}</div>
     ${v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b>${t && t.next.eta ? ` à <b>${fmtHM(t.next.eta)}</b> (${fmtIn(t.next.eta)})` : ''}<br>` : ''}
     ${t ? `Arrivée à ${esc(t.arr.stop || 'terminus')} : <b>${t.arr.estimated ? '~' : ''}${fmtHM(t.arr.real || t.arr.sched)}</b> (${fmtIn(t.arr.real || t.arr.sched)})` : ''}
-    ${kmh ? ` · ${kmh} km/h` : ''}`;
+    ${kmh ? ` · ${kmh} km/h` : ''}
+    ${v.delay != null ? `<br><span class="delay ${fmtDelay(v.delay, v.delayEst).c}">${esc(fmtDelay(v.delay, v.delayEst).long)}</span>` : ''}`;
 }
 
 /** Bouton « Ma position » : suivi en direct (la carte te suit), recentrer, ou arrêter. */
@@ -2349,13 +2367,13 @@ function parseFeed(feed){
     const ts = v.timestamp ? v.timestamp * 1000 : null;
     const stop = S.stops[v.stopId];
     return {
-      id: String(id), routeId, route, tripId: trip.tripId || '', svc: ti[7] || '',
+      id: String(id), routeId, route, tripId: trip.tripId || '', svc: ti[7] || '', startDate: trip.startDate || '',
       headsign: ti[1] || route.l || '',
       lat: v.position.latitude, lon: v.position.longitude,
       bearing: v.position.bearing, speed: v.position.speed,
       ts, age: ts ? Math.max(0, now - ts) : null,
       stopName: stop ? stop[0] : '',
-      delay: getDelay(tus[trip.tripId], v),
+      delay: getDelay(tus[trip.tripId], v), delayEst: false, est: null,
       label: (v.vehicle && (v.vehicle.label || v.vehicle.licensePlate)) || '',
       times: tripTimes(v, tus[trip.tripId], ti, trip)
     };
@@ -2371,6 +2389,108 @@ function parseFeed(feed){
     if (!st || st.t0 !== (v.ts || st.t0) || st.lat !== v.lat || st.lon !== v.lon) updateMotion(v);
   });
   Object.keys(motion).forEach(id => { if (!vehicles.some(v => v.id === id)) delete motion[id]; });
+  applyEstimates();
+  loadTripSchedules();          // horaires arrêt par arrêt des cars en circulation (une fois par ligne)
+}
+
+/* ====================== Avance / retard estimés ======================
+   Quand le flux officiel ne donne pas le retard, on le calcule : position du car le long de son
+   parcours, comparée à l'horaire prévu entre les deux arrêts qui l'encadrent. */
+const TRIP_ST = {}, tripGeomCache = {}, tsLoaded = new Set();
+let tsRunning = false;
+async function loadTripSchedules(){
+  if (tsRunning || !S || !S.routeStops) return;
+  const rids = [...new Set(vehicles.map(v => v.routeId))].filter(r => r && !tsLoaded.has(r) && S.routeStops[r]);
+  if (!rids.length) return;
+  tsRunning = true;
+  try {
+    const ids = new Set();
+    rids.forEach(r => (S.routeStops[r] || []).forEach(l => (l || []).forEach(id => ids.add(id))));
+    const all = [...ids], parts = [];
+    for (let i = 0; i < all.length; i += 60) parts.push(all.slice(i, i + 60));
+    for (let i = 0; i < parts.length; i += 4){
+      const res = await Promise.all(parts.slice(i, i + 4).map(p => call('getStopBoard', p).then(JSON.parse).catch(() => ({}))));
+      res.forEach(data => Object.keys(data).forEach(sid => (data[sid] || []).forEach(([tid, sec]) => {
+        if (S.trips[tid]) (TRIP_ST[tid] = TRIP_ST[tid] || {})[sid] = sec;
+      })));
+    }
+    rids.forEach(r => tsLoaded.add(r));
+    Object.keys(tripGeomCache).forEach(k => delete tripGeomCache[k]);
+  } catch(e){} finally { tsRunning = false; }
+  applyEstimates();
+  render();
+}
+/** Arrêts du car dans l'ordre, avec heure prévue (s depuis minuit) et position le long du parcours. */
+function tripGeom(tid, routeId){
+  if (tripGeomCache[tid] !== undefined) return tripGeomCache[tid];
+  const ti = S.trips[tid], m = Object.assign({}, TRIP_ST[tid] || {});
+  if (!ti) return null;
+  if (ti[5] && ti[3] != null && m[ti[5]] == null) m[ti[5]] = ti[3];      // départ (terminus) …
+  if (ti[6] && ti[4] != null && m[ti[6]] == null) m[ti[6]] = ti[4];      // … et arrivée
+  const stops = Object.keys(m).filter(id => S.stops[id]).map(id => ({ id, sec: m[id], lat: S.stops[id][1], lon: S.stops[id][2] }))
+    .sort((a, b) => a.sec - b.sec);
+  if (stops.length < 3 || !TRIP_ST[tid]) return (tripGeomCache[tid] = null);
+  // tracé officiel de la ligne si tous les arrêts sont dessus, sinon la chaîne des arrêts
+  let geo = null;
+  routeLines(routeId).forEach(line => {
+    const pr = stops.map(s => projectOn(line, s.lat, s.lon));
+    if (pr.some(p => p.d > 300)) return;
+    let ss = pr.map(p => p.s);
+    const rev = ss[ss.length - 1] < ss[0];
+    if (rev) ss = ss.map(s => line.len - s);
+    let bad = 0;
+    for (let i = 1; i < ss.length; i++) if (ss[i] < ss[i - 1] - 50) bad++;
+    if (bad > stops.length * 0.1) return;
+    for (let i = 1; i < ss.length; i++) ss[i] = Math.max(ss[i], ss[i - 1]);
+    const score = pr.reduce((a, p) => a + p.d, 0);
+    if (!geo || score < geo.score) geo = { line, rev, ss, score };
+  });
+  if (!geo){
+    const pts = stops.map(s => [s.lat, s.lon]), cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + distM(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]));
+    geo = { line: { pts, cum, len: cum[cum.length - 1] }, rev: false, ss: cum.slice() };
+  }
+  stops.forEach((s, i) => s.s = geo.ss[i]);
+  return (tripGeomCache[tid] = { line: geo.line, rev: geo.rev, stops });
+}
+/** Écart à l'horaire (s, + = retard) d'après la position ; null si on ne peut pas le savoir. */
+function estimateDelay(v){
+  if (!v.tripId) return null;
+  const G = tripGeom(v.tripId, v.routeId);
+  if (!G) return null;
+  const p = projectOn(G.line, v.lat, v.lon);
+  if (p.d > 400) return null;                                         // car hors de son parcours
+  const s = G.rev ? G.line.len - p.s : p.s, st = G.stops, n = st.length;
+  const base = serviceDayMs(v.startDate, st[0].sec), t = (v.ts || Date.now()) / 1000;
+  if (s < st[0].s + 60) return null;                                  // encore au départ : pas parti
+  let k = 0;
+  while (k < n - 2 && st[k + 1].s <= s) k++;
+  const a = st[k], b = st[k + 1];
+  const atStop = s - a.s < 60 || b.s - s < 60;
+  const f = b.s > a.s ? Math.max(0, Math.min(1, (s - a.s) / (b.s - a.s))) : 1;
+  const sched = base / 1000 + (s - a.s < 60 ? a.sec : b.s - s < 60 ? b.sec : a.sec + f * (b.sec - a.sec));
+  let d = t - sched;
+  if (atStop && d < 0 && (v.speed == null || v.speed < 2)) d = 0;    // arrêté en avance : il attend l'heure
+  if (Math.abs(d) > 90 * 60) return null;
+  const next = b.s - s < 60 && k + 2 < n ? k + 2 : k + 1;
+  return { delay: Math.round(d), base, next, stops: st };
+}
+function applyEstimates(){
+  vehicles.forEach(v => {
+    v.est = estimateDelay(v);
+    if (v.delay == null && v.est){ v.delay = v.est.delay; v.delayEst = true; }
+    if (v.times && v.delay != null && v.times.arr.real == null){
+      v.times.arr.real = v.times.arr.sched + Math.max(0, v.delay) * 1000;  // un car en avance attend aux points d'arrêt
+      v.times.arr.estimated = true;
+    }
+  });
+}
+/** Heure estimée d'un car au passage d'un arrêt de sa course (jour de service d) ; 'passed' s'il l'a dépassé. */
+function vehEta(v, stopId, d, schedMs){
+  if (!v || v.delay == null || !v.est || v.est.base !== d) return null;
+  const i = v.est.stops.findIndex(x => x.id === stopId);
+  if (i >= 0 && i < v.est.next) return 'passed';
+  return schedMs + Math.max(v.delay, v.delay < 0 ? -120 : 0) * 1000;
 }
 
 /* ====================== Affichage carte + liste ====================== */
@@ -2389,11 +2509,26 @@ function fmtAge(ms){
   return `il y a ${Math.round(s / 60)} min`;
 }
 
-function fmtDelay(d){
-  if (d == null) return { t:'Pas d’info retard', c:'d-none' };
-  const m = Math.round(Math.abs(d) / 60);
-  if (Math.abs(d) < 60) return { t:'À l’heure', c:'d-ok' };
-  return d > 0 ? { t:`+${m} min`, c:'d-late' } : { t:`−${m} min`, c:'d-early' };
+/** Ponctualité : en retard à partir de +2 min, en avance à partir de −1 min (secondes). */
+function punctOf(d){
+  if (d == null) return null;
+  const m = Math.round(d / 60);
+  return m >= 2 ? 'late' : m <= -1 ? 'early' : 'ok';
+}
+function fmtDelay(d, est){
+  const k = punctOf(d);
+  if (!k) return { t:'Pas d’info retard', c:'d-none', long:'Pas encore d’info d’avance ou de retard' };
+  const m = Math.abs(Math.round(d / 60)), a = est ? '≈ ' : '';
+  const src = est ? ' (estimé d’après sa position et la fiche horaire)' : ' (temps réel officiel)';
+  if (k === 'ok') return { t:'À l’heure', c:'d-ok', long:'À l’heure' + src };
+  return k === 'late' ? { t:`${a}+${m} min`, c:'d-late', long:`En retard de ${m} min` + src }
+                      : { t:`${a}−${m} min`, c:'d-early', long:`En avance de ${m} min` + src };
+}
+/** Pastille « Retard 4 min / Avance 2 min / À l’heure » pour un écart en ms. */
+function delayChip(ms, est){
+  const d = ms / 1000, k = punctOf(d), m = Math.abs(Math.round(d / 60));
+  const lbl = k === 'late' ? `Retard ${m} min` : k === 'early' ? `Avance ${m} min` : 'À l’heure';
+  return `<span class="dchip ${k}">${est ? '≈ ' : ''}${lbl}</span><br><small class="muted">${est ? 'estimé (position GPS)' : 'temps réel'}</small>`;
 }
 
 function badge(route){
@@ -2404,17 +2539,19 @@ function iconFor(v){
   const stale = v.age != null && v.age > STALE_MS;
   const has = v.bearing != null && v.bearing !== 0;
   const arrow = `<div class="arrow" style="transform:rotate(${Math.round((v.bearing || 0) + mapBearing())}deg);${has ? '' : 'display:none'}"></div>`;
-  const html = `<div class="bus-mk${stale ? ' stale' : ''}${typeof onBus !== 'undefined' && onBus === v.id ? ' mine' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div></div>`;
+  const pk = punctOf(v.delay), dm = Math.abs(Math.round((v.delay || 0) / 60));
+  const dly = pk === 'late' ? `<div class="dly late">+${dm}′</div>` : pk === 'early' ? `<div class="dly early">−${dm}′</div>` : '';
+  const html = `<div class="bus-mk${stale ? ' stale' : ''}${typeof onBus !== 'undefined' && onBus === v.id ? ' mine' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div>${dly}</div>`;
   // la clé ignore l'orientation de la flèche (mise à jour en continu par l'animation)
   return { key: html.replace(/rotate\([^)]*\)/, ''), icon: L.divIcon({ className:'', html, iconSize:[0,0] }) };
 }
 
 function popupFor(v){
-  const d = fmtDelay(v.delay);
+  const d = fmtDelay(v.delay, v.delayEst);
   const speed = v.speed != null ? `${Math.round(v.speed * 3.6)} km/h` : '';
   return `<div class="pop-h">${badge(v.route)}<b>${esc(v.headsign || 'Destination inconnue')}</b>${svcTag(v.svc)}</div>
     ${v.times ? timesTable(v.times, v) : (v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b><br>` : '')}
-    <span class="delay ${d.c}">${d.t}</span>${speed ? ' · ' + speed : ''}<br>
+    <span class="delay ${d.c}">${esc(d.long)}</span>${speed ? ' · ' + speed : ''}<br>
     <span style="opacity:.7">Position ${fmtAge(v.age)}${v.label ? ' · véhicule ' + esc(v.label) : ''}</span>
     ${ficheLinks(v.route.s) ? `<div style="margin-top:8px">${ficheLinks(v.route.s)}</div>` : ''}`;
 }
@@ -2423,6 +2560,13 @@ function popupFor(v){
    Entre deux positions officielles (~20 s), chaque car avance le long du tracé de sa ligne,
    à sa vitesse mesurée ; à chaque nouvelle position, il se recale en douceur (1,5 s). */
 const shapeCache = {}, motion = {};
+let punctFilter = '';
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-punct]');
+  if (!c) return;
+  punctFilter = punctFilter === c.dataset.punct ? '' : c.dataset.punct;
+  render();
+});
 function routeLines(rid){
   if (shapeCache[rid]) return shapeCache[rid];
   const lines = ((S.shapes || {})[rid] || []).filter(p => p.length > 1).map(pts => {
@@ -2579,8 +2723,13 @@ function render(){
       : `<div class="empty">Aucun car jaune en circulation pour le moment.${first}</div>`;
   } else {
     vis.sort((a, b) => a.route.s.localeCompare(b.route.s, 'fr', { numeric:true }) || a.headsign.localeCompare(b.headsign));
-    list.innerHTML = vis.map(v => {
-      const d = fmtDelay(v.delay);
+    const cnt = { ok:0, late:0, early:0 };
+    vis.forEach(v => { const k = punctOf(v.delay); if (k) cnt[k]++; });
+    const shown = punctFilter ? vis.filter(v => punctOf(v.delay) === punctFilter) : vis;
+    const chip = (k, lbl) => cnt[k] ? `<span class="dchip ${k}${punctFilter === k ? ' sel' : ''}" data-punct="${k}">${lbl} · ${cnt[k]}</span>` : '';
+    const sum = (cnt.ok + cnt.late + cnt.early) ? `<div class="punct">${chip('ok', 'À l’heure')}${chip('late', 'En retard')}${chip('early', 'En avance')}</div>` : '';
+    list.innerHTML = sum + shown.map(v => {
+      const d = fmtDelay(v.delay, v.delayEst);
       const stale = v.age != null && v.age > STALE_MS;
       return `<div class="bus-item${stale ? ' stale' : ''}" data-id="${esc(v.id)}">
         ${badge(v.route)}
@@ -2590,7 +2739,7 @@ function render(){
           ${timesShort(v.times)}
           ${ficheLinks(v.route.s)}
         </div>
-        <span class="delay ${d.c}">${d.t}</span>
+        <span class="delay ${d.c}" title="${esc(d.long)}">${d.t}</span>
       </div>`;
     }).join('');
   }
@@ -2781,11 +2930,17 @@ function gtfsRows(g){
         const stu = (tu.stopTimeUpdate || []).find(s => s.stopId === id);
         real = stu ? stuTime(stu, 'departure', schedMs) : (tu.delay != null ? schedMs + tu.delay * 1000 : null);
       }
+      let approx = false, estVeh = null;
+      if (real == null && !tu){
+        const ev = vehEta(vehByTrip[tid], id, d, schedMs);
+        if (ev === 'passed') return;                                // le car est déjà passé ici
+        if (ev != null){ real = ev; approx = true; estVeh = vehByTrip[tid]; }
+      }
       const eff = real != null ? real : schedMs;
       if (eff < now - 60e3) return;                                // déjà parti
-      const runNow = tu ? sameRun : Math.abs(schedMs - now) < 12 * 3600e3;
+      const runNow = estVeh ? true : tu ? sameRun : Math.abs(schedMs - now) < 12 * 3600e3 && !(vehByTrip[tid] && vehByTrip[tid].est);
       const rt0 = S.routes[ti[0]] || { s:'?', c:'F6BE00', t:'222222' };
-      rows.push({ eff, sched: schedMs, real, route: rt0, sens: sensFor(rt0.s, ti[1] || '', ti[2]),
+      rows.push({ eff, sched: schedMs, real, approx, route: rt0, sens: sensFor(rt0.s, ti[1] || '', ti[2]),
                   dest: ti[1] || '', tag: svcTag(ti[7]), veh: runNow ? vehByTrip[tid] : null, used: false });
     });
   }));
@@ -2832,10 +2987,10 @@ function ficheRows(g, pool){
           const mt = pool.find(r => !r.used && r.route.s === line && Math.abs(r.sched - sched) <= 120e3)
                   || pool.find(r => !r.used && lines.includes(r.route.s) && Math.abs(r.sched - sched) <= 120e3);
           if (mt) mt.used = true;
-          const real = mt ? mt.real : null;
+          const real = mt && mt.real != null ? sched + (mt.real - mt.sched) : null;
           const eff = real != null ? real : sched;
           if (eff < now - 60e3) return;
-          out.push({ eff, sched, real, route: mt ? mt.route : routeByShort(line), sens: ficheSens(url, t.dir),
+          out.push({ eff, sched, real, approx: !!(mt && mt.approx), route: mt ? mt.route : routeByShort(line), sens: ficheSens(url, t.dir),
                      dest: t.dir, tag: '', veh: mt ? mt.veh : null, kind: tableKindLabel(t) });
         }));
       });
@@ -2889,14 +3044,14 @@ function renderBoard(){
       const when = mins <= 0 ? `<span class="when soon">À quai</span>`
                  : mins < 60 ? `<span class="when${mins <= 2 ? ' soon' : ''}">${mins}<small>min</small></span>`
                  : `<span class="when">${fmtHM(r.eff)}</span>`;
-      const status = r.real != null ? `<span class="rt">Temps réel</span>` : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>`;
+      const status = r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>`;
       const sensTag = boardGroupBy === 'heure' && r.sens ? `<span class="tag ${r.sens === 'aller' ? 'tag-s' : 'tag-v'}">${r.sens}</span>` : '';
       html += `<tr>
         <td>${when}</td>
         <td>${badge(r.route)}</td>
         <td class="b-dest">${esc(r.dest)}${sensTag}${r.tag}<small>${r.veh && r.veh.stopName ? 'vers ' + esc(r.veh.stopName) : ''}</small>
           ${r.veh ? `<button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}</td>
-        <td>${fmtTime(r.real, r.sched)}</td>
+        <td>${fmtTime(r.real, r.sched, r.approx)}</td>
         <td>${status}</td>
       </tr>`;
     });
