@@ -588,11 +588,6 @@
   .dchip small{font-weight:600;opacity:.8}
   .bus-mk .dly{position:absolute;left:50%;top:13px;transform:translateX(-50%);font:800 10.5px/1 'Nunito Sans',sans-serif;color:#fff;border-radius:6px;padding:2px 4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.3)}
   .bus-mk .dly.late{background:var(--retard)} .bus-mk .dly.early{background:var(--avance)}
-  .bus-mk.urb .pill2{font-size:11px;padding:2px 6px;border-radius:7px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
-  .bus-mk.urb.stale{opacity:.5}
-  .urb-net{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gris,#667);margin:-2px 0 6px}
-  .urb-dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
-  .muted.sm{font-size:11.5px;margin-top:6px}
   .punct{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--ligne);font-size:12.5px}
   .punct .dchip{cursor:pointer;border:1.5px solid transparent} .punct .dchip.sel{border-color:currentColor}
 
@@ -821,7 +816,7 @@
 </main>
 
 <footer>
-  <span>Données : Région Réunion · réseau Car Jaune · Citalis, Kar’Ouest, Alternéo, Car’Sud, Estival (transport.data.gouv.fr, Licence Ouverte)
+  <span>Données : Région Réunion · réseau Car Jaune (Licence Ouverte)
 </span>
   <span>Application personnelle, non affiliée à Car Jaune</span>
 </footer>
@@ -902,7 +897,6 @@
       <div class="set-row"><div class="set-l"><b>Trafic sur la carte</b><small>routes colorées et bouchons repérés par les cars</small></div><label class="switch"><input type="checkbox" id="tfOn" checked><span></span></label></div>
       <div class="set-row col" id="tfKeyRow"><div class="set-l"><b>Clé TomTom</b><small id="tfKeyTxt"></small></div>
         <div class="tf-key" id="tfKeyEdit"><input class="set-in" id="tfKey" placeholder="colle ta clé gratuite (developer.tomtom.com)" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div></div>
-      <div class="set-row col"><div class="set-l"><b>Bus urbains sur la carte</b><small>lignes dès que tu zoomes, arrêts avec leurs prochains départs · 📡 bus en direct</small></div><div class="chk-row" id="urbNets"></div></div>
       <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt"></small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
       <div class="set-row"><div class="set-l"><b>Taille du texte</b></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
       <div class="set-row"><div class="set-l"><b>Économie de batterie</b><small id="ecoTxt"></small></div><label class="switch"><input type="checkbox" id="ecoOn" checked><span></span></label></div>
@@ -925,7 +919,7 @@
       </details>
     </div>
   </details>
-  <div class="set-foot">Car Jaune Live · application personnelle, non affiliée à Car Jaune<br>Données : Région Réunion · réseau Car Jaune · Citalis, Kar’Ouest, Alternéo, Car’Sud, Estival (transport.data.gouv.fr, Licence Ouverte)</div>
+  <div class="set-foot">Car Jaune Live · application personnelle, non affiliée à Car Jaune<br>Données : Région Réunion · réseau Car Jaune (Licence Ouverte)</div>
 </div></div>
 
 <div id="alStrip" class="hide" role="status" aria-live="polite"><span class="k"></span><div class="tx"><div class="t1"></div><div class="t2"></div></div><span class="more"></span><button class="cl" aria-label="Fermer">✕</button><span class="bar"></span></div>
@@ -2808,7 +2802,7 @@ setInterval(() => { if (pushCfg.on && alertCfg.on && document.visibilityState ==
 document.addEventListener('visibilitychange', () => { if (pushCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); });
 
 /* ---------- voyant du serveur : est-il à la dernière version ? ---------- */
-const SERVER_WANTED = '2026-11-02.6';                 // version de Code.gs attendue par cette version de l'appli
+const SERVER_WANTED = '2026-11-02.5';                 // version de Code.gs attendue par cette version de l'appli
 const srv = { state:'', version:'', trigger:false, at:0 };
 async function checkServer(){
   if (IN_GAS) return;
@@ -2957,7 +2951,7 @@ function renderSummaries(){
     ;
   if (friends.length) $('#sum-sec-proches').textContent += ` · tu suis ${friends.map(f => f.name).join(', ')}`;
   set('citySec', !cityCfg.on ? 'désactivé' : `${cityCfg.sector === 'city' ? (city.name || 'ma ville') : sectorName()} · ${[cityCfg.gareIn && 'arrivées', cityCfg.gareOut && 'départs'].filter(Boolean).join(' et ') || 'annonces'}`);
-  set('sec-carte', [TF.on ? 'trafic' + (TF.key ? ' TomTom' : '') : 'sans trafic', typeof urbSummary === 'function' ? urbSummary() : '', { auto:'thème auto', light:'clair', dark:'sombre' }[look.theme], look.eco !== false ? 'économie de batterie' : ''].filter(Boolean).join(' · '));
+  set('sec-carte', [TF.on ? 'trafic' + (TF.key ? ' TomTom' : '') : 'sans trafic', { auto:'thème auto', light:'clair', dark:'sombre' }[look.theme], look.eco !== false ? 'économie de batterie' : ''].filter(Boolean).join(' · '));
   set('sec-appli', IN_GAS ? 'version Apps Script' : srv.state === 'ok' ? 'serveur à jour ✅' : srv.state === 'old' ? 'serveur à mettre à jour ⚠️' : srv.state === 'down' ? 'serveur injoignable' : 'installation, raccourcis, dépannage');
   // options dépendantes : affichées seulement quand elles servent
   document.querySelectorAll('#settingsModal .dep-push').forEach(el => el.hidden = !pushCfg.on);
@@ -4409,245 +4403,6 @@ function setStatus(t){ $('#status').textContent = t; }
 const TF = { on:false, key:'', incidents:[], at:0, err:'', jams:{}, slow:{} };
 TF.on = true;                                                     // affiché d'office sur la carte (bouton 🚦 pour masquer)
 try { TF.key = localStorage.getItem('cj_tomtom') || ''; TF.on = localStorage.getItem('cj_traffic') !== '0'; } catch(e){}
-/* ====================== Bus urbains : Citalis, Kar’Ouest, Alternéo, Car’Sud, Estival ======================
-   Horaires officiels (GTFS transport.data.gouv.fr) préparés chaque semaine dans data/urbain/ par GitHub,
-   gardés sur le téléphone. Positions en direct pour Alternéo et Car’Sud (les seuls réseaux qui les publient). */
-const URB_RT = {
-  alterneo: 'https://proxy.transport.data.gouv.fr/resource/alterneo-civis-gtfs-rt-vehicle-position',
-  carsud:   'https://zenbus.net/gtfs/rt/poll.proto?src=true&dataset=carsud-reunion'
-};
-const URB_ALL = ['citalis', 'karouest', 'alterneo', 'carsud', 'estival'];
-let urbOn = {};
-try { urbOn = JSON.parse(localStorage.getItem('cj_urb') || 'null') || {}; } catch(e){}
-URB_ALL.forEach(id => { if (urbOn[id] == null) urbOn[id] = true; });          // tous visibles au départ
-const urb = { index: null, nets: {}, loading: {}, veh: {}, mode: {}, rtAt: {}, rtBusy: {}, drawKey: '', stopKey: '' };
-const urbPane = map.createPane('urb'); urbPane.style.zIndex = 380;            // sous les tracés et cars jaunes
-const urbRenderer = L.canvas({ padding: .3, pane: 'urb' });
-const urbLineLayer = L.layerGroup().addTo(map), urbStopLayer = L.layerGroup().addTo(map), urbVehLayer = L.layerGroup().addTo(map);
-const urbBase = () => (/googleusercontent|script\.google/.test(location.host) ? 'https://svperman.github.io/Car-Jaune-Live/' : '') + 'data/urbain/';
-
-function decodePoly(s){
-  const out = []; let i = 0, a = 0, b = 0;
-  while (i < s.length){
-    for (const k of [0, 1]){
-      let sh = 0, r = 0, c;
-      do { c = s.charCodeAt(i++) - 63; r |= (c & 31) << sh; sh += 5; } while (c >= 32);
-      const d = r & 1 ? ~(r >> 1) : r >> 1;
-      if (k) b += d; else a += d;
-    }
-    out.push([a / 1e5, b / 1e5]);
-  }
-  return out;
-}
-async function urbIndex(){
-  if (urb.index) return urb.index;
-  try {
-    const r = await fetch(urbBase() + 'index.json', { cache: 'no-cache' });
-    if (!r.ok) throw 0;
-    urb.index = await r.json(); idb.set('urb|index', urb.index);
-  } catch(e){ urb.index = await idb.get('urb|index'); }
-  return urb.index;
-}
-/** Charge un réseau (téléphone d'abord, réseau si nouvelle version). */
-function urbLoad(id){
-  if (urb.nets[id]) return Promise.resolve(urb.nets[id]);
-  if (urb.loading[id]) return urb.loading[id];
-  return urb.loading[id] = (async () => {
-    const info = ((await urbIndex()) || { nets: [] }).nets.find(n => n.id === id);
-    let c = await idb.get('urb|' + id);
-    if (!c || (info && c.v !== info.v)){
-      try {
-        const r = await fetch(urbBase() + id + '.json' + (info ? '?v=' + info.v : ''));
-        if (r.ok){ c = { v: info ? info.v : '', d: await r.json() }; idb.set('urb|' + id, c); }
-      } catch(e){}
-    }
-    if (!c) { delete urb.loading[id]; return null; }
-    const N = c.d;
-    N.R = N.routes.map(r => ({ id: r[0], s: r[1], l: r[2], c: r[3], t: r[4], net: N.name }));
-    N.routeById = {}; N.R.forEach((r, i) => N.routeById[r.id] = i);
-    if (N.tripIds){ N.tripIdx = {}; N.tripIds.forEach((t, i) => N.tripIdx[t] = i); }
-    urb.nets[id] = N; delete urb.loading[id];
-    urbDraw(true);
-    return N;
-  })();
-}
-const urbVisibleNets = () => !urb.index ? [] : urb.index.nets.filter(n => urbOn[n.id]);
-function bboxIn(bb, bounds){ return bounds.intersects(L.latLngBounds([bb[0], bb[1]], [bb[2], bb[3]])); }
-
-/** Lignes (zoom ≥ 12) et arrêts (zoom ≥ 15) des réseaux visibles à l'écran. */
-function urbDraw(force){
-  if (!urb.index) return;
-  const z = map.getZoom(), b = map.getBounds();
-  const nets = urbVisibleNets().filter(n => bboxIn(n.bbox, b.pad(0.3)));
-  if (z >= 11) nets.forEach(n => { if (!urb.nets[n.id]) urbLoad(n.id); });
-  const key = (z >= 12 ? 'L' : '') + nets.map(n => n.id + (urb.nets[n.id] ? '+' : '')).join(',');
-  if (force || key !== urb.drawKey){
-    urb.drawKey = key; urbLineLayer.clearLayers();
-    if (z >= 12) nets.forEach(n => {
-      const N = urb.nets[n.id]; if (!N) return;
-      if (!N.lines) N.lines = Object.keys(N.shapes).map(ri => ({ r: N.R[ri], pts: N.shapes[ri].map(decodePoly) }));
-      N.lines.forEach(l => l.pts.forEach(p => L.polyline(p, { renderer: urbRenderer, color: '#' + l.r.c, weight: 3, opacity: .5, interactive: false }).addTo(urbLineLayer)));
-    });
-  }
-  // arrêts
-  if (z < 15){ if (urb.stopKey){ urbStopLayer.clearLayers(); urb.stopKey = ''; } return; }
-  const bb = b.pad(0.2), list = [];
-  nets.forEach(n => { const N = urb.nets[n.id]; if (N) N.stops.forEach((s, i) => { if (list.length < 300 && bb.contains([s[1], s[2]])) list.push([N, i]); }); });
-  const sk = z + '|' + list.map(x => x[0].id + x[1]).join(',');
-  if (sk === urb.stopKey && !force) return;
-  urb.stopKey = sk; urbStopLayer.clearLayers();
-  const dark = document.documentElement.classList.contains('dark');
-  list.forEach(([N, i]) => {
-    const s = N.stops[i];
-    L.circleMarker([s[1], s[2]], { renderer: urbRenderer, radius: z >= 16 ? 5 : 4, weight: 2.5, color: '#' + N.color, fillColor: dark ? '#1E2228' : '#fff', fillOpacity: 1 })
-      .bindTooltip(`${s[0]} · ${N.name}`, { direction: 'top', offset: [0, -5] })
-      .on('click', e => urbStopPopup(N, i, e.latlng)).addTo(urbStopLayer);
-  });
-}
-map.on('zoomend moveend', () => { urbDraw(); urbRtTick(); });
-
-/* ---------- horaires ---------- */
-function urbActiveSet(N, dayMs){
-  const o = reuDate(dayMs), k = ymd(o);
-  N.act = N.act || {};
-  if (N.act[k]) return N.act[k];
-  const set = new Set(), d = N.dates[k];
-  Object.keys(N.cal).forEach(s => { const c = N.cal[s]; if (c[0][o.wd] === '1' && c[1] <= k && k <= c[2]) set.add(+s); });
-  if (d){ d[0].forEach(s => set.add(s)); d[1].forEach(s => set.delete(s)); }
-  return N.act[k] = set;
-}
-function urbIndexStops(N){
-  if (N.at) return;
-  N.at = {}; N.patTrips = N.pats.map(() => []);
-  N.pats.forEach((p, pi) => p.forEach((s, pos) => (N.at[s] = N.at[s] || []).push([pi, pos])));
-  N.trips.forEach((t, ti) => N.patTrips[t[3]].push(ti));
-}
-/** Prochains départs (théoriques, corrigés par le direct si connu) aux arrêts donnés. */
-function urbDepartures(N, stopIdxs, fromMs, max){
-  urbIndexStops(N);
-  const rows = [], today = midnightMs(fromMs);
-  for (const off of [-1, 0, 1]){
-    const day = today + off * 864e5, act = urbActiveSet(N, day);
-    stopIdxs.forEach(si => (N.at[si] || []).forEach(([pi, pos]) => {
-      if (pos === N.pats[pi].length - 1) return;                      // terminus : pas de départ
-      N.patTrips[pi].forEach(ti => {
-        const t = N.trips[ti];
-        if (!act.has(t[2])) return;
-        const sched = day + (t[5] + N.tps[t[4]][pos]) * 60000;
-        if (sched < fromMs - 30 * 60000 || sched > fromMs + 18 * 3600e3) return;
-        const live = N.tripIds ? urb.veh[N.id] && urb.veh[N.id].byTrip[N.tripIds[ti]] : null;
-        const eff = sched + (live && live.delay != null ? live.delay * 1000 : 0);
-        if (eff < fromMs - 60000) return;
-        rows.push({ route: N.R[t[0]], dest: N.heads[t[1]] || N.stops[N.pats[pi][N.pats[pi].length - 1]][0], sched, eff, live });
-      });
-    }));
-  }
-  rows.sort((a, b) => a.eff - b.eff);
-  return rows.slice(0, max || 6);
-}
-function urbStopPopup(N, i, ll){
-  const s = N.stops[i];
-  // même arrêt (les deux sens) : même nom à moins de 250 m
-  const ids = [];
-  N.stops.forEach((x, j) => { if (x[0] === s[0] && Math.abs(x[1] - s[1]) < .0023 && Math.abs(x[2] - s[2]) < .0024) ids.push(j); });
-  const pop = L.popup({ maxWidth: 300, minWidth: 230 }).setLatLng(ll || [s[1], s[2]]).openOn(map);
-  const paint = () => {
-    const now = Date.now(), rows = urbDepartures(N, ids, now, 6);
-    const pmr = s[3] === 1 ? ' <span class="pmr" title="Arrêt accessible en fauteuil roulant">♿ accessible</span>' : '';
-    pop.setContent(`<div class="pop-h"><b>🚏 ${esc(s[0])}</b>${pmr}</div>
-      <div class="urb-net"><span class="urb-dot" style="background:#${esc(N.color)}"></span>${esc(N.name)} · ${esc(N.zone)}</div>
-      ${rows.length ? '<div class="sp-list">' + rows.map(r => { const m = Math.round((r.eff - now) / 60000);
-        const dl = r.live && r.live.delay != null ? fmtDelay(r.live.delay) : null;
-        return `<div class="sp-row">${badge(r.route)}<span class="sp-d">${esc(r.dest)}</span><b class="sp-t${m <= 2 ? ' soon' : ''}">${m <= 0 ? 'À quai' : m < 60 ? m + ' min' : fmtHM(r.eff)}</b>${
-          r.live ? `<span title="Bus suivi en direct">📡</span>` : ''}${dl ? `<span class="delay ${dl.c}">${dl.t}</span>` : ''}</div>`; }).join('') + '</div>'
-        : '<div class="muted">Aucun départ prévu dans les prochaines heures.</div>'}
-      <div class="muted sm">${N.rt ? '📡 bus en direct quand ils émettent, sinon horaire officiel' : 'Horaires officiels (ce réseau ne publie pas de position en direct)'}</div>`);
-  };
-  paint();
-  if (N.rt){ urbRtFetch(N.id).then(paint).catch(() => {}); }
-}
-
-/* ---------- bus en direct (Alternéo, Car’Sud) ---------- */
-async function urbRtFetch(id){
-  if (urb.rtBusy[id]) return urb.rtBusy[id];
-  return urb.rtBusy[id] = (async () => {
-    let bytes = null;
-    if (urb.mode[id] !== 'srv'){
-      try { const r = await fetch(URB_RT[id], { cache: 'no-store' }); if (!r.ok) throw 0; bytes = new Uint8Array(await r.arrayBuffer()); urb.mode[id] = 'direct'; }
-      catch(e){ urb.mode[id] = 'srv'; }
-    }
-    if (!bytes) bytes = b64ToBytes((await call('getUrbanRt', id)).b64);   // le navigateur n'a pas le droit : on passe par ton serveur
-    const N = await urbLoad(id); if (!N || !FeedMessage) return;
-    const feed = FeedMessage.toObject(FeedMessage.decode(bytes), { longs: Number, defaults: false });
-    const delays = {}, list = [], byTrip = {};
-    (feed.entity || []).forEach(en => {
-      const tu = en.tripUpdate;
-      if (tu && tu.trip && tu.trip.tripId){
-        const st = (tu.stopTimeUpdate || []).find(x => (x.arrival && x.arrival.delay != null) || (x.departure && x.departure.delay != null));
-        const d = st ? (st.departure && st.departure.delay != null ? st.departure.delay : st.arrival.delay) : tu.delay;
-        if (d != null) delays[tu.trip.tripId] = d;
-      }
-    });
-    const now = Date.now();
-    (feed.entity || []).forEach(en => {
-      const v = en.vehicle; if (en.isDeleted || !v || !v.position || !v.position.latitude) return;
-      const tid = v.trip && v.trip.tripId, ti = tid && N.tripIdx ? N.tripIdx[tid] : undefined;
-      const t = ti != null ? N.trips[ti] : null;
-      const ri = t ? t[0] : v.trip && v.trip.routeId != null ? N.routeById[v.trip.routeId] : undefined;
-      const ts = v.timestamp ? v.timestamp * 1000 : now, age = now - ts;
-      if (age > 10 * 60000) return;                                    // bus qui n'émet plus
-      const o = { id: (v.vehicle && (v.vehicle.label || v.vehicle.id)) || en.id, lat: v.position.latitude, lon: v.position.longitude,
-        bearing: v.position.bearing, route: ri != null ? N.R[ri] : { s: '?', c: N.color, t: 'FFFFFF', net: N.name },
-        dest: t ? (N.heads[t[1]] || N.stops[N.pats[t[3]][N.pats[t[3]].length - 1]][0]) : '', delay: tid != null ? delays[tid] : undefined, age, net: N };
-      list.push(o); if (tid) byTrip[tid] = o;
-    });
-    urb.veh[id] = { list, byTrip }; urb.rtAt[id] = now;
-    urbDrawVeh();
-  })().finally(() => { delete urb.rtBusy[id]; });
-}
-function urbDrawVeh(){
-  urbVehLayer.clearLayers();
-  Object.keys(urb.veh).forEach(id => {
-    if (!urbOn[id]) return;
-    urb.veh[id].list.forEach(v => {
-      const pk = punctOf(v.delay), dm = Math.abs(Math.round((v.delay || 0) / 60));
-      const dly = pk === 'late' ? `<div class="dly late">+${dm}′</div>` : pk === 'early' ? `<div class="dly early">−${dm}′</div>` : '';
-      const html = `<div class="bus-mk urb${v.age > STALE_MS ? ' stale' : ''}"><div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div>${dly}</div>`;
-      L.marker([v.lat, v.lon], { icon: L.divIcon({ className: '', html, iconSize: [0, 0] }), zIndexOffset: -400, keyboard: false })
-        .bindPopup(() => `<div class="pop-h">${badge(v.route)}<b>${esc(v.dest || 'Bus ' + v.net.name)}</b></div>
-          <div class="urb-net"><span class="urb-dot" style="background:#${esc(v.net.color)}"></span>${esc(v.net.name)} · ${esc(v.net.zone)}</div>
-          ${v.delay != null ? `<div>${fmtDelay(v.delay).long}</div>` : ''}
-          <div class="muted sm">📡 position en direct · il y a ${v.age < 60000 ? Math.max(1, Math.round(v.age / 1000)) + ' s' : Math.round(v.age / 60000) + ' min'}</div>`, { maxWidth: 260 })
-        .addTo(urbVehLayer);
-    });
-  });
-}
-/** Toutes les 20 s, uniquement pour les réseaux visibles à l'écran (batterie). */
-function urbRtTick(){
-  if (!urb.index || document.hidden || view !== 'map') return;
-  const b = map.getBounds(), now = Date.now();
-  const every = lowBattery && look.eco !== false ? 45000 : 20000;
-  urbVisibleNets().filter(n => n.rt && URB_RT[n.id] && bboxIn(n.bbox, b)).forEach(n => {
-    if (!urb.rtAt[n.id] || now - urb.rtAt[n.id] > every) urbRtFetch(n.id).catch(() => { urb.rtAt[n.id] = now + 100000; });   // indisponible : on réessaie dans 2 min
-  });
-}
-setInterval(urbRtTick, 10000);
-
-/* ---------- réglages ---------- */
-function urbRenderSettings(){
-  const box = $('#urbNets'); if (!box) return;
-  const nets = (urb.index && urb.index.nets) || URB_ALL.map(id => ({ id, name: id }));
-  box.innerHTML = nets.map(n => `<label><input type="checkbox" data-urb="${esc(n.id)}"${urbOn[n.id] ? ' checked' : ''}><span class="urb-dot" style="background:#${esc(n.color || '999')}"></span>${esc(n.name)}${n.rt ? ' 📡' : ''}${n.zone ? ` <small class="muted">${esc(n.zone.split(' · ')[0])}</small>` : ''}</label>`).join('');
-}
-document.addEventListener('change', e => {
-  const c = e.target.closest('[data-urb]'); if (!c) return;
-  urbOn[c.dataset.urb] = c.checked;
-  try { localStorage.setItem('cj_urb', JSON.stringify(urbOn)); } catch(err){}
-  urbDraw(true); urbDrawVeh(); urbRtTick();
-});
-const urbSummary = () => { const n = URB_ALL.filter(id => urbOn[id]).length; return n ? `bus urbains (${n})` : ''; };
-(async () => { await urbIndex(); urbRenderSettings(); urbDraw(true); setTimeout(urbRtTick, 4000); })();
-
 const tfPane = map.createPane('traffic'); tfPane.style.zIndex = 350; tfPane.style.pointerEvents = 'none';
 let tfFlow = null, tfInc = null;
 const jamLayer = L.layerGroup().addTo(map), incLayer = L.layerGroup().addTo(map);
