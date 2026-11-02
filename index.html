@@ -408,6 +408,27 @@
   .set-foot{padding:14px 18px 22px;font-size:12px;color:var(--gris);text-align:center}
   .al-link{border:none;background:none;color:var(--titre);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
 
+  /* ---------- proches ---------- */
+  .fr-mk{position:relative;display:flex;align-items:center;gap:5px;transform:translate(-50%, calc(-100% - 22px));width:max-content;
+    background:#fff;border-radius:999px;padding:3px 9px 3px 3px;box-shadow:0 3px 12px rgba(0,0,0,.3);font:800 12.5px/1 'Nunito Sans',sans-serif;color:var(--titre)}
+  .fr-mk::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-top-color:#fff;border-bottom:0}
+  .fr-mk .av{width:24px;height:24px;border-radius:50%;background:#7C3AED;color:#fff;display:grid;place-items:center;font-size:12.5px}
+  .fr-mk .ln{border-radius:6px;padding:2px 5px;font-size:11px}
+  .fr-mk.old{opacity:.6} .fr-mk.old .av{background:#9AA0A6}
+  .fr-dot{width:14px;height:14px;border-radius:50%;background:#7C3AED;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);transform:translate(-50%,-50%)}
+  .fr-ctl{display:flex;flex-direction:column;gap:6px;max-width:min(320px, calc(100vw - 90px))}
+  .fr-chip{display:flex;align-items:center;gap:8px;background:#fff;border:none;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.2);
+    padding:7px 11px 7px 7px;font:inherit;font-size:12.5px;text-align:left;cursor:pointer;color:var(--texte)}
+  .fr-chip .av{flex:none;width:28px;height:28px;border-radius:50%;background:#7C3AED;color:#fff;display:grid;place-items:center;font-weight:800}
+  .fr-chip b{color:var(--titre)} .fr-chip small{display:block;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fr-chip > span:last-child{min-width:0}
+  .sh-code{font:800 20px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:var(--titre);white-space:nowrap}
+  .set-in{font:inherit;border:1px solid var(--ligne);border-radius:10px;padding:9px 11px;min-width:0;width:100%}
+  .fr-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .fr-list .it{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--ligne);border-radius:10px;padding:8px 10px;font-size:13.5px}
+  .fr-list .it button{border:none;background:var(--fond);border-radius:8px;padding:6px 9px;cursor:pointer}
+  .fr-add{display:grid;grid-template-columns:1fr 110px auto;gap:6px;margin-top:8px}
+
   /* ---------- avance / retard ---------- */
   .dchip{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
   .dchip.late{background:#FDE8DD;color:var(--retard)} .dchip.early{background:#E3EEFC;color:var(--avance)} .dchip.ok{background:#E6F5EC;color:var(--ok)}
@@ -648,6 +669,18 @@
 
   <div class="set-sec"><h3>📍 Position</h3>
     <div class="set-row"><div><b>Suivre ma position</b><small>choisit tout seul l’arrêt le plus proche (rien n’est affiché sur la carte)</small></div><label class="switch"><input type="checkbox" id="alFollow"><span></span></label></div>
+  </div>
+
+  <div class="set-sec" id="shareSec"><h3>👥 Mes proches</h3>
+    <div class="set-row"><div><b>Partager ma position et mon car</b><small id="shStatus">Tes proches voient où tu es et dans quel car jaune tu es monté.</small></div>
+      <label class="switch"><input type="checkbox" id="shOn"><span></span></label></div>
+    <div class="set-row"><div style="flex:1"><b>Mon prénom</b><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel" style="margin-top:6px"></div></div>
+    <div class="set-row"><div><b>Mon code secret</b><small>avec ton prénom, il protège ta position : seuls ceux qui l’ont te voient</small></div>
+      <div style="text-align:right"><div class="sh-code" id="shCode">——</div><button class="al-link" id="shNew" style="font-size:12px">↻ nouveau code</button></div></div>
+    <div class="set-row"><button class="btn" id="shSend" style="width:100%">📤 Envoyer le lien à mes proches</button></div>
+    <div class="set-row" style="display:block"><b>Suivre un proche</b><small>son prénom et son code (ou ouvre simplement le lien qu’il t’a envoyé)</small>
+      <div class="fr-add"><input class="set-in" id="frName" placeholder="Prénom"><input class="set-in" id="frCode" inputmode="numeric" maxlength="7" placeholder="Code"><button class="btn small" id="frAdd">Ajouter</button></div>
+      <div class="fr-list" id="frList"></div></div>
   </div>
 
   <div class="set-sec"><h3>📱 Appli fermée</h3>
@@ -2316,6 +2349,7 @@ function renderSettings(){
   $('#pauseOff').hidden = !muted;
   $('#alSound').checked = alertCfg.sound; $('#alVibe').checked = alertCfg.vibe; $('#alWake').checked = alertCfg.wake;
   $('#alFollow').checked = alertCfg.follow;
+  renderShareUI();
   if (!IN_GAS){ $('#apiRow').hidden = false; $('#apiTxt').textContent = API_URL ? '…' + API_URL.slice(-34) : 'pas encore réglé'; }
   renderNotif();
 }
@@ -3430,12 +3464,264 @@ function loadPrefs(){
     if (Array.isArray(p.favs)) favs = p.favs;
     const qv = new URLSearchParams(location.search).get('vue');   // raccourcis de l'appli installée
     if (qv) view = qv;
+    if (linkView) view = linkView;                                  // lien d'un proche : on ouvre la carte
     if (typeof p.line === 'string') selLine = p.line;
     const tp = JSON.parse(localStorage.getItem('cj_trip') || '{}');
     if (tp.a) trip.a = tp.a; if (tp.b) trip.b = tp.b; if (tp.mode) trip.mode = tp.mode; if (tp.grp) boardGroupBy = tp.grp;
   } catch(e){}
 }
 function setStatus(t){ $('#status').textContent = t; }
+/* ====================== Proches : partage de position ======================
+   Celui qui partage envoie sa position (et le car où il est) toutes les 45 s à 10 min selon qu'il roule,
+   CHIFFRÉE (AES-GCM) avec une clé tirée de « prénom + code secret », via ntfy.sh (gratuit, sans compte).
+   Les proches qui connaissent le prénom et le code la déchiffrent et la voient sur la carte.
+   ntfy ne voit qu'un canal au nom aléatoire et un texte illisible. */
+const SHARE_BASE = 'https://svperman.github.io/Car-Jaune-Live/';
+const tEnc = new TextEncoder(), tDec = new TextDecoder(), keyCache = {};
+const nameKey = s => norm(s).replace(/\s+/g, '');
+const codeKey = s => String(s || '').replace(/\D/g, '');
+const fmtCode = c => codeKey(c).replace(/^(\d{3})(\d{3})$/, '$1 $2');
+const b64 = u8 => btoa(String.fromCharCode(...u8));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function shareKeys(name, code){
+  const id = nameKey(name) + '|' + codeKey(code);
+  if (keyCache[id]) return keyCache[id];
+  const hsh = new Uint8Array(await crypto.subtle.digest('SHA-256', tEnc.encode('cjl-canal|' + id)));
+  const topic = 'cjl_' + [...hsh.slice(0, 12)].map(b => b.toString(16).padStart(2, '0')).join('');
+  const base = await crypto.subtle.importKey('raw', tEnc.encode(id), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey({ name:'PBKDF2', salt: tEnc.encode('car-jaune-live'), iterations: 120000, hash:'SHA-256' },
+    base, { name:'AES-GCM', length:256 }, false, ['encrypt', 'decrypt']);
+  return (keyCache[id] = { topic, key });
+}
+async function seal(key, obj){
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, tEnc.encode(JSON.stringify(obj))));
+  const out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12);
+  return b64(out);
+}
+async function unseal(key, s){
+  const u = unb64(s);
+  return JSON.parse(tDec.decode(await crypto.subtle.decrypt({ name:'AES-GCM', iv: u.slice(0, 12) }, key, u.slice(12))));
+}
+
+/* ----- je partage ----- */
+const shareCfg = Object.assign({ on:false, name:'', code:'' }, (() => { try { return JSON.parse(localStorage.getItem('cj_share') || '{}'); } catch(e){ return {}; } })());
+if (!codeKey(shareCfg.code)) shareCfg.code = newCode();
+let shareLast = { t:0, lat:0, lon:0, bus:'' }, shareTimer = null, shareOwnWatch = false, shareErr = '';
+function newCode(){ return String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000); }
+function saveShare(){ try { localStorage.setItem('cj_share', JSON.stringify(shareCfg)); } catch(e){} }
+function startShare(){
+  if (!navigator.geolocation || !window.crypto || !crypto.subtle){ toast('Partage impossible sur cet appareil.'); return false; }
+  if (meWatch == null){
+    shareOwnWatch = true;
+    meWatch = navigator.geolocation.watchPosition(p => { onLiveFix(p); sendShare(); }, e => {
+      if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour partager.'); setShareOn(false); }
+      else gpsWeak = true;
+    }, { enableHighAccuracy:true, maximumAge:5000, timeout:30000 });
+  }
+  clearInterval(shareTimer); shareTimer = setInterval(() => sendShare(), 20000);
+  setTimeout(() => sendShare(true), 1500);
+  return true;
+}
+function stopShare(){
+  clearInterval(shareTimer); shareTimer = null;
+  if (shareOwnWatch && meWatch != null){ navigator.geolocation.clearWatch(meWatch); meWatch = null; onBus = null; busCand = null; }
+  shareOwnWatch = false;
+}
+async function setShareOn(on){
+  if (on && !shareCfg.name.trim()){ toast('Écris d’abord ton prénom.'); $('#shOn').checked = false; $('#shName').focus(); return; }
+  shareCfg.on = on; saveShare();
+  if (on){ if (!startShare()){ shareCfg.on = false; saveShare(); } else toast('👥 Partage activé : envoie le lien à tes proches.'); }
+  else { await pushShare({ n: shareCfg.name, t: Date.now(), off: true }); stopShare(); toast('👥 Partage arrêté : tes proches ne te voient plus.'); }
+  renderShareUI();
+}
+async function pushShare(payload){
+  try {
+    const { topic, key } = await shareKeys(shareCfg.name, shareCfg.code);
+    const r = await fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic, message: await seal(key, payload) }) });
+    shareErr = r.ok ? '' : (r.status === 429 ? 'limite d’envois atteinte, réessai plus tard' : 'erreur ' + r.status);
+    return r.ok;
+  } catch(e){ shareErr = 'pas de réseau'; return false; }
+}
+async function sendShare(force, extra){
+  if (!shareCfg.on || !myPos) return;
+  const now = Date.now(), v = onBus && vehicles.find(x => x.id === onBus);
+  const busId = v ? v.id : '', moved = distM(shareLast.lat, shareLast.lon, myPos.lat, myPos.lon), dt = now - shareLast.t;
+  const every = v ? 45e3 : (myPos.speed || 0) > 2 ? 90e3 : 600e3;           // en car : 45 s · en mouvement : 90 s · immobile : 10 min
+  if (!force && busId === shareLast.bus && dt < every && !(moved > 300 && dt > 30e3)) return;
+  const r5 = x => Math.round(x * 1e5) / 1e5;
+  const payload = { n: shareCfg.name.trim(), t: now, lat: r5(myPos.lat), lon: r5(myPos.lon), acc: Math.round(myPos.acc || 0),
+    sp: Math.round((myPos.speed || 0) * 3.6), ...(extra || {}),
+    bus: v ? { id: v.id, l: v.route.s, c: v.route.c, tc: v.route.t, d: v.headsign || '', s: v.stopName || '', dl: v.delay, de: v.delayEst,
+               arr: v.times ? (v.times.arr.real || v.times.arr.sched) : null, as: v.times ? v.times.arr.stop : '' } : null };
+  shareLast = { t: now, lat: myPos.lat, lon: myPos.lon, bus: busId };
+  await pushShare(payload);
+  renderShareUI();
+}
+// l'appli passe en arrière-plan : on prévient les proches que la position peut ne plus suivre
+document.addEventListener('visibilitychange', () => {
+  if (!shareCfg.on) return;
+  if (document.visibilityState === 'hidden') sendShare(true, { bg: true });
+  else sendShare(true);
+});
+function shareLink(){ return SHARE_BASE + '#proche=' + encodeURIComponent(shareCfg.name.trim()) + '&code=' + codeKey(shareCfg.code); }
+async function sendShareLink(){
+  if (!shareCfg.name.trim()){ toast('Écris d’abord ton prénom.'); $('#shName').focus(); return; }
+  if (!shareCfg.on) await setShareOn(true);
+  const url = shareLink();
+  const text = `Suis-moi dans les cars jaunes 🚌 : ${url}\n(ou dans l’appli Car Jaune Live → ⚙️ → Suivre un proche : ${shareCfg.name.trim()}, code ${fmtCode(shareCfg.code)})`;
+  try { if (navigator.share){ await navigator.share({ title:'Car Jaune Live', text }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text); toast('Lien copié : colle-le dans un message à tes proches.'); }
+  catch(e){ prompt('Copie ce lien pour tes proches :', url); }
+}
+function renderShareUI(){
+  if (!$('#shOn')) return;
+  $('#shOn').checked = shareCfg.on;
+  if (document.activeElement !== $('#shName')) $('#shName').value = shareCfg.name;
+  $('#shCode').textContent = fmtCode(shareCfg.code);
+  $('#shStatus').textContent = !shareCfg.on ? 'Tes proches voient où tu es et dans quel car jaune tu es monté.'
+    : shareErr ? '⚠️ Partage actif, mais ' + shareErr + '.'
+    : shareLast.t ? `✅ Partage actif · envoyé à ${fmtHM(shareLast.t)}${shareLast.bus ? ' · dans le car' : ''} · s’arrête si tu fermes l’appli`
+    : '✅ Partage actif · en attente de ta position…';
+  renderFriendList();
+}
+$('#shOn').addEventListener('change', e => setShareOn(e.target.checked));
+$('#shName').addEventListener('change', e => {
+  shareCfg.name = e.target.value.trim().slice(0, 20); saveShare(); renderShareUI();
+  if (shareCfg.on) sendShare(true);
+});
+$('#shNew').addEventListener('click', async () => {
+  if (shareCfg.on && !confirm('Nouveau code : tes proches devront recevoir le nouveau lien. Continuer ?')) return;
+  if (shareCfg.on) await pushShare({ n: shareCfg.name, t: Date.now(), off: true });
+  shareCfg.code = newCode(); saveShare(); renderShareUI();
+  if (shareCfg.on) sendShare(true);
+});
+$('#shSend').addEventListener('click', sendShareLink);
+
+/* ----- je suis mes proches ----- */
+const friends = (() => { try { return JSON.parse(localStorage.getItem('cj_friends') || '[]'); } catch(e){ return []; } })();
+const friendLayer = L.layerGroup().addTo(map), friendMk = {};
+let friendPoll = null;
+function saveFriends(){ try { localStorage.setItem('cj_friends', JSON.stringify(friends.map(f => ({ name: f.name, code: f.code })))); } catch(e){} }
+function addFriend(name, code, quiet){
+  name = String(name || '').trim().slice(0, 20); code = codeKey(code);
+  if (!name || code.length < 4){ toast('Il faut le prénom et le code de ton proche.'); return null; }
+  let f = friends.find(x => nameKey(x.name) === nameKey(name) && x.code === code);
+  if (!f){ f = { name, code }; friends.push(f); saveFriends(); }
+  if (!quiet) toast(`👥 Tu suis maintenant ${name}.`);
+  startFriendPoll(); renderFriendList();
+  return f;
+}
+function removeFriend(i){
+  const f = friends[i]; if (!f) return;
+  friends.splice(i, 1); saveFriends();
+  if (friendMk[f.name + f.code]){ friendLayer.removeLayer(friendMk[f.name + f.code]); delete friendMk[f.name + f.code]; }
+  renderFriends(); renderFriendList();
+}
+async function pollFriend(f){
+  try {
+    const { topic, key } = await shareKeys(f.name, f.code);
+    const txt = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=${f.since || '12h'}`).then(r => r.text());
+    const msgs = txt.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e){ return null; } }).filter(m => m && m.event === 'message');
+    for (const m of msgs){
+      f.since = m.id;
+      try { const o = await unseal(key, m.message); if (!f.last || o.t >= f.last.t) f.last = o; f.bad = false; }
+      catch(e){ if (!f.last) f.bad = true; }
+    }
+    f.checked = Date.now(); f.err = '';
+  } catch(e){ f.err = 'pas de réseau'; }
+}
+async function pollFriends(){
+  if (!friends.length || document.visibilityState !== 'visible') return;
+  await Promise.all(friends.map(pollFriend));
+  renderFriends(); renderFriendList();
+}
+function startFriendPoll(){
+  if (friendPoll || !friends.length) return;
+  pollFriends(); friendPoll = setInterval(pollFriends, 15000);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollFriends(); });
+const agoTxt = ms => { const s = Math.round((Date.now() - ms) / 1000); return s < 60 ? 'à l’instant' : s < 3600 ? `il y a ${Math.round(s / 60)} min` : `il y a ${Math.floor(s / 3600)} h ${pad(Math.round(s / 60) % 60)}`; };
+/** Où afficher le proche : sur son car (qui avance en continu) s'il est dedans, sinon sa dernière position. */
+function friendLatLng(o){
+  if (o.bus && markers.get(o.bus.id) && Date.now() - o.t < 5 * 60e3) return markers.get(o.bus.id).getLatLng();
+  return L.latLng(o.lat, o.lon);
+}
+function friendState(f){
+  const o = f.last;
+  if (!o) return { t: f.bad ? 'code incorrect ?' : f.err ? f.err : f.checked ? 'aucune position reçue · partage pas encore activé, ou prénom / code différent' : 'recherche…', old:true };
+  if (o.off) return { t: `a arrêté le partage (${agoTxt(o.t)})`, old:true };
+  const old = Date.now() - o.t > 15 * 60e3;
+  const b = o.bus;
+  const where = b ? `🚌 dans le ${b.l} → ${b.d}${b.s ? ' · prochain arrêt ' + b.s : ''}` : (o.sp > 8 ? `se déplace (${o.sp} km/h)` : 'à pied ou à l’arrêt');
+  return { t: `${where} · ${agoTxt(o.t)}${o.bg ? ' · appli en arrière-plan' : ''}`, old, where };
+}
+function friendPopup(f){
+  const o = f.last, st = friendState(f), b = o && o.bus;
+  return `<div class="pop-h"><b>👤 ${esc(f.name)}</b></div>
+    ${b ? `<div style="margin:4px 0">${badge({ s:b.l, c:b.c || 'F6BE00', t:b.tc || '222222' })} <b>→ ${esc(b.d)}</b></div>
+      ${b.s ? `Prochain arrêt : <b>${esc(b.s)}</b><br>` : ''}
+      ${b.arr ? `Arrivée à ${esc(b.as || 'terminus')} : <b>~${fmtHM(b.arr)}</b><br>` : ''}
+      ${b.dl != null ? `<span class="delay ${fmtDelay(b.dl, b.de).c}">${esc(fmtDelay(b.dl, b.de).long)}</span><br>` : ''}`
+    : `${esc(st.t.split(' · ')[0])}<br>`}
+    <span class="muted">Position ${o ? agoTxt(o.t) : '—'}${o && o.acc ? ` · ± ${fmtDist(o.acc)}` : ''}${o && o.bg ? '<br>⚠️ son appli est en arrière-plan : la position peut ne plus suivre' : ''}</span>`;
+}
+function renderFriends(){
+  friends.forEach(f => {
+    const k = f.name + f.code, o = f.last;
+    if (!o || o.off || !isFinite(o.lat)){ if (friendMk[k]){ friendLayer.removeLayer(friendMk[k]); delete friendMk[k]; } return; }
+    const st = friendState(f), b = o.bus;
+    const html = `<div class="fr-mk${st.old ? ' old' : ''}"><span class="av">${esc(f.name[0].toUpperCase())}</span>${esc(f.name)}${
+      b ? `<span class="ln" style="background:#${esc(b.c || 'F6BE00')};color:#${esc(b.tc || '222222')}">${esc(b.l)}</span>` : ''}</div>`;
+    const icon = L.divIcon({ className:'', html: html + (b ? '' : '<div class="fr-dot"></div>'), iconSize:[0, 0] });
+    if (!friendMk[k]) friendMk[k] = L.marker(friendLatLng(o), { icon, zIndexOffset: 3000 }).bindPopup('').addTo(friendLayer);
+    const m = friendMk[k];
+    if (m._html !== html){ m.setIcon(icon); m._html = html; }
+    m.setLatLng(friendLatLng(o));
+    m.setPopupContent(friendPopup(f));
+  });
+  renderFriendChips();
+}
+// le proche suit son car qui avance en continu
+setInterval(() => friends.forEach(f => { const m = friendMk[f.name + f.code]; if (m && f.last && f.last.bus) m.setLatLng(friendLatLng(f.last)); }), 1000);
+const FriendCtl = L.Control.extend({ options:{ position:'bottomleft' }, onAdd(){ const d = L.DomUtil.create('div', 'fr-ctl'); d.id = 'frCtl'; L.DomEvent.disableClickPropagation(d); return d; } });
+new FriendCtl().addTo(map);
+function renderFriendChips(){
+  const box = $('#frCtl'); if (!box) return;
+  box.innerHTML = friends.map((f, i) => {
+    const st = friendState(f);
+    return `<button class="fr-chip" data-fr="${i}"><span class="av"${st.old ? ' style="background:#9AA0A6"' : ''}>${esc(f.name[0].toUpperCase())}</span><span><b>${esc(f.name)}</b><small>${esc(st.t)}</small></span></button>`;
+  }).join('');
+}
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-fr]'); if (!c) return;
+  const f = friends[+c.dataset.fr], m = f && friendMk[f.name + f.code];
+  if (view !== 'map') setView('map');
+  if (m){ map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 15), { duration:.8 }); setTimeout(() => m.openPopup(), 850); }
+  else toast(`${f.name} : ${friendState(f).t}`);
+});
+function renderFriendList(){
+  const box = $('#frList'); if (!box) return;
+  box.innerHTML = friends.length ? friends.map((f, i) => `<div class="it"><span><b>👤 ${esc(f.name)}</b> <small class="muted">· ${esc(friendState(f).t)}</small></span>
+    <span><button data-fr="${i}" title="Voir sur la carte">📍</button> <button data-frdel="${i}" title="Ne plus suivre">✕</button></span></div>`).join('')
+    : '<small class="muted">Personne pour l’instant.</small>';
+}
+document.addEventListener('click', e => { const d = e.target.closest('[data-frdel]'); if (d) removeFriend(+d.dataset.frdel); });
+$('#frAdd').addEventListener('click', () => {
+  if (addFriend($('#frName').value, $('#frCode').value)){ $('#frName').value = ''; $('#frCode').value = ''; }
+});
+// lien reçu : …/#proche=Samuel&code=482173
+var linkView = '';
+(function readShareLink(){
+  const m = location.hash.match(/proche=([^&]+)&code=(\d{4,8})/);
+  if (!m) return;
+  const f = addFriend(decodeURIComponent(m[1]), m[2], true);
+  try { history.replaceState(null, '', location.pathname + location.search); } catch(e){}
+  if (f){ linkView = 'map'; setTimeout(() => toast(`👥 Tu suis maintenant ${f.name} : sa position s’affiche sur la carte.`), 1200); }
+})();
+startFriendPoll();
+if (shareCfg.on) setTimeout(startShare, 2500);     // partage gardé d'une ouverture à l'autre
+
 let toastTimer;
 let toastAct = null, toastLast = { t:'', at:0 };
 function toast(t, act){
