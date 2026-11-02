@@ -793,6 +793,8 @@
     <div class="set-row"><div style="flex:1"><b>Mon prénom</b><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel" style="margin-top:6px"></div></div>
     <div class="set-row"><div><b>Mon code secret</b><small>avec ton prénom, il protège ta position : seuls ceux qui l’ont te voient</small></div>
       <div style="text-align:right"><div class="sh-code" id="shCode">——</div><button class="al-link" id="shNew" style="font-size:12px">↻ nouveau code</button></div></div>
+    <div class="set-row"><div><b>Automatique dans les cars jaunes</b><small>dès que tu montes dans un car, tes proches te voient (et jusqu’à 10 min après ta descente), sans rien toucher</small></div>
+      <label class="switch"><input type="checkbox" id="shAuto" checked><span></span></label></div>
     <div class="set-row"><div><b>Prévenir mes proches</b><small>quand j’attends en gare, quand je pars, peu avant d’arriver et à mon arrivée</small></div>
       <label class="switch"><input type="checkbox" id="shEvents" checked><span></span></label></div>
     <div class="set-row"><button class="btn" id="shSend" style="width:100%">📤 Envoyer le lien à mes proches</button></div>
@@ -3066,7 +3068,7 @@ async function refresh(){
     render();
     if (view === 'trip') renderTrip();
     checkAlerts();
-    if (meWatch != null){ detectMyBus(); renderRide(); }
+    if (meWatch != null){ detectMyBus(); renderRide(); try { autoCheck(); } catch(e){} }
   } catch(e){
     diag('erreur-temps-reel', { msg: errMsg(e).slice(0, 120), enLigne: navigator.onLine });
     if (navigator.onLine === false){
@@ -4187,22 +4189,22 @@ async function unseal(key, s){
 }
 
 /* ----- je partage ----- */
-const shareCfg = Object.assign({ on:false, name:'', code:'', events:true }, (() => { try { return JSON.parse(localStorage.getItem('cj_share') || '{}'); } catch(e){ return {}; } })());
+const shareCfg = Object.assign({ on:false, name:'', code:'', events:true, auto:true }, (() => { try { return JSON.parse(localStorage.getItem('cj_share') || '{}'); } catch(e){ return {}; } })());
 if (!codeKey(shareCfg.code)) shareCfg.code = newCode();
 let shareLast = { t:0, lat:0, lon:0, bus:'' }, shareTimer = null, shareOwnWatch = false, shareErr = '';
 function newCode(){ return String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000); }
 function saveShare(){ try { localStorage.setItem('cj_share', JSON.stringify(shareCfg)); } catch(e){} }
-function startShare(){
+function startShare(standby){
   if ((!navigator.geolocation && !BGGEO) || !window.crypto || !crypto.subtle){ toast('Partage impossible sur cet appareil.'); return false; }
   if (meWatch == null){
     shareOwnWatch = true;
-    meWatch = watchPos(p => { onLiveFix(p); rideTick(); sendShare(); }, e => {
-      if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour partager.'); setShareOn(false); }
+    meWatch = watchPos(p => { onLiveFix(p); autoCheck(); rideTick(); sendShare(); }, e => {
+      if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour partager.'); if (shareCfg.on) setShareOn(false); else stopShare(); }
       else gpsWeak = true;
     }, { enableHighAccuracy:true, maximumAge:5000, timeout:30000 }, 'Ta position est partagée avec tes proches');
   }
-  clearInterval(shareTimer); shareTimer = setInterval(() => sendShare(), 20000);
-  setTimeout(() => sendShare(true), 1500);
+  clearInterval(shareTimer); shareTimer = setInterval(() => { autoCheck(); sendShare(); }, 20000);
+  if (!standby) setTimeout(() => sendShare(true), 1500);
   return true;
 }
 function stopShare(){
@@ -4214,7 +4216,7 @@ async function setShareOn(on){
   if (on && !shareCfg.name.trim()){ toast('Écris d’abord ton prénom.'); $('#shOn').checked = false; $('#shName').focus(); return; }
   shareCfg.on = on; saveShare();
   if (on){ if (!startShare()){ shareCfg.on = false; saveShare(); } else toast('👥 Partage activé : envoie le lien à tes proches.'); }
-  else { await pushShare({ n: shareCfg.name, t: Date.now(), off: true }); stopShare(); toast('👥 Partage arrêté : tes proches ne te voient plus.'); }
+  else { autoActive = false; await pushShare({ n: shareCfg.name, t: Date.now(), off: true }); stopShare(); toast('👥 Partage arrêté : tes proches ne te voient plus.'); setTimeout(autoWatchStart, 1000); }
   renderShareUI();
 }
 async function pushShare(payload){
@@ -4225,8 +4227,40 @@ async function pushShare(payload){
     return r.ok;
   } catch(e){ shareErr = 'pas de réseau'; return false; }
 }
+/* ----- partage automatique : dès que je monte dans un car jaune, mes proches me voient ----- */
+let autoActive = false, autoOffT = null;
+const sharing = () => shareCfg.on || autoActive;
+/** Veille : suit ma position (sans rien envoyer) pour reconnaître le car où je monte. */
+function autoWatchStart(){
+  if (!shareCfg.auto || shareCfg.on || !shareCfg.name.trim() || meWatch != null) return;
+  startShare(true);
+}
+function autoCheck(){
+  if (shareCfg.on || !shareCfg.auto) return;
+  if (onBus){
+    clearTimeout(autoOffT); autoOffT = null;
+    if (!autoActive){
+      autoActive = true;
+      const v = vehicles.find(x => x.id === onBus);
+      toast(`🚌 Car ${v ? v.route.s + ' ' : ''}détecté : ta position est partagée avec tes proches.`);
+      diag('partage-auto', { debut: v ? v.route.s : onBus });
+      renderShareUI();
+    }
+  } else if (autoActive && !autoOffT){
+    // descendu : on laisse 10 min (arrivée, marche jusqu'à l'arrêt suivant), puis on arrête
+    autoOffT = setTimeout(async () => {
+      autoOffT = null;
+      if (onBus || shareCfg.on) return;
+      autoActive = false;
+      await pushShare({ n: shareCfg.name, t: Date.now(), off: true });
+      diag('partage-auto', { fin: true });
+      renderShareUI();
+    }, 10 * 60e3);
+  }
+}
+
 async function sendShare(force, extra){
-  if (!shareCfg.on || !myPos) return;
+  if (!sharing() || !myPos) return;
   const now = Date.now(), v = onBus && vehicles.find(x => x.id === onBus);
   const busId = v ? v.id : '', moved = distM(shareLast.lat, shareLast.lon, myPos.lat, myPos.lon), dt = now - shareLast.t;
   const every = v ? 45e3 : (myPos.speed || 0) > 2 ? 90e3 : 600e3;           // en car : 45 s · en mouvement : 90 s · immobile : 10 min
@@ -4243,7 +4277,7 @@ async function sendShare(force, extra){
 }
 // l'appli passe en arrière-plan : on prévient les proches que la position peut ne plus suivre
 document.addEventListener('visibilitychange', () => {
-  if (!shareCfg.on) return;
+  if (!sharing()) return;
   if (document.visibilityState === 'hidden') sendShare(true, BGGEO ? {} : { bg: true });   // l'APK continue en arrière-plan
   else sendShare(true);
 });
@@ -4273,7 +4307,7 @@ function nearStop(maxM){
 }
 function shareEvent(ev){
   diag('proches', { evenement: ev.k, arret: ev.stop || ev.to || '' });
-  if (!shareCfg.on || !shareCfg.events) return;
+  if (!sharing() || !shareCfg.events) return;
   ev.at = Date.now();
   sendShare(true, { ev });
   // copie lisible pour ceux qui ont l'appli ntfy (prévenus même appli Car Jaune fermée)
@@ -4290,13 +4324,15 @@ function evText(name, ev){
     case 'wait':   return { title:`🚏 ${name} attend à ${ev.stop}`, body:`Depuis ${fmtHM(ev.since || ev.at)}.${ev.next ? ` Prochain car : ${ev.next}.` : ''}` };
     case 'depart': return { title:`🚌 ${name} est parti${ev.stop ? ' de ' + ev.stop : ''}`, body:`${line.trim().replace(/^dans/, 'Dans')}${ev.to ? `. Arrivée prévue à ${ev.to} vers ${fmtHM(ev.eta)}` : ''}${late}.` };
     case 'soon':   return { title:`⏱️ ${name} arrive bientôt à ${ev.to}`, body:`Dans ~${Math.max(1, Math.round((ev.eta - ev.at) / 60000))} min, vers ${fmtHM(ev.eta)}${line}${late}.` };
-    case 'arrive': return { title:`📍 ${name} est arrivé${ev.stop ? ' à ' + ev.stop : ''}`, body:`À ${fmtHM(ev.at)}${line}${late}.${ev.guess ? ' (estimé : son appli était fermée)' : ''}` };
+    case 'arrive': return ev.guess
+      ? { title:`📍 ${name} est arrivé${ev.stop ? ' à ' + ev.stop : ''}`, body:`Vers ${fmtHM(ev.at)}${line} (estimé : son appli était fermée).` }
+      : { title:`🚶 ${name} est descendu${ev.l ? ' du ' + ev.l : ' du car'}${ev.stop ? ' à ' + ev.stop : ''}`, body:`À ${fmtHM(ev.at)}${late}. Il n’est plus dans le car.` };
   }
   return { title: name, body: '' };
 }
 /** À chaque position : reconnaît l'attente en gare, la montée, l'approche et la descente. */
 function rideTick(){
-  if (!shareCfg.on || !myPos) return;
+  if (!(shareCfg.on || shareCfg.auto) || !myPos) return;
   const now = Date.now(), v = onBus && vehicles.find(x => x.id === onBus), sp = myPos.speed || 0;
   if (v){
     if (ride.phase !== 'ride'){
@@ -4340,7 +4376,8 @@ function rideTick(){
 function shareLink(){ return SHARE_BASE + '#proche=' + encodeURIComponent(shareCfg.name.trim()) + '&code=' + codeKey(shareCfg.code); }
 async function sendShareLink(){
   if (!shareCfg.name.trim()){ toast('Écris d’abord ton prénom.'); $('#shName').focus(); return; }
-  if (!shareCfg.on) await setShareOn(true);
+  if (shareCfg.auto) autoWatchStart();                 // automatique : tes proches te voient dès que tu es dans un car
+  else if (!shareCfg.on) await setShareOn(true);
   const url = shareLink();
   const { ntopic } = await shareKeys(shareCfg.name, shareCfg.code);
   const text = `Suis-moi dans les cars jaunes 🚌 : ${url}\n(ou dans l’appli Car Jaune Live → ⚙️ → Suivre un proche : ${shareCfg.name.trim()}, code ${fmtCode(shareCfg.code)})`
@@ -4355,7 +4392,9 @@ function renderShareUI(){
   if (document.activeElement !== $('#shName')) $('#shName').value = shareCfg.name;
   $('#shCode').textContent = fmtCode(shareCfg.code);
   $('#shEvents').checked = shareCfg.events !== false;
-  $('#shStatus').textContent = !shareCfg.on ? 'Tes proches voient où tu es et dans quel car jaune tu es monté.'
+  $('#shAuto').checked = shareCfg.auto !== false;
+  $('#shStatus').textContent = autoActive && !shareCfg.on ? `🚌 Partage automatique en cours (dans le car)${shareLast.t ? ' · envoyé à ' + fmtHM(shareLast.t) : ''}`
+    : !shareCfg.on ? (shareCfg.auto && shareCfg.name.trim() ? '🟡 En veille : le partage démarre tout seul quand tu montes dans un car jaune.' : 'Tes proches voient où tu es et dans quel car jaune tu es monté.')
     : shareErr ? '⚠️ Partage actif, mais ' + shareErr + '.'
     : shareLast.t ? `✅ Partage actif · envoyé à ${fmtHM(shareLast.t)}${shareLast.bus ? ' · dans le car' : ''} · ${BGGEO ? 'continue même appli fermée' : 's’arrête si tu fermes l’appli'}`
     : '✅ Partage actif · en attente de ta position…';
@@ -4363,7 +4402,7 @@ function renderShareUI(){
 }
 $('#shOn').addEventListener('change', e => setShareOn(e.target.checked));
 $('#shName').addEventListener('change', e => {
-  shareCfg.name = e.target.value.trim().slice(0, 20); saveShare(); renderShareUI();
+  shareCfg.name = e.target.value.trim().slice(0, 20); saveShare(); renderShareUI(); autoWatchStart();
   if (shareCfg.on) sendShare(true);
 });
 $('#shNew').addEventListener('click', async () => {
@@ -4374,6 +4413,12 @@ $('#shNew').addEventListener('click', async () => {
 });
 $('#shSend').addEventListener('click', sendShareLink);
 $('#shEvents').addEventListener('change', e => { shareCfg.events = e.target.checked; saveShare(); });
+$('#shAuto').addEventListener('change', e => {
+  shareCfg.auto = e.target.checked; saveShare();
+  if (shareCfg.auto){ if (!shareCfg.name.trim()){ toast('Écris d’abord ton prénom.'); $('#shName').focus(); } else { autoWatchStart(); toast('🟡 Partage auto : il démarrera dès que tu montes dans un car jaune.'); } }
+  else if (!shareCfg.on){ if (autoActive){ autoActive = false; pushShare({ n: shareCfg.name, t: Date.now(), off: true }); } stopShare(); }
+  renderShareUI();
+});
 
 /* ----- je suis mes proches ----- */
 const friends = (() => { try { return JSON.parse(localStorage.getItem('cj_friends') || '[]'); } catch(e){ return []; } })();
@@ -4474,6 +4519,8 @@ function friendState(f){
     return { t: `🚌 dans le ${b ? b.l : v.route.s} → ${b ? b.d : v.headsign}${v.stopName ? ' · prochain arrêt ' + v.stopName : ''}${r.until ? ` · arrive à ${r.to} ~${fmtHM(r.until)}` : ''}${
       Date.now() - o.t > 2 * 60e3 ? ' · suivi par le car' : ''}`, old:false };
   }
+  const off = f.lastEv && f.lastEv.k === 'arrive' && !b && Date.now() - f.lastEv.at < 30 * 60e3 ? f.lastEv : null;
+  if (off) return { t: `🚶 descendu${off.l ? ' du ' + off.l : ''}${off.stop ? ' à ' + off.stop : ''} à ${fmtHM(off.at)} · ${agoTxt(o.t)}`, old };
   const w = f.lastEv && f.lastEv.k === 'wait' && Date.now() - f.lastEv.at < 45 * 60e3 ? f.lastEv : null;
   const where = b ? `🚌 dans le ${b.l} → ${b.d}${b.s ? ' · prochain arrêt ' + b.s : ''}` : w && (o.sp || 0) < 8 ? `🚏 attend à ${w.stop} depuis ${fmtHM(w.since || w.at)}`
               : (o.sp > 8 ? `se déplace (${o.sp} km/h)` : 'à pied ou à l’arrêt');
@@ -4547,6 +4594,7 @@ var linkView = '';
 })();
 startFriendPoll();
 if (shareCfg.on) setTimeout(startShare, 2500);     // partage gardé d'une ouverture à l'autre
+else setTimeout(autoWatchStart, 3000);              // veille : partage auto à la montée dans un car
 
 let toastTimer;
 let toastAct = null, toastLast = { t:'', at:0 };

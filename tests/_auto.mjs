@@ -1,0 +1,15 @@
+import { createRequire } from 'node:module';
+const { chromium } = createRequire(import.meta.url)('playwright');
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport:{width:390,height:844}, geolocation:{latitude:-20.9001, longitude:55.5301, accuracy:8}, permissions:['geolocation'] });
+const sent = [];
+await ctx.route('https://ntfy.sh/**', r => { if (r.request().method()==='POST') sent.push(JSON.parse(r.request().postData()).topic.slice(0,6)); r.fulfill({ status:200, body:'{}', headers:{'Access-Control-Allow-Origin':'*'} }); });
+const pg = await ctx.newPage(); const errs=[]; pg.on('pageerror', e=>errs.push(e.message));
+await pg.goto('http://localhost:8765/_test.html'); await pg.waitForTimeout(2500);
+await pg.evaluate("forceUntil = Date.now() + 3600e3; updateMode(); refresh(); 1"); await pg.waitForTimeout(1500);
+await pg.click('#gearBtn'); await pg.fill('#shName', 'Samuel'); await pg.press('#shName', 'Tab'); await pg.waitForTimeout(2000);
+console.log('avant le car :', await pg.inner_text('#shStatus'), '| envois :', sent.length);
+await pg.evaluate("onBus = 'bus1'; myPos = { lat:-20.9001, lon:55.5301, acc:8, speed:12 }; autoCheck(); rideTick(); sendShare(); 1"); await pg.waitForTimeout(1500);
+console.log('dans le car :', await pg.inner_text('#shStatus'), '| envois :', sent.join(','));
+console.log('toast :', await pg.inner_text('#toast'));
+console.log('errors', errs); await b.close();
