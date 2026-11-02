@@ -508,6 +508,32 @@
   .rel-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
   .rel-it{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 
+  /* ---------- dernier car, cours, signalements, tarifs ---------- */
+  .tag-last{background:#2E2246;color:#E2D4FF;margin-left:6px}
+  .cls-card,.tarif-card{padding:0}
+  .cls-card > summary,.tarif-card > summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer}
+  .cls-card > summary::-webkit-details-marker,.tarif-card > summary::-webkit-details-marker{display:none}
+  .cls-card[open] > summary .sa-c,.tarif-card[open] > summary .sa-c{transform:rotate(90deg)}
+  .cls-body{padding:0 16px 16px}
+  .cls-grid{display:grid;grid-template-columns:44px 1fr 1fr;gap:6px 8px;align-items:center;margin:10px 0}
+  .cls-h{font-size:11.5px;font-weight:700;color:var(--gris);text-transform:uppercase}
+  .cls-d{font-weight:800;color:var(--titre)}
+  .cls-grid .set-in{padding:7px 8px}
+  .cls-adv{margin-top:8px;font-size:14px;line-height:1.6}
+  .cls-adv small{display:block}
+  .rep-chip{display:inline-block;margin-left:5px;font-size:13px;background:var(--fond);border-radius:999px;padding:0 6px}
+  .rep-stop{margin-bottom:10px;padding:10px 12px;border-radius:10px;background:#FFF4D6;font-size:13px;font-weight:700}
+  html.dark .rep-stop{background:#3A3218}
+  .rep-box{max-width:420px;padding:0}
+  .rep-btns{display:flex;flex-direction:column;gap:8px}
+  .rep-btns .btn{text-align:left}
+  .tarifs h4{margin:14px 0 6px;color:var(--titre);font-size:14.5px}
+  .tarifs ul{margin:0;padding-left:18px;font-size:13.5px;line-height:1.5}
+  .tarifs p{font-size:13.5px;margin:4px 0}
+  .tf-tab{border-collapse:collapse;width:100%;font-size:13.5px}
+  .tf-tab th,.tf-tab td{padding:6px 8px;border-bottom:1px solid var(--ligne);text-align:center}
+  .tf-tab td:first-child{text-align:left;font-weight:700;color:var(--titre)}
+
   /* ---------- correspondances ---------- */
   .tr-h{font-size:15px;color:var(--titre);margin:18px 0 8px}
   .tr-card{display:flex;align-items:center;gap:12px;border:1.5px solid var(--ligne);border-radius:12px;padding:10px 12px;margin:8px 0;background:var(--carte)}
@@ -700,6 +726,16 @@
         </div>
       </div>
       <div class="card" id="tripCard" style="margin-top:16px"></div>
+      <details class="card cls-card" id="clsCard" style="margin-top:16px">
+        <summary><span class="sa-i">🎓</span><span class="sa-t"><b>Quand partir · mes horaires de cours</b><small id="clsSum">indique tes heures de cours : je te dis quel car prendre</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+        <div class="cls-body">
+          <div class="set-row"><div class="set-l"><b>Me prévenir</b><small>le matin pour arriver à l’heure, et avant la fin des cours pour le retour</small></div><label class="switch"><input type="checkbox" id="clsOn"><span></span></label></div>
+          <div class="cls-grid" id="clsGrid"></div>
+          <div class="set-row"><div class="set-l"><b>Marge</b><small>temps pour rejoindre l’arrêt / arriver avant le cours</small></div>
+            <select class="set-sel" id="clsWalk"><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
+          <div id="clsToday"></div>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -742,6 +778,24 @@
     <div class="wrap">
       <h1>Fiches horaires</h1>
       <p class="lead">Les fiches PDF officielles de chaque ligne, récupérées automatiquement sur carjaune.re.</p>
+      <details class="card tarif-card" style="margin-bottom:16px">
+        <summary><span class="sa-i">🎫</span><span class="sa-t"><b>Tarifs et titres de transport</b><small>gratuit pour les étudiants · abonnements dès 15 €/mois</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+        <div class="cls-body tarifs">
+          <h4>🆓 Gratuit (avec une carte Car Jaune)</h4>
+          <ul><li><b>Étudiants</b>, demandeurs d’emploi (Y Pass, 3 mois), plus de 65 ans, personnes en situation de handicap ≥ 50 % (Réuni Pass Handicap) et leur accompagnant, stagiaires de la formation (Réuni Pass).</li>
+            <li>Certains pass gratuits ne valent pas sur les lignes <b>Z’éclair, ZO et T</b>.</li></ul>
+          <h4>📅 Abonnements</h4>
+          <table class="tf-tab"><tr><th></th><th>Mois</th><th>Trimestre</th><th>Année</th></tr>
+            <tr><td>Moins de 26 ans</td><td>15 €</td><td>30 €</td><td>70 €</td></tr>
+            <tr><td>26 ans et plus</td><td>38 €</td><td>100 €</td><td>360 €</td></tr></table>
+          <p class="src-note">Abonnements à <b>moitié prix du 1<sup>er</sup> mai au 31 octobre 2026</b> (19 € / 7,50 € par mois) : vérifie sur carjaune.re si l’offre est prolongée. Ton employeur peut payer jusqu’à 75 % (Prime transport).</p>
+          <h4>🎟️ Ticket à l’unité</h4>
+          <p>Prix et validité : <a href="https://www.carjaune.re/fr/assistant-tarifaire/7" target="_blank" rel="noopener">assistant tarifaire carjaune.re</a>. Achat dans le car, ou sur ton téléphone avec l’appli <b>M-Ticket Car Jaune</b>.</p>
+          <h4>📍 Où faire sa carte</h4>
+          <p>Dans l’un des <b>12 points Info / Vente</b> de l’île (avec une pièce d’identité). Recharge ensuite en ligne sur <a href="https://www.carjaune.re" target="_blank" rel="noopener">carjaune.re</a>.</p>
+          <p class="src-note">Sources : Car Jaune (avril 2026), Région Réunion (mai 2026), France Travail (sept. 2025). Infos vérifiées le 2 novembre 2026.</p>
+        </div>
+      </details>
       <div class="card" id="calCard" style="margin-bottom:16px"><h2>Calendrier scolaire · La Réunion</h2><p class="muted">Chargement…</p></div>
       <div class="grid" id="fichesGrid"><div class="card">Chargement…</div></div>
       <div class="note" id="fichesNote"></div>
@@ -770,6 +824,11 @@
 <div class="modal" id="ficheModal" hidden><div class="modal-box" id="ficheModalBox"></div></div>
 
 <datalist id="stopList"></datalist>
+<div class="modal" id="repSheet" hidden><div class="modal-box rep-box" role="dialog" aria-label="Signaler">
+  <div class="set-head"><h2>📣 Signaler</h2><button class="x" data-rep-close aria-label="Fermer">✕</button></div>
+  <div style="padding:14px 18px 18px"><p class="src-note" id="repWhat"></p><div class="rep-btns" id="repBtns"></div>
+  <p class="src-note" style="margin-top:12px">Anonyme · visible par les autres utilisateurs de l’appli pendant 2 h.</p></div>
+</div></div>
 <div class="modal" id="nextSheet" hidden><div class="modal-box" role="dialog" aria-label="Mon prochain car">
   <div class="set-head"><h2>🚌 Mon prochain car</h2><button class="x" data-close-next aria-label="Fermer">✕</button></div>
   <div style="padding:6px 18px 18px" id="nextBody"></div>
@@ -794,6 +853,7 @@
       <div class="set-row"><div class="set-l"><b>Arrivée à quai</b><small>quand le car arrive à l’arrêt</small></div><label class="switch"><input type="checkbox" id="alQuai" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Avance / retard</b><small>si le retard change de 2 min ou plus</small></div><label class="switch"><input type="checkbox" id="alLate" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Aucun car dans l’heure</b></div><label class="switch"><input type="checkbox" id="alNoBus" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>🌙 Dernier car</b><small>30 min puis 10 min avant le dernier car du jour</small></div><label class="switch"><input type="checkbox" id="alLast" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Arrêt le plus proche</b><small>choisi tout seul selon ta position</small></div><label class="switch"><input type="checkbox" id="alFollow"><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Son</b></div><label class="switch"><input type="checkbox" id="alSound" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Vibration</b><small>Android uniquement</small></div><label class="switch"><input type="checkbox" id="alVibe" checked><span></span></label></div>
@@ -840,6 +900,7 @@
       <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt"></small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
       <div class="set-row"><div class="set-l"><b>Taille du texte</b></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
       <div class="set-row"><div class="set-l"><b>Économie de batterie</b><small id="ecoTxt"></small></div><label class="switch"><input type="checkbox" id="ecoOn" checked><span></span></label></div>
+      <div class="set-row" id="offRow"><div class="set-l"><b>Carte hors ligne</b><small id="offTxt">les zones que tu as déjà regardées restent visibles sans réseau</small></div><button class="btn small ghost" id="offClear">Vider</button></div>
       <div class="set-row"><div class="set-l"><b>Garder l’écran allumé</b><small>pendant les alertes</small></div><label class="switch"><input type="checkbox" id="alWake"><span></span></label></div>
     </div>
   </details>
@@ -1218,7 +1279,7 @@ function setView(v, silent){
   $('.crumb').classList.toggle('hide', v === 'map');          // plus de place pour la carte
   if (v === 'map') setTimeout(fixMapSize, 50);
   if (v === 'board') renderBoard();
-  if (v === 'trip') renderTrip();
+  if (v === 'trip'){ renderTrip(); try { renderClasses(); } catch(e){} }
   if (!silent) savePrefs();
 }
 document.querySelector('.tabs').addEventListener('click', e => {
@@ -1902,6 +1963,82 @@ function journeyRows(from, to){
             .sort((a, b) => a.eff - b.eff);
 }
 
+/* ---------- 🎓 Quand partir selon mes cours ----------
+   Aller (A → B) : le dernier car qui arrive avant le début du cours (moins la marge).
+   Retour (B → A) : le premier car après la fin du cours (plus la marge pour rejoindre l'arrêt). */
+const DAYS = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'dimanche'];
+const cls = Object.assign({ on:false, walk:5, d:{} }, (() => { try { return JSON.parse(localStorage.getItem('cj_cls') || '{}'); } catch(e){ return {}; } })());
+function saveCls(){ try { localStorage.setItem('cj_cls', JSON.stringify(cls)); } catch(e){} }
+const hmToMs = (day, hm) => { const [hh, mm] = hm.split(':').map(Number); return day + (hh * 60 + mm) * 60e3; };
+/** Conseils du jour : { aller:{r, leave}, retour:{r, leave}, s, e } (ou null). */
+function classAdvice(dayMs){
+  const wd = reuDate(dayMs + 12 * 3600e3).wd + 1, c = cls.d[wd];          // 1 = lundi … 7 = dimanche
+  if (!c || !tripReady() || !tripBoard.data) return null;
+  const A = findGroup(trip.a), B = findGroup(trip.b), margin = (+cls.walk || 5) * 60e3, out = {};
+  if (c.s){
+    const S = hmToMs(dayMs, c.s);
+    const opts = journeyRows(A, B).filter(r => midnightMs(r.sched) === dayMs && !r.ghost && (r.rarr != null ? r.rarr : r.arr) <= S - margin);
+    const r = opts.sort((x, y) => (y.rarr || y.arr) - (x.rarr || x.arr))[0];
+    if (r) out.aller = { r, leave: r.eff - margin, S };
+  }
+  if (c.e){
+    const E = hmToMs(dayMs, c.e);
+    const r = journeyRows(B, A).filter(x => midnightMs(x.sched) === dayMs && !x.ghost && x.eff >= E + margin).sort((x, y) => x.eff - y.eff)[0];
+    if (r) out.retour = { r, leave: r.eff - margin, E };
+  }
+  return (out.aller || out.retour) ? out : null;
+}
+function renderClasses(){
+  if (!$('#clsGrid')) return;
+  $('#clsOn').checked = cls.on; $('#clsWalk').value = String(cls.walk || 5);
+  $('#clsGrid').innerHTML = `<div class="cls-h"></div><div class="cls-h">début</div><div class="cls-h">fin</div>` + [1, 2, 3, 4, 5, 6].map(d => {
+    const c = cls.d[d] || {};
+    return `<div class="cls-d">${DAYS[d]}</div><input type="time" class="set-in" data-cd="${d}" data-ck="s" value="${c.s || ''}"><input type="time" class="set-in" data-cd="${d}" data-ck="e" value="${c.e || ''}">`;
+  }).join('');
+  const today = midnightMs(Date.now()), adv = classAdvice(today), wd = reuDate(Date.now()).wd + 1, c = cls.d[wd];
+  const n = Object.values(cls.d).filter(x => x && (x.s || x.e)).length;
+  $('#clsSum').textContent = !n ? 'indique tes heures de cours : je te dis quel car prendre' : `${n} jour${n > 1 ? 's' : ''} renseigné${n > 1 ? 's' : ''}${cls.on ? ' · alertes actives' : ''}`;
+  let h = '';
+  if (!tripReady()) h = '<p class="src-note">Remplis d’abord ton aller ci-dessus (ex. chez toi → université).</p>';
+  else if (!c || (!c.s && !c.e)) h = `<p class="src-note">Pas de cours renseigné aujourd’hui (${DAYS[wd] || 'dimanche'}).</p>`;
+  else if (!adv) h = '<p class="src-note">Recherche des cars…</p>';
+  else {
+    const line = (k, x) => x ? `<div class="cls-adv">${k === 'aller' ? '🌅 Aller' : '🌆 Retour'} : ${badge(x.r.route)} <b>${fmtHM(x.r.eff)}</b> → arrivée ${fmtHM(x.r.rarr != null ? x.r.rarr : x.r.arr)}
+      <small class="muted">${k === 'aller' ? `pour ton cours de ${fmtHM(x.S)}` : `après ta fin de cours à ${fmtHM(x.E)}`} · pars à ${fmtHM(x.leave)}</small></div>` : '';
+    h = `<b>Aujourd’hui</b>${line('aller', adv.aller)}${line('retour', adv.retour)}`;
+  }
+  $('#clsToday').innerHTML = h;
+}
+$('#clsCard').addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'clsOn'){ cls.on = t.checked; if (cls.on && !alertCfg.on) setAlertsOn(true, true); }
+  else if (t.id === 'clsWalk') cls.walk = +t.value;
+  else if (t.dataset.cd){ const d = cls.d[t.dataset.cd] || (cls.d[t.dataset.cd] = {}); d[t.dataset.ck] = t.value; }
+  saveCls(); renderClasses();
+});
+$('#clsCard').addEventListener('toggle', () => { if ($('#clsCard').open){ if (tripReady() && !tripBoard.data) loadTripBoard(); renderClasses(); } });
+/** Toutes les 30 s : faut-il partir ? (aller : 5 min avant l'heure de départ ; retour : 5 min avant la fin du cours) */
+function checkClasses(){
+  if (!cls.on || !alertCfg.on || isMuted() || !tripReady()) return;
+  if (!tripBoard.data){ loadTripBoard(); return; }
+  const now = Date.now(), today = midnightMs(now), adv = classAdvice(today);
+  if (!adv) return;
+  const A = findGroup(trip.a), B = findGroup(trip.b);
+  [['aller', adv.aller], ['retour', adv.retour]].forEach(([k, x]) => {
+    if (!x) return;
+    const when = k === 'aller' ? x.leave - 5 * 60e3 : x.E - 5 * 60e3;   // aller : 5 min avant de partir · retour : 5 min avant la fin
+    const key = 'cls|' + today + '|' + k, st = alertSent[key] || (alertSent[key] = {});
+    if (now >= when && now < x.r.eff && !st.sent){
+      st.sent = 1; saveSent();
+      const m = Math.max(0, Math.round((x.leave - now) / 60000));
+      notify(k === 'aller' ? `🎓 Cours à ${fmtHM(x.S)} : prends le ${x.r.route.s} de ${fmtHM(x.r.eff)}` : `🎓 Fin de cours : ${x.r.route.s} à ${fmtHM(x.r.eff)}`,
+        k === 'aller' ? `Depuis ${A.name}, arrivée ${fmtHM(x.r.rarr != null ? x.r.rarr : x.r.arr)}. Pars ${m ? 'dans ' + m + ' min' : 'maintenant'}.`
+                      : `Depuis ${B.name} vers ${A.name}${x.r.real != null ? ' (' + delayChip(x.r.real - x.r.sched, x.r.approx).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() + ')' : ''}. Pars à ${fmtHM(x.leave)}.`);
+    }
+  });
+}
+setInterval(() => { try { checkClasses(); } catch(e){} }, 30000);
+
 /* ---------- correspondances : 1 changement dans une gare commune aux deux lignes ---------- */
 let transfer = { key:'', loading:false, done:false, hubs:[] };
 const transferKey = (A, B) => A.name + '>' + B.name;
@@ -1985,7 +2122,7 @@ function renderTrip(){
     loadTripBoard();
     return;
   }
-  const rows = journeyRows(from, to).slice(0, 12);
+  const rows = markLast(journeyRows(from, to)).slice(0, 12);
   const now = Date.now();
   // à pied jusqu'à la gare de départ : on signale les cars que tu ne peux plus attraper
   const dFrom = myPos && isFinite(from.lat) ? distM(myPos.lat, myPos.lon, from.lat, from.lon) : null;
@@ -2005,7 +2142,7 @@ function renderTrip(){
       const late = walk != null && walk > 1 && mins < walk;
       const leave = walk != null && walk > 1 && !late && mins - walk <= 30
         ? `<br><span class="walk${mins - walk > 5 ? ' ok' : ''}">🚶 pars ${mins - walk <= 0 ? 'maintenant' : 'dans ' + (mins - walk) + ' min'}</span>` : '';
-      t += `<tr class="${late ? 'toolate' : ''}"><td>${when}${leave}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched, r.approx)}</td>
+      t += `<tr class="${late ? 'toolate' : ''}${r.ghost ? ' ghost' : ''}"><td>${when}${leave}${r.last ? '<br>' + LAST_TAG : ''}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched, r.approx)}</td>
         <td class="arr">${fmtTime(r.rarr, r.arr, r.rarr != null && r.real != null)}</td>
         <td><span class="dur">${Math.round((arrEff - r.eff) / 60000)} min</span></td>
         <td>${r.ghost ? '<span class="dchip ghost">🚫 Pas vu en circulation</span>' : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>`}
@@ -2477,6 +2614,16 @@ function checkAlerts(){
     }
   }
   if (inHour) noBusAt = 0;
+  // 🌙 dernier car du jour : prévenu 30 min puis 10 min avant
+  if (alertCfg.lastBus !== false && ctx.ready){
+    const last = lastOfToday(rows);
+    if (last && last.eff > now){
+      const m = (last.eff - now) / 60000, st = alertSent['last|' + stop + '|' + last.sched] || (alertSent['last|' + stop + '|' + last.sched] = {});
+      const txt = `${last.route.s} → ${last.dest} à ${fmtHM(last.eff)}. Après, plus de car aujourd’hui${ctx.sens ? ' pour ton ' + ctx.sens : ''}.`;
+      if (m <= 30 && m > 10 && !st.l30){ st.l30 = 1; saveSent(); notify(`🌙 Dernier car à ${stop} dans ${Math.round(m)} min`, txt, 'warn'); }
+      else if (m <= 10 && m > 0.5 && !st.l10){ st.l10 = 1; st.l30 = 1; saveSent(); notify(`🌙 Dernier car dans ${Math.round(m)} min !`, txt, 'warn'); }
+    }
+  }
   renderAlertStatus(rows, ctx);
 }
 function renderAlertStatus(rows, ctx){
@@ -2655,7 +2802,7 @@ setInterval(() => { if (pushCfg.on && alertCfg.on && document.visibilityState ==
 document.addEventListener('visibilitychange', () => { if (pushCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); });
 
 /* ---------- voyant du serveur : est-il à la dernière version ? ---------- */
-const SERVER_WANTED = '2026-11-02.4';                 // version de Code.gs attendue par cette version de l'appli
+const SERVER_WANTED = '2026-11-02.5';                 // version de Code.gs attendue par cette version de l'appli
 const srv = { state:'', version:'', trigger:false, at:0 };
 async function checkServer(){
   if (IN_GAS) return;
@@ -2685,6 +2832,14 @@ function renderServer(){
 }
 $('#srvCheck').addEventListener('click', checkServer);
 setTimeout(checkServer, 8000);
+
+/* ---------- carte hors ligne : tuiles gardées par le service worker ---------- */
+async function renderOffline(){
+  if (!$('#offTxt') || !window.caches) return;
+  try { const c = await caches.open('cj-tiles-v1'); const n = (await c.keys()).length;
+    $('#offTxt').textContent = n ? `${n} morceaux de carte gardés : les zones déjà regardées restent visibles sans réseau` : 'les zones que tu regardes resteront visibles sans réseau'; } catch(e){}
+}
+$('#offClear').addEventListener('click', async () => { try { await caches.delete('cj-tiles-v1'); } catch(e){} renderOffline(); toast('Carte hors ligne vidée.'); });
 
 /* ---------- raccourci d'écran d'accueil ---------- */
 $('#nextShortcut').addEventListener('click', async () => {
@@ -2778,7 +2933,7 @@ function renderSettings(){
   $('#pauseOff').hidden = !muted;
   $('#alSound').checked = alertCfg.sound; $('#alVibe').checked = alertCfg.vibe; $('#alWake').checked = alertCfg.wake;
   $('#alFollow').checked = alertCfg.follow;
-  renderShareUI(); renderCityUI(); renderDiag(); renderPushUI(); renderTfKey(); renderEcoUI(); renderSummaries();
+  renderShareUI(); renderCityUI(); renderDiag(); renderPushUI(); renderTfKey(); renderEcoUI(); renderSummaries(); renderOffline();
   $('#apkRow').hidden = NATIVE || !/Android/i.test(navigator.userAgent);
   if (!IN_GAS){ $('#apiRow').hidden = false; renderServer(); }
   renderNotif();
@@ -2908,7 +3063,7 @@ function loadAlertCfg(){
   alertCfg.ntfy = pushCfg.on ? pushCfg.topic : '';
   if (alertCfg.muteUntil && Date.now() >= alertCfg.muteUntil) alertCfg.muteUntil = 0;   // pause terminée
   $('#alLead').value = String(alertCfg.lead);
-  $('#alQuai').checked = alertCfg.quai; $('#alLate').checked = alertCfg.late; $('#alNoBus').checked = alertCfg.noBus;
+  $('#alQuai').checked = alertCfg.quai; $('#alLate').checked = alertCfg.late; $('#alNoBus').checked = alertCfg.noBus; $('#alLast').checked = alertCfg.lastBus !== false;
   $('#alFollow').checked = alertCfg.follow;
   if (alertCfg.follow) setFollow(true);
 }
@@ -2916,8 +3071,8 @@ $('#geoBtn').addEventListener('click', locateOnce);
 $('#alFollow').addEventListener('change', e => setFollow(e.target.checked));
 $('#alLead').addEventListener('change', e => { alertCfg.lead = +e.target.value; saveAlertCfg(); renderAlertStatus(); });
 $('#alLine').addEventListener('change', e => { alertCfg.line = e.target.value; saveAlertCfg(); renderAlertStatus(); });
-['alQuai', 'alLate', 'alNoBus'].forEach(id => $('#' + id).addEventListener('change', e => {
-  alertCfg[{ alQuai:'quai', alLate:'late', alNoBus:'noBus' }[id]] = e.target.checked; saveAlertCfg();
+['alQuai', 'alLate', 'alNoBus', 'alLast'].forEach(id => $('#' + id).addEventListener('change', e => {
+  alertCfg[{ alQuai:'quai', alLate:'late', alNoBus:'noBus', alLast:'lastBus' }[id]] = e.target.checked; saveAlertCfg();
 }));
 $('#alToggle').addEventListener('click', () => { if (!alertCfg.on) alertCfg.journey = false; toggleAlerts(); });
 $('#geoInfo').addEventListener('click', e => {
@@ -3367,7 +3522,8 @@ async function openStopPopup(g, ll){
         r.real != null ? `<span class="delay ${fmtDelay((r.real - r.sched) / 1000, r.approx).c}">${fmtDelay((r.real - r.sched) / 1000, r.approx).t}</span>` : ''}</div>`; }).join('') + '</div>'
       : '<div class="muted">Aucun départ dans les prochaines heures.</div>'}
     ${reliabilityHtml(next.map(r => r.route.s)).replace('<div class="rel">', '<div class="rel sm">')}
-    <div class="sp-act"><button class="btn small" data-sp-board="${esc(g.name)}">🕒 Tous les départs</button><button class="btn small ghost" data-sp-watch="${esc(g.name)}">🔔 Surveiller</button></div>`);
+    ${stopReportsHtml(g.name)}
+    <div class="sp-act"><button class="btn small" data-sp-board="${esc(g.name)}">🕒 Tous les départs</button><button class="btn small ghost" data-sp-watch="${esc(g.name)}">🔔 Surveiller</button><button class="btn small ghost" data-report="${esc(g.name)}" title="Signaler">📣</button></div>`);
 }
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-sp-board]'), w = e.target.closest('[data-sp-watch]');
@@ -3919,6 +4075,62 @@ $('#favBtn').addEventListener('click', () => {
 });
 
 /** Passages GTFS à venir à l'arrêt (prévu + temps réel), triés par heure effective. */
+/* ---------- 📣 signalements entre utilisateurs (partagés par le serveur, effacés au bout de 2 h) ---------- */
+const REP_KINDS = { full:['🧍', 'Car bondé'], skip:['🚫', 'Car pas passé'], early:['⏩', 'Passé en avance'], moved:['🚧', 'Arrêt déplacé / travaux'], ok:['👍', 'Tout va bien'] };
+let REPORTS = [], repAt = 0;
+async function loadReports(force){
+  if (!force && Date.now() - repAt < 90e3) return;
+  repAt = Date.now();
+  try { REPORTS = JSON.parse(await rawCall('getReports') || '[]'); } catch(e){ return; }
+  if (view === 'board') renderBoard();
+}
+setInterval(() => { if (document.visibilityState === 'visible' && (view === 'board' || view === 'trip')) loadReports(); }, 60e3);
+const repMatch = (r, stop) => REPORTS.filter(x => x.stop === stop && (x.kind === 'moved' || (x.line === r.route.s && Math.abs(x.sched - r.sched) <= 10 * 60e3)));
+function reportChips(r){
+  if (!board.group || !REPORTS.length) return '';
+  const list = repMatch(r, board.group.name).filter(x => x.kind !== 'moved');
+  if (!list.length) return '';
+  const by = {}; list.forEach(x => by[x.kind] = (by[x.kind] || 0) + 1);
+  return Object.keys(by).map(k => `<span class="rep-chip" title="${esc(REP_KINDS[k][1])} (signalé par ${by[k]} personne${by[k] > 1 ? 's' : ''})">${REP_KINDS[k][0]}${by[k] > 1 ? by[k] : ''}</span>`).join('');
+}
+function stopReportsHtml(stop){
+  const moved = REPORTS.filter(x => x.stop === stop && x.kind === 'moved');
+  return moved.length ? `<div class="rep-stop">🚧 Arrêt déplacé ou travaux signalé ${agoTxt(Math.max(...moved.map(x => x.at)))}${moved.length > 1 ? ` (${moved.length} personnes)` : ''}</div>` : '';
+}
+function openReport(stop, line, sched, label){
+  const box = $('#repSheet');
+  box.dataset.stop = stop; box.dataset.line = line || ''; box.dataset.sched = sched || 0;
+  $('#repWhat').textContent = line ? `${line} de ${fmtHM(+sched)} à ${stop}` : `Arrêt ${stop}`;
+  $('#repBtns').innerHTML = Object.keys(REP_KINDS).filter(k => line ? k !== 'moved' : k === 'moved' || k === 'ok')
+    .map(k => `<button class="btn ghost" data-rep="${k}">${REP_KINDS[k][0]} ${REP_KINDS[k][1]}</button>`).join('');
+  box.hidden = false;
+}
+$('#repSheet').addEventListener('click', async e => {
+  const box = $('#repSheet');
+  if (e.target.id === 'repSheet' || e.target.closest('[data-rep-close]')){ box.hidden = true; return; }
+  const b = e.target.closest('[data-rep]'); if (!b) return;
+  const rep = { stop: box.dataset.stop, line: box.dataset.line, sched: +box.dataset.sched, kind: b.dataset.rep };
+  const key = 'rep|' + rep.stop + '|' + rep.line + '|' + rep.sched + '|' + rep.kind;
+  box.hidden = true;
+  if (alertSent[key]){ toast('Déjà signalé, merci !'); return; }
+  try { await rawCall('report', JSON.stringify(rep)); alertSent[key] = { at: Date.now() }; saveSent(); toast('📣 Merci ! Les autres voyageurs le verront pendant 2 h.'); loadReports(true); }
+  catch(e){ toast(/Action inconnue/.test(errMsg(e)) ? 'Signalements disponibles après la mise à jour du serveur.' : 'Signalement impossible : ' + errMsg(e).slice(0, 60)); }
+});
+document.addEventListener('click', e => {
+  const r = e.target.closest('[data-report]'); if (!r) return;
+  openReport(r.dataset.report, r.dataset.line, r.dataset.sched);
+});
+
+/** Le dernier départ d'aujourd'hui (hors cars fantômes), ou null s'il n'y en a plus. */
+function lastOfToday(rows){
+  const today = midnightMs(Date.now());
+  let last = null;
+  rows.forEach(r => { if (!r.ghost && midnightMs(r.sched) === today && (!last || r.sched > last.sched)) last = r; });
+  return last;
+}
+function markLast(rows){ const l = lastOfToday(rows); rows.forEach(r => r.last = r === l); return rows; }
+const LAST_TAG = '<span class="tag tag-last" title="Dernier car de la journée">🌙 dernier</span>';
+
 /* ---------- cars fantômes : un car prévu, déjà parti de son terminus, mais absent du temps réel ---------- */
 /** Fiable seulement si le flux suit bien les trajets du GTFS (sinon on ne dit rien plutôt que de se tromper). */
 function rtCoverage(){
@@ -4039,7 +4251,8 @@ function renderBoard(){
   const pTxt = !pNow ? '' : pNow.type === 'ferie' ? `<span class="tag tag-f">Horaires de jour férié</span>`
              : pNow.type === 'vacances' ? `<span class="tag tag-v">Horaires vacances scolaires</span>`
              : `<span class="tag tag-s">Horaires période scolaire</span>`;
-  const head = `<div class="board-head"><h2>${esc(g.name)}${stopPmr(g)}${pTxt}</h2><span class="upd">${
+  try { loadReports(); } catch(e){}
+  const head = stopReportsHtml(g.name) + `<div class="board-head"><h2>${esc(g.name)}${stopPmr(g)}${pTxt}</h2><span class="upd">${
     mode === 'sleep' ? 'Réseau fermé · horaires théoriques'
     : `Temps réel ${feedTime ? 'à ' + fmtHM(feedTime) : ''} · actualisation auto`}</span></div>`;
   if (board.loading){ card.innerHTML = head + `<div class="placeholder">Chargement des passages…</div>`; return; }
@@ -4075,15 +4288,16 @@ function renderBoard(){
       html += `<tr class="${r.ghost ? 'ghost' : ''}">
         <td>${when}</td>
         <td>${badge(r.route)}${r.pmr === '1' ? '<span class="pmr-i" title="Car accessible en fauteuil roulant">♿</span>' : ''}</td>
-        <td class="b-dest">${esc(r.dest)}${sensTag}${r.tag}<small>${r.veh && r.veh.stopName ? 'vers ' + esc(r.veh.stopName) : ''}</small>
-          ${r.veh ? `<button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}</td>
+        <td class="b-dest">${esc(r.dest)}${sensTag}${r.tag}${r.last ? LAST_TAG : ''}${reportChips(r)}<small>${r.veh && r.veh.stopName ? 'vers ' + esc(r.veh.stopName) : ''}</small>
+          ${r.veh ? `<button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}
+          ${r.sched - now < 30 * 60e3 ? `<button class="see" data-report="${esc(g.name)}" data-line="${esc(r.route.s)}" data-sched="${r.sched}">📣 Signaler</button>` : ''}</td>
         <td>${fmtTime(r.real, r.sched, r.approx)}</td>
         <td>${status}</td>
       </tr>`;
     });
     return `<table class="board"><thead><tr><th>Départ</th><th>Ligne</th><th>Direction</th><th>Horaire</th><th>Info</th></tr></thead><tbody>${html}</tbody></table>`;
   };
-  const all = fr || pool;
+  const all = markLast(fr || pool);
   let body = '';
   if (boardGroupBy === 'sens'){
     ['aller', 'retour'].forEach(s => {

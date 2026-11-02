@@ -92,7 +92,9 @@ const API_ = {
   getTravel:         function () { return getTravel(); },
   getVersion:        function () { return getVersion(); },
   saveStats:         function (json) { return saveStats(json); },
-  getStats:          function () { return getStats(); }
+  getStats:          function () { return getStats(); },
+  report:            function (json) { return report(json); },
+  getReports:        function () { return getReports(); }
 };
 
 function api_(action, args) {
@@ -940,7 +942,7 @@ function weight_(row) { return (row || []).reduce(function (a, c) { return a + (
 /* ------------------------------------------------------------------ */
 /*  Version du serveur (l'appli affiche un voyant « à jour »)          */
 /* ------------------------------------------------------------------ */
-const SERVER_VERSION = '2026-11-02.4';
+const SERVER_VERSION = '2026-11-02.5';
 function getVersion() {
   let trigger = false;
   try { trigger = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'pushTick'; }); } catch (e) {}
@@ -973,6 +975,32 @@ function saveStats(json) {
       });
     });
     propPut_(props, STATS_PROP, JSON.stringify(cur));
+  } finally { lock.releaseLock(); }
+  return '1';
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  Signalements des voyageurs (anonymes, gardés 2 h)                  */
+/* ------------------------------------------------------------------ */
+const REPORT_KINDS = { full: 1, skip: 1, early: 1, moved: 1, ok: 1 };
+function getReports() {
+  const s = CacheService.getScriptCache().get('reports_v1');
+  const lim = Date.now() - 2 * 3600e3;
+  return JSON.stringify((s ? JSON.parse(s) : []).filter(function (r) { return r.at > lim; }));
+}
+function report(json) {
+  const r = typeof json === 'string' ? JSON.parse(json) : json;
+  if (!r || !REPORT_KINDS[r.kind] || !r.stop) throw new Error('signalement invalide');
+  const clean = { stop: String(r.stop).slice(0, 80), line: String(r.line || '').slice(0, 8), sched: +r.sched || 0, kind: r.kind, at: Date.now() };
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+  try {
+    const cache = CacheService.getScriptCache();
+    const lim = Date.now() - 2 * 3600e3;
+    const list = JSON.parse(cache.get('reports_v1') || '[]').filter(function (x) { return x.at > lim; });
+    list.push(clean);
+    cache.put('reports_v1', JSON.stringify(list.slice(-300)), 3 * 3600);
   } finally { lock.releaseLock(); }
   return '1';
 }
