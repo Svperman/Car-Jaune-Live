@@ -1,5 +1,7 @@
-_test.html
-test-*.png
-node_modules
-package.json
-package-lock.json
+/_test.html
+/test-*.png
+node_modules/
+/node_modules
+/package.json
+/package-lock.json
+android-app/android/
