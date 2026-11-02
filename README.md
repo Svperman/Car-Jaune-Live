@@ -6,6 +6,23 @@ mon trajet aller/retour, alertes d'arrivée selon ta position.
 L'appli (ce dossier, sur GitHub Pages) parle au serveur **Google Apps Script** (`Code.gs`)
 qui récupère les données officielles. Rien à payer, pas de carte bancaire.
 
+## 0. Mise à jour automatique du serveur (à régler une seule fois)
+
+Après ce réglage, chaque modification de `apps-script/Code.gs` poussée sur GitHub met à jour le serveur
+**tout seul** : nouvelle version + même URL `/exec`. Plus besoin de « Gérer les déploiements ».
+
+Sur ton PC, dans PowerShell :
+
+```powershell
+git clone https://github.com/Svperman/Car-Jaune-Live.git
+cd Car-Jaune-Live\apps-script
+.\setup-auto-deploy.ps1 -ScriptId "ID_DU_SCRIPT"
+```
+
+Le script active la connexion Google (`clasp login`) puis enregistre 2 secrets GitHub :
+`CLASPRC_JSON` (tes identifiants clasp) et `SCRIPT_ID`. Suivi des mises à jour : onglet **Actions** du dépôt
+(bouton **Run workflow** pour relancer à la main, même depuis le téléphone).
+
 ## 1. Le serveur Apps Script (Google Sheet « Car Jaune »)
 
 Les fichiers du serveur sont dans `apps-script/` : `Code.gs` (le seul fichier à coller) et `appsscript.json`

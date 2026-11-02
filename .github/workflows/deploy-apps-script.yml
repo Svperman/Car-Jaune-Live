@@ -1,0 +1,83 @@
+# Car Jaune Live — mise à jour automatique du serveur Google Apps Script
+#
+# À chaque modification de apps-script/ poussée sur GitHub (ou en appuyant sur « Run workflow »
+# dans l'onglet Actions, même depuis le téléphone), ce robot :
+#   1. envoie Code.gs + appsscript.json dans ton projet Apps Script (clasp push),
+#   2. crée une nouvelle version et met à jour TON déploiement existant → l'URL /exec ne change pas,
+#   3. vérifie que le serveur répond {"ok":true}.
+#
+# Réglage unique : 2 secrets dans GitHub → Settings → Secrets and variables → Actions
+#   CLASPRC_JSON : contenu du fichier .clasprc.json créé par « clasp login » sur ton PC
+#   SCRIPT_ID    : ID du script (Apps Script → ⚙️ Paramètres du projet → ID du script)
+# (voir apps-script/setup-auto-deploy.ps1, qui fait tout ça pour toi)
+
+name: Déployer le serveur Apps Script
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps-script/Code.gs', 'apps-script/appsscript.json']
+  workflow_dispatch:
+
+concurrency:
+  group: apps-script-deploy
+  cancel-in-progress: false
+
+env:
+  # déploiement utilisé par l'appli (même que API_URL dans index.html) : l'URL /exec reste la même
+  DEPLOYMENT_ID: AKfycbxb8N-ilmQrYtY4D7vY0TSPUYB_CnQfsbXgKDVwRw48ZzWbiMk5lJ4ULQU-lczHal53
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Vérifier les réglages
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ] || [ -z "$SCRIPT_ID" ]; then
+            echo "::error::Secrets manquants : ajoute CLASPRC_JSON et SCRIPT_ID (Settings → Secrets and variables → Actions). Voir apps-script/setup-auto-deploy.ps1"
+            exit 1
+          fi
+
+      - name: Connexion à Google (identifiants clasp)
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
+        run: |
+          printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+          # clasp 3 écrit {"tokens":…}, clasp 2 écrit {"token":…} : on prend la version qui va avec
+          if grep -q '"tokens"' ~/.clasprc.json; then echo "CLASP=@google/clasp@3" >> $GITHUB_ENV; else echo "CLASP=@google/clasp@2.4.2" >> $GITHUB_ENV; fi
+          cd apps-script
+          printf '{"scriptId":"%s","rootDir":"."}' "$SCRIPT_ID" > .clasp.json
+          printf '**/**\n!Code.gs\n!appsscript.json\n' > .claspignore
+
+      - name: Envoyer Code.gs dans Apps Script
+        working-directory: apps-script
+        run: npx -y $CLASP push --force
+
+      - name: Mettre à jour le déploiement (même URL /exec)
+        working-directory: apps-script
+        run: |
+          DESC="Auto GitHub $(date -u +%Y-%m-%d\ %H:%M) ${GITHUB_SHA::7}"
+          npx -y $CLASP deploy --deploymentId "$DEPLOYMENT_ID" --description "$DESC" \
+            || npx -y $CLASP update-deployment "$DEPLOYMENT_ID" --description "$DESC"
+
+      - name: Vérifier que le serveur répond
+        run: |
+          URL="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?action=getSchoolCalendar"
+          for i in 1 2 3 4 5 6; do
+            BODY=$(curl -sL --max-time 60 "$URL" || true)
+            if echo "$BODY" | grep -q '"ok":true'; then echo "✅ Serveur à jour et opérationnel"; exit 0; fi
+            echo "Tentative $i : pas encore prêt…"; sleep 10
+          done
+          echo "::warning::Le code est déployé, mais le test n'a pas répondu {\"ok\":true}. Si une nouvelle autorisation Google est nécessaire, ouvre l'éditeur Apps Script et exécute refreshSchoolCalendar une fois."
+          echo "$BODY" | head -c 400
