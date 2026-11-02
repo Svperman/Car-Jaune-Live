@@ -1,10 +1,11 @@
 /* Car Jaune Live — service worker : appli utilisable hors ligne (coquille), données toujours fraîches */
-const VERSION = 'cj-v8';
+const VERSION = 'cj-v9';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+  'https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js',
   'https://cdn.jsdelivr.net/npm/protobufjs@7.4.0/dist/protobuf.min.js'
 ];
 

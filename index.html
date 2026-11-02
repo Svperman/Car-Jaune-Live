@@ -308,6 +308,23 @@
   #rideBanner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1000;background:#fff;border-radius:12px;
               box-shadow:0 4px 18px rgba(0,0,0,.3);padding:10px 14px;font-size:13px;max-width:min(560px,calc(100% - 150px));line-height:1.45}
   #rideBanner[hidden]{display:none}
+  /* mode navigation (façon Waze / Google Maps) */
+  .nav-arrow{width:46px;height:46px;filter:drop-shadow(0 3px 5px rgba(0,0,0,.45))}
+  .nav-arrow svg{width:46px;height:46px;transition:transform .25s}
+  #rideBanner.nav{left:12px;right:12px;top:auto;bottom:14px;transform:none;max-width:none;width:auto;border-radius:16px;padding:12px 16px;
+                  background:#1F2937;color:#F3F4F6;box-shadow:0 8px 28px rgba(0,0,0,.45)}
+  #rideBanner.nav b,#rideBanner.nav .rb-h{color:#fff}
+  #rideBanner.nav .muted{color:#9CA3AF}
+  .nav-grid{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .nav-big{font-size:28px;font-weight:800;line-height:1;color:#fff}
+  .nav-big small{font-size:13px;font-weight:600;color:#9CA3AF;margin-left:3px}
+  .nav-col{min-width:0;flex:1}
+  .nav-col .l1{font-size:15px;font-weight:800;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nav-col .l2{font-size:12.5px;color:#D1D5DB}
+  .nav-speed{text-align:center;background:#111827;border-radius:12px;padding:6px 10px;min-width:62px}
+  .nav-speed .nav-big{font-size:24px}
+  #mapCard.navmode .leaflet-control-zoom,#mapCard.navmode .leaflet-control-layers{display:none}
+  #mapCard.navmode #btnList,#mapCard.navmode #btnFs,#mapCard.navmode #btnFit{display:none}
   #rideBanner b{color:var(--titre)}
   #rideBanner .rb-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--titre)}
   .bus-mk.mine .pill2{outline:3px solid #1D6FD8;outline-offset:2px}
@@ -497,6 +514,7 @@
 <div id="toast" hidden></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.4.0/dist/protobuf.min.js"></script>
 <script>
 /* ====================== Réglages ====================== */
@@ -577,7 +595,9 @@ const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 
 /* ====================== Carte ====================== */
 const REUNION = [[-21.39, 55.21], [-20.86, 55.84]];
-const map = L.map('map', { zoomControl:true, zoomSnap:0.5 });
+const map = L.map('map', { zoomControl:true, zoomSnap:0.25,
+  rotate:true, bearing:0, touchRotate:true, rotateControl:{ closeOnZeroBearing:true, position:'topleft' } });   // carte orientable (mode navigation)
+const mapBearing = () => (map.getBearing ? map.getBearing() : 0);
 map.fitBounds(REUNION);
 
 // Fonds de carte (gratuits, sans clé) : le choix est mémorisé
@@ -614,7 +634,7 @@ const MapButtons = L.Control.extend({
   options:{ position:'topright' },
   onAdd(){
     const box = L.DomUtil.create('div', 'map-ctl');
-    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnMe">📍 Ma position</button><button id="btnFs">⛶ Plein écran</button><button id="btnFit">🏝️ Toute l'île</button>`;
+    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnNav">🚘 Navigation</button><button id="btnMe">📍 Ma position</button><button id="btnFs">⛶ Plein écran</button><button id="btnFit">🏝️ Toute l'île</button>`;
     L.DomEvent.disableClickPropagation(box);
     return box;
   }
@@ -635,7 +655,8 @@ $('#btnFs').addEventListener('click', () => {
   $('#btnFs').textContent = on ? '⤡ Quitter' : '⛶ Plein écran';
 });
 $('#btnFit').addEventListener('click', () => map.flyToBounds(REUNION, { duration:.8 }));
-$('#btnMe').addEventListener('click', () => locateOnMap());
+$('#btnMe').addEventListener('click', () => { if (navOn){ stopNav(); return; } locateOnMap(); });   // quitter la navigation garde le suivi
+$('#btnNav').addEventListener('click', () => toggleNav());
 
 /* ====================== Appels serveur ====================== */
 /* Adresse de ton Apps Script déployé (…/exec) pour l'appli installée sur le téléphone.
@@ -1566,7 +1587,10 @@ let lastFix = null, nearAt = 0, nearPos = null, onBus = null, busCand = null, bu
 
 function meIcon(){
   const h = myPos && myPos.heading, moving = myPos && (myPos.speed || 0) > 1;
-  const head = h != null && isFinite(h) && moving ? `<div class="me-head" style="transform:rotate(${Math.round(h)}deg)"></div>` : '';
+  if (navOn) return L.divIcon({ className:'', iconSize:[46, 46], iconAnchor:[23, 23], html:
+    `<div class="nav-arrow"><svg viewBox="0 0 46 46" style="transform:rotate(${Math.round((navHead || 0) + mapBearing())}deg)">
+       <circle cx="23" cy="23" r="21" fill="#fff" opacity=".9"/><path d="M23 6 L36 37 L23 30 L10 37 Z" fill="${onBus ? '#F6BE00' : '#1D6FD8'}" stroke="#0B3B8C" stroke-width="1.5" stroke-linejoin="round"/></svg></div>` });
+  const head = h != null && isFinite(h) && moving ? `<div class="me-head" style="transform:rotate(${Math.round(h + mapBearing())}deg)"></div>` : '';
   return L.divIcon({ className:'', iconSize:[44, 44], iconAnchor:[22, 22],
     html:`<div class="me-wrap${meWatch != null ? ' live' : ''}${onBus ? ' onbus' : ''}">${head}<div class="me-dot"></div></div>` });
 }
@@ -1619,7 +1643,7 @@ function onLiveFix(p){
   gpsWeak = false;
   myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed, heading };
   showMeOnMap();
-  if (meFollow && !userPanned) map.panTo([myPos.lat, myPos.lon], { animate: true, duration: .8 });
+  if (meFollow && !userPanned && !navOn) map.panTo([myPos.lat, myPos.lon], { animate: true, duration: .8 });
   detectMyBus();
   if (view === 'trip') renderTrip();
 }
@@ -1655,6 +1679,25 @@ function detectMyBus(){
 function renderRide(){
   const box = $('#rideBanner');
   const v = onBus && vehicles.find(x => x.id === onBus);
+  box.classList.toggle('nav', navOn);
+  if (navOn){
+    const kmh = Math.round(((onBus && motion[onBus] ? motion[onBus].speed : 0) || (myPos && myPos.speed) || 0) * 3.6);
+    const spd = `<div class="nav-speed"><div class="nav-big">${kmh}</div><small class="muted">km/h</small></div>`;
+    box.hidden = false;
+    if (v){
+      const t = v.times, eta = t && t.next.eta, arr = t && (t.arr.real || t.arr.sched);
+      box.innerHTML = `<div class="nav-grid">${badge(v.route)}
+        <div class="nav-col"><div class="l1">→ ${esc(v.headsign || '')}</div>
+          <div class="l2">${v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b>` : ''}${arr ? ` · arrivée <b>${t.arr.estimated ? '~' : ''}${fmtHM(arr)}</b>` : ''}</div></div>
+        ${eta ? `<div class="nav-big">${Math.max(0, Math.round((eta - Date.now()) / 60000))}<small>min</small></div>` : ''}${spd}</div>`;
+    } else {
+      const near = myPos ? nearbyStops(myPos.lat, myPos.lon, 1)[0] : null;
+      box.innerHTML = `<div class="nav-grid"><div class="nav-col"><div class="l1">${gpsWeak ? '📡 Signal GPS faible…' : '🧭 Navigation'}</div>
+          <div class="l2">${near ? `Arrêt le plus proche : <b>${esc(near.g.name)}</b> (${fmtDist(near.d)})` : 'Recherche de ta position…'}${
+            kmh > 11 ? '<br>Je cherche le car jaune où tu te trouves…' : ''}</div></div>${spd}</div>`;
+    }
+    return;
+  }
   if (!v){
     if (meWatch != null && myPos){
       const kmh = Math.round((myPos.speed || 0) * 3.6);
@@ -1687,7 +1730,7 @@ async function toggleLiveTracking(){
     onLiveFix(p);
     if (first){
       first = false;
-      map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 15), { duration:.8 });
+      if (!navOn) map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 15), { duration:.8 });
       const near = nearbyStops(myPos.lat, myPos.lon, 1)[0];
       if (near && near.d > NEAR_M) toast(`Tu es à ${fmtDist(near.d)} de l’arrêt le plus proche (${near.g.name}).`);
     }
@@ -1702,6 +1745,7 @@ async function toggleLiveTracking(){
 }
 function stopLiveTracking(){
   if (meWatch != null) navigator.geolocation.clearWatch(meWatch);
+  if (navOn) stopNav();
   meWatch = null; meFollow = false; userPanned = false; onBus = null; busCand = null;
   try { if (meWake) meWake.release(); } catch(e){}
   meWake = null;
@@ -1709,12 +1753,91 @@ function stopLiveTracking(){
   updateMeBtn(); renderRide(); render();
 }
 function updateMeBtn(){
+  const n = $('#btnNav');
+  if (n){
+    n.classList.toggle('on', navOn);
+    n.textContent = !navOn ? '🚘 Navigation' : userPanned ? '🎯 Recentrer' : '🚘 Quitter la navigation';
+    n.onclick = null;
+  }
   const b = $('#btnMe'); if (!b) return;
   b.classList.toggle('on', meWatch != null);
   b.textContent = meWatch == null ? '📍 Ma position' : userPanned ? '🎯 Recentrer' : '🧭 Suivi actif';
   b.title = meWatch == null ? 'Afficher et suivre ma position' : userPanned ? 'Revenir sur ma position' : 'Arrêter le suivi';
 }
 map.on('dragstart', () => { if (meWatch != null && meFollow){ userPanned = true; updateMeBtn(); } });
+
+/* ====================== Mode navigation (façon Waze / Google Maps) ======================
+   La carte tourne pour que ta direction soit en haut, tu es une flèche qui glisse en douceur
+   (sur la route du car quand tu es dedans), le zoom suit ta vitesse et la vue montre la route devant toi. */
+let navFs = false, navOn = false, navHead = 0, navZoom = 16.5, navLast = 0, navArrowAt = 0;
+const angDiff = (a, b) => ((b - a + 540) % 360) - 180;          // écart signé le plus court
+function navTargetZoom(kmh){ return kmh < 8 ? 17.5 : kmh < 30 ? 16.75 : kmh < 60 ? 16 : 15.25; }
+/** Où je suis « maintenant » : dans le car = position animée du car sur sa route ; sinon prolongement du dernier GPS. */
+function navPose(now){
+  if (onBus && motion[onBus] && motion[onBus].disp){
+    const st = motion[onBus], p = predictedPos(st, now);
+    return { lat: st.disp[0], lon: st.disp[1], head: p[2] != null ? p[2] : (myPos && myPos.heading), speed: st.speed || (myPos && myPos.speed) || 0 };
+  }
+  if (!myPos) return null;
+  const sp = myPos.speed || 0, hd = myPos.heading;
+  let lat = myPos.lat, lon = myPos.lon;
+  if (lastFix && sp > 1.5 && hd != null){                         // entre deux positions GPS : on avance tout droit (3 s maxi)
+    const d = sp * Math.min((now - lastFix.t) / 1000, 3), b = hd * Math.PI / 180;
+    lat += d * Math.cos(b) / 110540; lon += d * Math.sin(b) / (111320 * Math.cos(lat * Math.PI / 180));
+  }
+  return { lat, lon, head: hd, speed: sp };
+}
+function navLoop(t){
+  if (!navOn) return;
+  requestAnimationFrame(navLoop);
+  if (document.hidden || t - navLast < 33) return;               // ~30 images/s
+  navLast = t;
+  const now = Date.now(), pose = navPose(now);
+  if (!pose) return;
+  if (pose.head != null && isFinite(pose.head) && pose.speed > 1) navHead = (navHead + angDiff(navHead, pose.head) * 0.12 + 360) % 360;
+  const tz = navTargetZoom(pose.speed * 3.6);
+  if (Math.abs(tz - navZoom) > 0.01) navZoom += (tz - navZoom) * 0.03;
+  if (meMarker){
+    meMarker.setLatLng([pose.lat, pose.lon]);
+    const svg = meMarker._icon && meMarker._icon.querySelector('.nav-arrow svg');
+    if (svg) svg.style.transform = `rotate(${Math.round(navHead + mapBearing())}deg)`;
+  }
+  if (userPanned) return;                                        // l'utilisateur regarde ailleurs : on ne bouge pas la vue
+  // centre décalé vers l'avant : tu es dans le tiers bas de l'écran, la route devant toi est visible
+  const h = map.getSize().y, mpp = 156543.03 * Math.cos(pose.lat * Math.PI / 180) / Math.pow(2, navZoom);
+  const ahead = h * 0.22 * mpp, b = navHead * Math.PI / 180;
+  const c = [pose.lat + ahead * Math.cos(b) / 110540, pose.lon + ahead * Math.sin(b) / (111320 * Math.cos(pose.lat * Math.PI / 180))];
+  map.setView(c, navZoom, { animate: false });
+  if (map.setBearing) map.setBearing(-navHead);                  // ta direction vers le haut
+}
+async function toggleNav(){
+  if (navOn && userPanned){ userPanned = false; updateMeBtn(); return; }   // recentrer
+  navOn ? stopNav() : startNav();
+}
+async function startNav(){
+  if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return; }
+  if (meWatch == null) await toggleLiveTracking();
+  if (meWatch == null) return;
+  navOn = true; userPanned = false;
+  navHead = (myPos && myPos.heading) || 0;
+  navZoom = map.getZoom() < 14 ? 16 : map.getZoom();
+  if (isMobile()){ panelOpen = false; setPanel(false); }
+  $('#mapCard').classList.add('navmode');
+  if (isMobile()){ document.body.classList.add('fs'); navFs = true; }   // plein écran sur téléphone, comme une appli GPS
+  if (meMarker) meMarker.setIcon(meIcon());
+  updateMeBtn(); renderRide();
+  requestAnimationFrame(navLoop);
+}
+function stopNav(){
+  if (!navOn) return;
+  navOn = false;
+  $('#mapCard').classList.remove('navmode');
+  if (navFs){ document.body.classList.remove('fs'); navFs = false; }
+  if (map.setBearing) map.setBearing(0);                         // retour nord en haut
+  if (meMarker) meMarker.setIcon(meIcon());
+  updateMeBtn(); renderRide();
+}
+map.on('rotatestart', () => { if (navOn){ userPanned = true; updateMeBtn(); } });
 function locateOnMap(){ toggleLiveTracking(); }
 document.addEventListener('visibilitychange', async () => {
   if (!document.hidden && meWatch != null && navigator.wakeLock && (!meWake || meWake.released)){
@@ -2217,10 +2340,11 @@ function badge(route){
 
 function iconFor(v){
   const stale = v.age != null && v.age > STALE_MS;
-  const arrow = v.bearing != null && v.bearing !== 0
-    ? `<div class="arrow" style="transform:rotate(${Math.round(v.bearing)}deg)"></div>` : '';
+  const has = v.bearing != null && v.bearing !== 0;
+  const arrow = `<div class="arrow" style="transform:rotate(${Math.round((v.bearing || 0) + mapBearing())}deg);${has ? '' : 'display:none'}"></div>`;
   const html = `<div class="bus-mk${stale ? ' stale' : ''}${typeof onBus !== 'undefined' && onBus === v.id ? ' mine' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div></div>`;
-  return { key: html, icon: L.divIcon({ className:'', html, iconSize:[0,0] }) };
+  // la clé ignore l'orientation de la flèche (mise à jour en continu par l'animation)
+  return { key: html.replace(/rotate\([^)]*\)/, ''), icon: L.divIcon({ className:'', html, iconSize:[0,0] }) };
 }
 
 function popupFor(v){
@@ -2333,6 +2457,12 @@ function moveLoop(t){
     }
     st.disp = [la, lo];
     m.setLatLng([la, lo]);
+    // flèche dans le sens réel de circulation, compensée si la carte est tournée
+    const cap = predictedPos(st, now)[2];
+    const ar = m._icon && m._icon.querySelector('.arrow');
+    if (ar && cap != null && (st.speed > 0 || (st.bearing != null && st.bearing !== 0))){
+      ar.style.display = ''; ar.style.transform = `rotate(${Math.round(cap + mapBearing())}deg)`;
+    }
   });
 }
 requestAnimationFrame(moveLoop);
