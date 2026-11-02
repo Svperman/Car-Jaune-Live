@@ -454,6 +454,10 @@
     background:var(--carte);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.2);padding:5px 10px;font-size:11px;font-weight:700;color:var(--titre);white-space:nowrap}
   .tf-legend[hidden]{display:none}
   .tf-legend i{display:inline-block;width:16px;height:5px;border-radius:3px;margin-right:4px;vertical-align:middle}
+  .inc-mk{display:flex;align-items:center;gap:3px;transform:translate(-50%,-50%);width:max-content;background:var(--carte);border-radius:999px;
+    padding:3px 7px;font-size:15px;box-shadow:0 2px 8px rgba(0,0,0,.35);border:2px solid #F2A100;cursor:pointer}
+  .inc-mk.m2{border-color:#D9480F} .inc-mk.m3,.inc-mk.m4{border-color:#B00020}
+  .inc-mk b{font:800 11px 'Nunito Sans',sans-serif;color:#B00020}
   .tf-list{display:flex;flex-direction:column;gap:8px}
   .tf-it{display:flex;gap:12px;align-items:flex-start;background:var(--carte);border-radius:10px;box-shadow:var(--ombre);padding:12px 14px;border-left:5px solid var(--jaune)}
   .tf-it.m3,.tf-it.m4{border-left-color:#B00020} .tf-it.m2{border-left-color:#D9480F} .tf-it.m1{border-left-color:#F2A100}
@@ -718,10 +722,9 @@
   <section class="view" id="view-trafic">
     <div class="wrap">
       <h1>Infos trafic</h1>
-      <p class="lead">Perturbations du réseau Car Jaune et circulation sur les routes de l’île.</p>
+      <p class="lead">Perturbations publiées dans le flux temps réel du réseau. Les embouteillages s’affichent directement sur la carte.</p>
       <div id="alertsList"></div>
-      <div class="tf-h"><h2>🚗 Embouteillages en ce moment</h2><button class="btn small ghost" id="tfShowMap">🚦 Voir sur la carte</button></div>
-      <div id="trafficList"><div class="card placeholder">Chargement…</div></div>
+
     </div>
   </section>
 </main>
@@ -1199,7 +1202,6 @@ function setView(v, silent){
   if (v === 'map') setTimeout(fixMapSize, 50);
   if (v === 'board') renderBoard();
   if (v === 'trip') renderTrip();
-  if (v === 'trafic') try { loadIncidents(); } catch(e){}
   if (!silent) savePrefs();
 }
 document.querySelector('.tabs').addEventListener('click', e => {
@@ -4026,10 +4028,11 @@ function setStatus(t){ $('#status').textContent = t; }
    2. Sans clé aussi : « bouchons vus par les cars jaunes » — un car qui roule au pas loin de tout arrêt
       sur 2 positions de suite signale un bouchon sur son tracé (effacé quand les cars roulent de nouveau). */
 const TF = { on:false, key:'', incidents:[], at:0, err:'', jams:{}, slow:{} };
-try { TF.key = localStorage.getItem('cj_tomtom') || ''; TF.on = localStorage.getItem('cj_traffic') === '1'; } catch(e){}
+TF.on = true;                                                     // affiché d'office sur la carte (bouton 🚦 pour masquer)
+try { TF.key = localStorage.getItem('cj_tomtom') || ''; TF.on = localStorage.getItem('cj_traffic') !== '0'; } catch(e){}
 const tfPane = map.createPane('traffic'); tfPane.style.zIndex = 350; tfPane.style.pointerEvents = 'none';
 let tfFlow = null, tfInc = null;
-const jamLayer = L.layerGroup().addTo(map);
+const jamLayer = L.layerGroup().addTo(map), incLayer = L.layerGroup().addTo(map);
 function tfUrl(kind){
   const t = Math.floor(Date.now() / 120e3);                                  // nouvelles tuiles toutes les 2 min
   return kind === 'flow'
@@ -4044,19 +4047,18 @@ function applyTraffic(){
   tfFlow = tfInc = null;
   if (TF.on && TF.key){
     tfFlow = L.tileLayer(tfUrl('flow'), { pane:'traffic', opacity:.85, maxZoom:19, attribution:'Trafic © TomTom' }).addTo(map);
-    tfInc = L.tileLayer(tfUrl('inc'), { pane:'traffic', maxZoom:19 }).addTo(map);
+    loadIncidents();
   }
-  drawJams();
+  drawJams(); drawIncidents();
 }
-setInterval(() => { if (tfFlow){ tfFlow.setUrl(tfUrl('flow')); tfInc.setUrl(tfUrl('inc')); } }, 120e3);
+setInterval(() => { if (tfFlow) tfFlow.setUrl(tfUrl('flow')); }, 120e3);
 function toggleTraffic(on){
   TF.on = on == null ? !TF.on : on;
   try { localStorage.setItem('cj_traffic', TF.on ? '1' : '0'); } catch(e){}
   applyTraffic();
-  if (TF.on){
-    if (!TF.key) toast('🚦 Bouchons repérés par les cars jaunes affichés. Pour toutes les routes : ajoute une clé TomTom gratuite dans ⚙️.', () => openSettings());
-    loadIncidents();
-  }
+  toast(!TF.on ? '🚦 Trafic masqué sur la carte.'
+    : TF.key ? '🚦 Trafic affiché sur la carte.' : '🚦 Bouchons repérés par les cars jaunes affichés. Pour toutes les routes : ajoute une clé TomTom gratuite dans ⚙️.',
+    !TF.on || TF.key ? null : () => openSettings());
 }
 /* ---- incidents TomTom (bouchons, accidents, travaux) sur toute l'île ---- */
 const TF_ICON = { 1:'💥', 2:'🌫️', 3:'⚠️', 4:'🌧️', 5:'🧊', 6:'🚗', 7:'🚧', 8:'⛔', 9:'🚧', 10:'💨', 11:'🌊', 14:'🛻' };
@@ -4075,9 +4077,26 @@ async function loadIncidents(force){
       .sort((a, b) => (b.magnitudeOfDelay || 0) - (a.magnitudeOfDelay || 0) || (b.delay || 0) - (a.delay || 0));
     TF.at = Date.now(); TF.err = '';
   } catch(e){ TF.err = errMsg(e); }
-  renderTraffic();
+  drawIncidents(); renderTfKey();
 }
-setInterval(() => { if (TF.key && (TF.on || view === 'trafic') && document.visibilityState === 'visible') loadIncidents(); }, 60e3);
+setInterval(() => { if (TF.key && TF.on && view === 'map' && document.visibilityState === 'visible') loadIncidents(); }, 60e3);
+/** Accidents, travaux, bouchons TomTom : une icône par incident, touche-la pour le détail. */
+function drawIncidents(){
+  incLayer.clearLayers();
+  if (!TF.on || !TF.key) return;
+  TF.incidents.forEach(inc => {
+    const c = incCenter(inc); if (!c || inc.iconCategory === 0) return;
+    const road = (inc.roadNumbers || []).join(', ');
+    const what = (inc.events && inc.events[0] && inc.events[0].description) || TF_KIND[inc.iconCategory] || 'Incident';
+    const big = (inc.magnitudeOfDelay || 0) >= 3;
+    const icon = L.divIcon({ className:'', iconSize:[0, 0], html:`<div class="inc-mk m${inc.magnitudeOfDelay || 0}">${TF_ICON[inc.iconCategory] || '⚠️'}${
+      inc.delay >= 120 ? `<b>+${Math.round(inc.delay / 60)}′</b>` : ''}</div>` });
+    L.marker(c, { icon, zIndexOffset: big ? 400 : 200 }).bindPopup(`<div class="pop-h"><b>${TF_ICON[inc.iconCategory] || '⚠️'} ${esc(road ? road + ' · ' : '')}${esc(what)}</b></div>
+      ${esc([inc.from, inc.to].filter(Boolean).join(' → '))}${inc.length ? ` <span class="muted">(${fmtDist(inc.length)})</span>` : ''}<br>
+      ${inc.delay ? `<b style="color:var(--retard)">+${Math.max(1, Math.round(inc.delay / 60))} min</b> de retard` : inc.magnitudeOfDelay === 4 ? '<b>Route fermée</b>' : ''}
+      <div class="muted" style="font-size:11px;margin-top:4px">TomTom · ${fmtHM(TF.at)}</div>`).addTo(incLayer);
+  });
+}
 function incCenter(inc){
   const c = inc.geo && inc.geo.coordinates;
   if (!c) return null;
@@ -4176,7 +4195,7 @@ document.addEventListener('click', e => {
   if (j){ const jam = TF.jams[j.dataset.jam]; if (jam){ setView('map'); if (!TF.on) toggleTraffic(true); setTimeout(() => { fixMapSize(); map.flyTo([jam.lat, jam.lon], 15, { duration:.8 }); }, 120); } }
 });
 $('#btnTraffic').addEventListener('click', () => toggleTraffic());
-$('#tfShowMap').addEventListener('click', () => { setView('map'); toggleTraffic(true); setTimeout(() => { fixMapSize(); map.flyToBounds(REUNION, { duration:.8 }); }, 120); });
+
 function renderTfKey(){
   if (!$('#tfKey')) return;
   if (document.activeElement !== $('#tfKey')) $('#tfKey').value = TF.key ? TF.key.slice(0, 4) + '…' + TF.key.slice(-4) : '';
