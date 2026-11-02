@@ -876,25 +876,28 @@ function decodeTripUpdates_(bytes) {
 function pbEach_(b, i, end, cb) {
   while (i < end) {
     const key = pbVar_(b, i); i = key.i;
-    const f = Number(key.v >> 3n), wt = Number(key.v & 7n);
-    if (wt === 0) { const r = pbVar_(b, i); i = r.i; cb(f, wt, r.v); }
-    else if (wt === 2) { const r = pbVar_(b, i); const len = Number(r.v); cb(f, wt, { s: r.i, e: r.i + len }); i = r.i + len; }
+    const f = Math.floor(key.v / 8), wt = key.v % 8;
+    if (wt === 0) { const r = pbVar_(b, i); i = r.i; cb(f, wt, r); }
+    else if (wt === 2) { const r = pbVar_(b, i); const len = r.v; cb(f, wt, { s: r.i, e: r.i + len }); i = r.i + len; }
     else if (wt === 1) i += 8;
     else if (wt === 5) i += 4;
     else break;
   }
 }
+/** Entier « varint » protobuf, sans BigInt (compatible avec tous les moteurs Apps Script). */
 function pbVar_(b, i) {
-  let v = 0n, shift = 0n;
+  let v = 0, lo = 0, mul = 1, n = 0;
   while (i < b.length) {
     const x = b[i++];
-    v |= BigInt(x & 127) << shift;
+    if (n < 5) lo += (x & 127) * mul;                 // les 32 premiers bits (pour les nombres négatifs)
+    v += (x & 127) * mul;
+    mul *= 128; n++;
     if (!(x & 128)) break;
-    shift += 7n;
   }
-  return { v: v, i: i };
+  return { v: v, lo: lo % 4294967296, n: n, i: i };
 }
-function pbInt_(v) { return Number(BigInt.asIntN(64, v)); }
+/** int32 / int64 signé : un nombre négatif est codé sur 10 octets ; ses 32 bits bas suffisent pour un retard. */
+function pbInt_(r) { return r.n >= 10 ? (r.lo | 0) : r.v; }
 function pbStr_(b, r) { return Utilities.newBlob(b.slice(r.s, r.e).map(function (x) { return x > 127 ? x - 256 : x; })).getDataAsString('UTF-8'); }
 
 
