@@ -9,7 +9,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const BASE = process.env.BASE || 'http://localhost:8765';
 // page de test = index.html + faux serveur injecté avant le script de l'appli
 const html = readFileSync('index.html', 'utf8').replace(
-  /(<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/protobufjs[^>]*><\/script>)/,
+  /(<script src="lib\/protobuf\.min\.js"><\/script>)/,
   '$1<script src="tests/mock.js"></script>');
 if (!html.includes('tests/mock.js')) { console.error('✗ impossible d’injecter le faux serveur'); process.exit(1); }
 // en local sans Internet : bibliothèques servies depuis node_modules (LOCAL=1)

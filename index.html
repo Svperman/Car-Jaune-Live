@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,300;6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="lib/leaflet.css">
 <style>
   /* Charte inspirée de carjaune.re : Nunito Sans, jaune #F6BE00, cartes blanches arrondies */
   :root{
@@ -852,9 +852,9 @@
 </div>
 <div id="toast" hidden></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/leaflet-rotate@0.2.8/dist/leaflet-rotate.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/protobufjs@7.4.0/dist/protobuf.min.js"></script>
+<script src="lib/leaflet.js"></script>
+<script src="lib/leaflet-rotate.js"></script>
+<script src="lib/protobuf.min.js"></script>
 <script>
 /* ====================== Réglages ====================== */
 const REFRESH_MS = 20000;          // actualisation auto toutes les 20 s
@@ -934,7 +934,7 @@ const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 
 /* ====================== Carte ====================== */
 const REUNION = [[-21.39, 55.21], [-20.86, 55.84]];
-const map = L.map('map', { zoomControl:true, zoomSnap:0.25,
+const map = L.map('map', { zoomControl:false, zoomSnap:0.25,
   rotate:true, bearing:0, touchRotate:true, rotateControl:{ closeOnZeroBearing:true, position:'topleft' } });   // carte orientable (mode navigation)
 const mapBearing = () => (map.getBearing ? map.getBearing() : 0);
 map.fitBounds(REUNION);
@@ -953,6 +953,15 @@ let baseName = 'Plan détaillé';
 try { const b = localStorage.getItem('cj_base'); if (BASES[b]) baseName = b; } catch(e){}
 BASES[baseName].addTo(map);
 L.control.layers(BASES, null, { position:'bottomright' }).addTo(map);
+L.control.zoom({ position:'topleft', zoomInTitle:'Zoom avant', zoomOutTitle:'Zoom arrière' }).addTo(map);
+map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
+// libellés des contrôles en français (boussole, fonds de carte, fermeture des bulles)
+function frenchControls(){
+  document.querySelectorAll('.leaflet-control-rotate a, .leaflet-control-rotate-toggle').forEach(a => { a.title = 'Remettre le nord en haut'; a.setAttribute('aria-label', 'Remettre le nord en haut'); });
+  document.querySelectorAll('.leaflet-control-layers-toggle').forEach(a => { a.title = 'Fonds de carte'; a.setAttribute('aria-label', 'Fonds de carte'); });
+}
+map.on('popupopen', e => { const c = e.popup.getElement().querySelector('.leaflet-popup-close-button'); if (c){ c.setAttribute('aria-label', 'Fermer'); c.title = 'Fermer'; } });
+setTimeout(frenchControls, 0);
 map.on('baselayerchange', e => { try { localStorage.setItem('cj_base', e.name); } catch(err){} });
 const shapeLayer = L.layerGroup().addTo(map);
 
@@ -2431,7 +2440,7 @@ function notify(title, body, kind, opt = {}){
     if (lvl !== 'info' || opt.show) showStrip(title, body, lvl);
     if (lvl !== 'info'){
       if (alertCfg.sound) beep(kind);
-      if (alertCfg.vibe) try { if (navigator.vibrate) navigator.vibrate(lvl === 'warn' ? [200, 100, 200] : [180]); } catch(e){}
+      if (alertCfg.vibe) try { if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(lvl === 'warn' ? [200, 100, 200] : [180]); } catch(e){}
     }
   } else if (lvl !== 'info' || opt.show){
     // 2. notification du téléphone : seulement quand tu ne regardes pas l'appli
@@ -4023,7 +4032,7 @@ function applyTraffic(){
   const btn = $('#btnTraffic');
   if (btn){ btn.classList.toggle('on', TF.on); btn.setAttribute('aria-pressed', TF.on); }
   if ($('#tfOn')) $('#tfOn').checked = TF.on;
-  $('#tfLegend').hidden = !TF.on;
+  $('#tfLegend').hidden = !(TF.on && TF.key);                        // légende des couleurs TomTom (sans clé : pas de couleurs)
   [tfFlow, tfInc].forEach(l => { if (l) map.removeLayer(l); });
   tfFlow = tfInc = null;
   if (TF.on && TF.key){

@@ -39,6 +39,7 @@ jobs:
           python3 -m http.server 8765 >/dev/null 2>&1 &
           sleep 2
           node tests/smoke.mjs
+          node tests/scenarios.mjs
       - name: Captures d'écran du test
         if: always()
         uses: actions/upload-artifact@v4
@@ -58,7 +59,7 @@ jobs:
       - name: Préparer les fichiers publiés
         run: |
           mkdir -p _site
-          cp -r index.html manifest.webmanifest sw.js icons _site/
+          cp -r index.html manifest.webmanifest sw.js icons lib _site/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
