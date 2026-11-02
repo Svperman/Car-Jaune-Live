@@ -825,6 +825,7 @@
       <small class="set-note" id="tfKeyTxt"></small></div>
     <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt">automatique : sombre le soir et selon ton téléphone</small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
     <div class="set-row"><div class="set-l"><b>Taille du texte</b><small>pages, listes et réglages</small></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
+    <div class="set-row"><div class="set-l"><b>Économie de batterie</b><small id="ecoTxt">GPS approximatif quand tu ne bouges pas, précis dès que tu roules ; carte animée seulement à l’écran</small></div><label class="switch"><input type="checkbox" id="ecoOn" checked><span></span></label></div>
     <div class="set-row"><div class="set-l"><b>Garder l’écran allumé</b><small>pendant les alertes ; use la batterie</small></div><label class="switch"><input type="checkbox" id="alWake"><span></span></label></div>
   </section>
 
@@ -920,7 +921,11 @@ let stopGroups = [], board = { group:null, data:null, loading:false, at:0 };
 let favs = [];
 let CAL = { holidays:[], feries:{} }, SVC_TYPE = {};
 let alertCfg = { on:true, lead:5, line:'', quai:true, late:true, noBus:true, follow:false, ntfy:'', muteUntil:0, sound:true, vibe:true, wake:false };
-const alertSent = {};                  // ce qui a déjà été notifié (par passage)
+// ce qui a déjà été notifié (par passage) : gardé sur le téléphone, car l'iPhone relance souvent l'appli
+const alertSent = (() => { try { const o = JSON.parse(localStorage.getItem('cj_sent') || '{}'), lim = Date.now() - 4 * 3600e3;
+  Object.keys(o).forEach(k => { if (+k.split('|').pop() < lim) delete o[k]; }); return o; } catch(e){ return {}; } })();
+let sentSaveT = null;
+function saveSent(){ clearTimeout(sentSaveT); sentSaveT = setTimeout(() => { try { localStorage.setItem('cj_sent', JSON.stringify(alertSent)); } catch(e){} }, 500); }
 let geoWatch = null, myPos = null, noBusAt = 0, wakeLock = null;
 let trip = { a:'', b:'', mode:'auto' }, tripBoard = { key:'', data:null, loading:false }, lastSens = '';
 let boardGroupBy = 'sens';
@@ -1026,7 +1031,7 @@ function watchPos(onFix, onErr, opts, why){
   if (BGGEO){
     const w = { native:true, id:null };
     BGGEO.addWatcher({ backgroundTitle:'Car Jaune Live', backgroundMessage: why || 'Position utilisée pour tes cars jaunes',
-      requestPermissions:true, stale:false, distanceFilter:15 }, (loc, err) => {
+      requestPermissions:true, stale:false, distanceFilter: opts && opts.enableHighAccuracy === false ? 60 : 15 }, (loc, err) => {
       if (err){ if (err.code === 'NOT_AUTHORIZED') onErr({ code:1 }); else onErr({ code:2 }); return; }
       if (loc) onFix({ coords:{ latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy, speed: loc.speed, heading: loc.bearing }, timestamp: loc.time });
     }).then(id => { w.id = id; }).catch(() => onErr({ code:2 }));
@@ -2164,16 +2169,18 @@ map.on('popupopen', e => {
 /** Nouvelle position GPS pendant le suivi. */
 function onLiveFix(p){
   const now = Date.now(), c = p.coords;
+  if (lastFix && now - lastFix.t < 1500 && lastFix.lat === c.latitude && lastFix.lon === c.longitude) return;   // doublon
   // vitesse / cap du téléphone (absents, 0 ou -1 sur certains appareils) : sinon calculés entre deux positions
   let speed = c.speed != null && isFinite(c.speed) && c.speed > 0 ? c.speed : null;
   let heading = c.heading != null && isFinite(c.heading) && c.heading >= 0 ? c.heading : null;
   if (lastFix){
     const d = distM(lastFix.lat, lastFix.lon, c.latitude, c.longitude), dt = (now - lastFix.t) / 1000;
-    if (speed == null && dt >= 1) speed = d / dt;
+    // position approximative (mode économie) : on ne compte le déplacement que s'il dépasse l'imprécision
+    if (speed == null && dt >= 1) speed = d > Math.min(300, (c.accuracy || 0) + (lastFix.acc || 0)) * 0.8 ? d / dt : 0;
     if (heading == null && d > 8)
       heading = (Math.atan2((c.longitude - lastFix.lon) * Math.cos(c.latitude * Math.PI / 180), c.latitude - lastFix.lat) * 180 / Math.PI + 360) % 360;
   }
-  lastFix = { lat: c.latitude, lon: c.longitude, t: now };
+  lastFix = { lat: c.latitude, lon: c.longitude, t: now, acc: c.accuracy };
   gpsWeak = false;
   myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed, heading };
   diag('gps', { lat: +c.latitude.toFixed(5), lon: +c.longitude.toFixed(5), acc: Math.round(c.accuracy), kmh: speed != null ? Math.round(speed * 3.6) : null });
@@ -2546,9 +2553,9 @@ function alertContext(){
     const from = s.sens === 'aller' ? s.A : s.B, to = s.sens === 'aller' ? s.B : s.A;
     let rows = journeyRows(from, to);
     if (alertCfg.line) rows = rows.filter(r => r.route.s === alertCfg.line);
-    return { stop: from.name, rows, sens: s.sens, to: to.name };
+    return { stop: from.name, rows, sens: s.sens, to: to.name, ready: !tripBoard.loading && !!tripBoard.data };
   }
-  return { stop: board.group ? board.group.name : '', rows: alertRows() };
+  return { stop: board.group ? board.group.name : '', rows: alertRows(), ready: !!board.data && !board.loading && !board.error };
 }
 function alertRows(){
   const g = board.group;
@@ -2574,28 +2581,35 @@ function checkAlerts(){
     const name = `${r.route.s} → ${r.dest}` + (ctx.sens ? ` (${ctx.sens})` : '');
     const arrTxt = r.arr ? ` Arrivée à ${r.dest} vers ${fmtHM(r.rarr != null ? r.rarr : r.arr)}.` : '';
     if (!st.lead && mins <= lead && mins > 1){
-      st.lead = true; st.delay = delayMin;
+      st.lead = true; st.delay = delayMin; saveSent();
       notify(`🚌 ${name}`, `Arrive à ${stop} dans ${Math.round(mins)} min, à ${fmtHM(r.eff)} (${dTxt}).${arrTxt}`);
-    } else if (alertCfg.late && st.lead && !st.quai && delayMin != null && st.delay != null && Math.abs(delayMin - st.delay) >= 2){
+    } else if (alertCfg.late && st.lead && !st.quai && delayMin != null && st.delay != null && Math.abs(delayMin - st.delay) >= (r.approx ? 3 : 2)){
       notify(`⏱️ ${name} : ${delayMin > st.delay ? 'plus de retard' : 'rattrape son retard'}`,
              `Nouvelle heure d’arrivée à ${stop} : ${fmtHM(r.eff)} (${dTxt}), dans ${Math.max(0, Math.round(mins))} min.`, 'warn');
-      st.delay = delayMin;
-    } else if (alertCfg.late && st.lead && st.delay == null && delayMin != null && Math.abs(delayMin) >= 2){
+      st.delay = delayMin; saveSent();
+    } else if (alertCfg.late && st.lead && st.delay == null && delayMin != null && Math.abs(delayMin) >= (r.approx ? 3 : 2)){
       notify(`⏱️ ${name}`, `Le car est maintenant suivi en temps réel : arrivée à ${stop} à ${fmtHM(r.eff)} (${dTxt}).`, 'warn');
-      st.delay = delayMin;
+      st.delay = delayMin; saveSent();
     }
     if (alertCfg.quai && !st.quai && r.real != null && mins <= 0.75 && mins > -2){
-      st.quai = true;
+      st.quai = true; saveSent();
       notify(`🚏 ${name} arrive à quai`, `Le car est en train d’arriver à ${stop} (${fmtHM(r.eff)}, ${dTxt}).`);
     }
   });
   // aucun car dans l'heure
   const nextRow = rows.find(r => r.eff > now);
   const inHour = rows.some(r => r.eff > now && r.eff - now <= 60 * 60e3);
-  if (alertCfg.noBus && !inHour && now - noBusAt > 45 * 60e3){
+  // seulement quand les horaires sont vraiment chargés (sinon fausse alerte à chaque ouverture),
+  // les fiches lues, et une fois par heure et par arrêt même si l'appli est rouverte
+  const settled = ctx.ready && rows.length + (ficheJob.running ? 0 : 1) > 0 && performance.now() > 45000;
+  if (alertCfg.noBus && settled && !inHour && now - noBusAt > 45 * 60e3){
+    let last = 0; try { last = +localStorage.getItem('cj_nobus_' + stop) || 0; } catch(e){}
     noBusAt = now;
-    notify(`🚫 Aucun car jaune à ${stop} dans l’heure`,
-      nextRow ? `Prochain : ${nextRow.route.s} → ${nextRow.dest}, ${dayLabel(nextRow.eff)} à ${fmtHM(nextRow.eff)}.` : 'Aucun départ prévu dans les prochaines 24 h.', 'none');
+    if (now - last > 45 * 60e3){
+      try { localStorage.setItem('cj_nobus_' + stop, String(now)); } catch(e){}
+      notify(`🚫 Aucun car jaune à ${stop} dans l’heure`,
+        nextRow ? `Prochain : ${nextRow.route.s} → ${nextRow.dest}, ${dayLabel(nextRow.eff)} à ${fmtHM(nextRow.eff)}.` : 'Plus de départ prévu aujourd’hui.', 'none');
+    }
   }
   if (inHour) noBusAt = 0;
   renderAlertStatus(rows, ctx);
@@ -2824,7 +2838,7 @@ $('#diagShare').addEventListener('click', async () => {
 });
 
 /* ---------- apparence : thème et taille du texte ---------- */
-const look = Object.assign({ theme:'auto', text:'' }, (() => { try { return JSON.parse(localStorage.getItem('cj_look') || '{}'); } catch(e){ return {}; } })());
+const look = Object.assign({ theme:'auto', text:'', eco:true }, (() => { try { return JSON.parse(localStorage.getItem('cj_look') || '{}'); } catch(e){ return {}; } })());
 const darkMq = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
 function isDark(){
   if (look.theme !== 'auto') return look.theme === 'dark';
@@ -2842,6 +2856,14 @@ function applyLook(){
 }
 function saveLook(){ try { localStorage.setItem('cj_look', JSON.stringify(look)); } catch(e){} applyLook(); }
 $('#themeSel').addEventListener('change', e => { look.theme = e.target.value; saveLook(); });
+$('#ecoOn').addEventListener('change', e => { look.eco = e.target.checked; saveLook(); gpsPreciseUntil = 0; try { adaptGps(); } catch(err){} renderEcoUI(); });
+function renderEcoUI(){
+  if (!$('#ecoOn')) return;
+  $('#ecoOn').checked = look.eco !== false;
+  $('#ecoTxt').textContent = !look.eco ? 'désactivée : GPS toujours précis (plus de batterie)'
+    : lowBattery ? '🔋 Batterie faible : animations et rafraîchissements ralentis'
+    : `GPS approximatif quand tu ne bouges pas, précis dès que tu roules${gpsMode ? ' · en ce moment : ' + (gpsMode === 'eco' ? 'approximatif 🍃' : 'précis 📍') : ''}`;
+}
 $('#textSel').addEventListener('change', e => { look.text = e.target.value; saveLook(); });
 if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', applyLook);
 setInterval(applyLook, 5 * 60e3);
@@ -2859,7 +2881,7 @@ function renderSettings(){
   $('#pauseOff').hidden = !muted;
   $('#alSound').checked = alertCfg.sound; $('#alVibe').checked = alertCfg.vibe; $('#alWake').checked = alertCfg.wake;
   $('#alFollow').checked = alertCfg.follow;
-  renderShareUI(); renderCityUI(); renderDiag(); renderPushUI(); renderTfKey();
+  renderShareUI(); renderCityUI(); renderDiag(); renderPushUI(); renderTfKey(); renderEcoUI();
   $('#apkRow').hidden = NATIVE || !/Android/i.test(navigator.userAgent);
   if (!IN_GAS){ $('#apiRow').hidden = false; $('#apiTxt').textContent = API_URL ? '…' + API_URL.slice(-34) : 'pas encore réglé'; }
   renderNotif();
@@ -3101,7 +3123,7 @@ async function refresh(){
     if (navigator.onLine !== false) setStatus('Flux temps réel injoignable');
   } finally {
     busy = false;
-    nextAt = Date.now() + REFRESH_MS;
+    nextAt = Date.now() + (document.hidden ? 60000 : lowBattery && look.eco ? 40000 : REFRESH_MS);   // économie : moins souvent quand c'est inutile
     $('#refresh').classList.remove('spin');
   }
 }
@@ -3336,13 +3358,18 @@ function estimateDelay(v){
   const sched = base / 1000 + (s - a.s < 60 ? a.sec : b.s - s < 60 ? b.sec : a.sec + f * (b.sec - a.sec));
   let d = t - sched;
   if (atStop && d < 0 && (v.speed == null || v.speed < 2)) d = 0;    // arrêté en avance : il attend l'heure
-  if (Math.abs(d) > 90 * 60) return null;
+  if (Math.abs(d) > 20 * 60) return null;                            // > 20 min : car garé ou mauvais trajet, pas fiable
   const next = b.s - s < 60 && k + 2 < n ? k + 2 : k + 1;
   return { delay: Math.round(d), base, next, stops: st };
 }
+const lastMoved = {};                  // car immobile depuis longtemps (garé, pause) : son « retard » n'a pas de sens
 function applyEstimates(){
+  const now = Date.now();
   vehicles.forEach(v => {
+    const lm = lastMoved[v.id];
+    if (!lm || distM(lm.lat, lm.lon, v.lat, v.lon) > 150) lastMoved[v.id] = { lat: v.lat, lon: v.lon, t: now };
     v.est = estimateDelay(v);
+    if (v.est && now - lastMoved[v.id].t > 6 * 60e3 && Math.abs(v.est.delay) > 5 * 60) v.est = null;
     if (v.delay == null && v.est){ v.delay = v.est.delay; v.delayEst = true; }
     if (v.times && v.delay != null && v.times.arr.real == null){
       v.times.arr.real = v.times.arr.sched + Math.max(0, v.delay) * 1000;  // un car en avance attend aux points d'arrêt
@@ -3513,7 +3540,7 @@ function predictedPos(st, now){
 let lastMove = 0;
 function moveLoop(t){
   requestAnimationFrame(moveLoop);
-  if (document.hidden || t - lastMove < 120) return;                // ~8 images/s : fluide et économe
+  if (document.hidden || view !== 'map' || t - lastMove < (lowBattery ? 330 : 120)) return;   // ~8 images/s (3 si batterie faible), carte à l'écran seulement
   lastMove = t;
   const now = Date.now();
   markers.forEach((m, id) => {
@@ -3970,6 +3997,16 @@ document.addEventListener('visibilitychange', () => {
 });
 
 let lastBoardTick = 0, lastAlertTick = 0;
+/** En arrière-plan, le temps réel ne sert que pour une alerte en cours, le partage ou « Cars dans ma ville ». */
+function needBackgroundRt(){
+  try { return (alertCfg.on && !isMuted() && !!alertContext().stop) || sharing() || cityCfg.on; } catch(e){ return alertCfg.on; }
+}
+/* Batterie du téléphone (Android) : en dessous de 20 % hors charge, l'appli ralentit animations et rafraîchissements. */
+let lowBattery = false;
+if (navigator.getBattery) navigator.getBattery().then(b => {
+  const upd = () => { const was = lowBattery; lowBattery = look.eco && !b.charging && b.level <= 0.2; if (was !== lowBattery){ renderEcoUI(); if (lowBattery) toast('🔋 Batterie faible : l’appli passe en mode économie.'); } };
+  b.addEventListener('levelchange', upd); b.addEventListener('chargingchange', upd); upd();
+}).catch(() => {});
 function tick(){
   if (!FeedMessage) return;
   updateMode();
@@ -3978,7 +4015,7 @@ function tick(){
   if (mode === 'sleep'){ updateSleepCountdown(); if (alertCfg.on && Date.now() - lastAlertTick > 15000){ lastAlertTick = Date.now(); checkAlerts(); } return; }
   const left = Math.max(0, Math.ceil((nextAt - Date.now()) / 1000));
   $('#countdown').textContent = busy ? 'Actualisation…' : `Actualisation dans ${left} s`;
-  if (!busy && (!document.hidden || alertCfg.on) && Date.now() >= nextAt) refresh();
+  if (!busy && Date.now() >= nextAt && (!document.hidden || needBackgroundRt())) refresh();
   if (alertCfg.on && Date.now() - lastAlertTick > 15000){ lastAlertTick = Date.now(); checkAlerts(); }
   if (vehicles.length && !busy){
     const now = Date.now();
@@ -4406,23 +4443,45 @@ if (!codeKey(shareCfg.code)) shareCfg.code = newCode();
 let shareLast = { t:0, lat:0, lon:0, bus:'' }, shareTimer = null, shareOwnWatch = false, shareErr = '';
 function newCode(){ return String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000); }
 function saveShare(){ try { localStorage.setItem('cj_share', JSON.stringify(shareCfg)); } catch(e){} }
+/* ----- économie de batterie : GPS approximatif quand tu ne bouges pas, précis dès que tu roules ou es dans un car ----- */
+let gpsMode = '', gpsPreciseUntil = 0;
+const GPS_OPTS = { eco: { enableHighAccuracy:false, maximumAge:60000, timeout:60000 }, precis: { enableHighAccuracy:true, maximumAge:5000, timeout:30000 } };
+function wantedGps(){
+  if (!look.eco) return 'precis';
+  const moving = myPos && (myPos.speed || 0) > 2.5;                      // > 9 km/h
+  if (onBus || moving) gpsPreciseUntil = Date.now() + 3 * 60e3;   // on garde le précis 3 min après
+  return Date.now() < gpsPreciseUntil ? 'precis' : 'eco';
+}
+function shareFix(p){ onLiveFix(p); autoCheck(); rideTick(); sendShare(); adaptGps(); }
+function shareGeoErr(e){
+  if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour partager.'); if (shareCfg.on) setShareOn(false); else stopShare(); }
+  else gpsWeak = true;
+}
+function adaptGps(force){
+  if (!shareOwnWatch) return;
+  const m = wantedGps();
+  if (m === gpsMode && !force) return;
+  gpsMode = m;
+  if (meWatch != null) clearPos(meWatch);
+  meWatch = watchPos(shareFix, shareGeoErr, GPS_OPTS[m], 'Ta position est partagée avec tes proches');
+  diag('gps-mode', { mode: m });
+  renderShareUI(); renderEcoUI();
+}
 function startShare(standby){
   if ((!navigator.geolocation && !BGGEO) || !window.crypto || !crypto.subtle){ toast('Partage impossible sur cet appareil.'); return false; }
   if (meWatch == null){
     shareOwnWatch = true;
-    meWatch = watchPos(p => { onLiveFix(p); autoCheck(); rideTick(); sendShare(); }, e => {
-      if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour partager.'); if (shareCfg.on) setShareOn(false); else stopShare(); }
-      else gpsWeak = true;
-    }, { enableHighAccuracy:true, maximumAge:5000, timeout:30000 }, 'Ta position est partagée avec tes proches');
+    gpsMode = ''; gpsPreciseUntil = standby ? 0 : Date.now() + 60e3;      // partage manuel : précis au départ
+    adaptGps(true);
   }
-  clearInterval(shareTimer); shareTimer = setInterval(() => { autoCheck(); sendShare(); }, 20000);
+  clearInterval(shareTimer); shareTimer = setInterval(() => { autoCheck(); sendShare(); adaptGps(); }, 20000);
   if (!standby) setTimeout(() => sendShare(true), 1500);
   return true;
 }
 function stopShare(){
   clearInterval(shareTimer); shareTimer = null;
   if (shareOwnWatch && meWatch != null){ clearPos(meWatch); meWatch = null; onBus = null; busCand = null; }
-  shareOwnWatch = false;
+  shareOwnWatch = false; gpsMode = '';
 }
 async function setShareOn(on){
   if (on && !shareCfg.name.trim()){ toast('Écris d’abord ton prénom.'); $('#shOn').checked = false; $('#shName').focus(); return; }
