@@ -1,5 +1,5 @@
 /* Car Jaune Live — service worker : appli utilisable hors ligne (coquille), données toujours fraîches */
-const VERSION = 'cj-v20';
+const VERSION = 'cj-v21';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png',
@@ -24,7 +24,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   // données en direct (serveur Apps Script, fonds de carte, PDF) : jamais mises en cache ici
-  if (/script\.google|googleusercontent|tile\.openstreetmap|basemaps\.cartocdn|arcgisonline|ntfy\.sh/.test(url.host)) return;
+  if (/script\.google|googleusercontent|tile\.openstreetmap|basemaps\.cartocdn|arcgisonline|ntfy\.sh|tomtom\.com|geo\.api\.gouv/.test(url.host)) return;
 
   // page : réseau d'abord (pour recevoir les mises à jour), cache si hors ligne
   if (req.mode === 'navigate'){
