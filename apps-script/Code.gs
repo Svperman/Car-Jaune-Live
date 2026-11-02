@@ -83,7 +83,11 @@ const API_ = {
   getStopBoard:      function (ids) { return getStopBoard((ids || []).slice(0, 60).map(String)); },
   getParsedFiches:   function (urls) { return getParsedFiches((urls || []).slice(0, 60).map(String)); },
   getPdfB64:         function (url) { return getPdfB64(String(url || '')); },
-  saveParsedFiche:   function (url, json) { return saveParsedFiche(String(url || ''), json); }
+  saveParsedFiche:   function (url, json) { return saveParsedFiche(String(url || ''), json); },
+  setPushAlert:      function (cfg) { return setPushAlert(cfg); },
+  deletePushAlert:   function (topic) { return deletePushAlert(String(topic || '')); },
+  testPush:          function (topic) { return testPush(String(topic || '')); },
+  pushSeen:          function (topic) { return pushSeen(String(topic || '')); }
 };
 
 function api_(action, args) {
@@ -648,3 +652,225 @@ function cacheGet_(cache, key) {
     return null;
   }
 }
+
+
+/* ------------------------------------------------------------------ */
+/*  Alertes appli fermée : le serveur surveille ton arrêt et envoie    */
+/*  la notification par ntfy, même téléphone verrouillé.               */
+/*  Un déclencheur toutes les minutes, qui ne travaille que pendant    */
+/*  tes créneaux (aller / retour) : le reste du temps il s'arrête net. */
+/* ------------------------------------------------------------------ */
+
+const PUSH_PREFIX = 'push_';
+const NTFY_TOPIC = /^[A-Za-z0-9_-]{6,64}$/;
+
+function pushId_(topic) { return hash_('push|' + topic).replace(/[^A-Za-z0-9]/g, '').slice(0, 16); }
+
+/** Enregistre (ou remplace) l'alerte d'un téléphone. cfg = { topic, lead, lines[], quai, windows:[{days[1..7], from, to, fromIds[], toIds[], fromName, toName}] } */
+function setPushAlert(cfg) {
+  cfg = typeof cfg === 'string' ? JSON.parse(cfg) : cfg;
+  if (!cfg || !NTFY_TOPIC.test(cfg.topic || '')) throw new Error('canal ntfy invalide');
+  const hm = function (s) { return /^\d{2}:\d{2}$/.test(s || '') ? s : null; };
+  const ids = function (a) { return (a || []).slice(0, 40).map(String); };
+  const clean = {
+    topic: cfg.topic,
+    lead: Math.max(1, Math.min(30, +cfg.lead || 5)),
+    lines: (cfg.lines || []).slice(0, 30).map(String),
+    quai: cfg.quai !== false,
+    windows: (cfg.windows || []).slice(0, 4).map(function (w) {
+      return { days: (w.days || []).map(Number).filter(function (d) { return d >= 1 && d <= 7; }),
+               from: hm(w.from), to: hm(w.to), fromIds: ids(w.fromIds), toIds: ids(w.toIds),
+               fromName: String(w.fromName || '').slice(0, 60), toName: String(w.toName || '').slice(0, 60) };
+    }).filter(function (w) { return w.from && w.to && w.days.length && w.fromIds.length; }),
+    muteUntil: +cfg.muteUntil || 0,
+    savedAt: Date.now()
+  };
+  if (!clean.windows.length) throw new Error('aucun créneau valide');
+  PropertiesService.getScriptProperties().setProperty(PUSH_PREFIX + pushId_(clean.topic), JSON.stringify(clean));
+  const trig = ensurePushTrigger_();
+  return JSON.stringify({ ok: true, trigger: trig });
+}
+
+function deletePushAlert(topic) {
+  if (!NTFY_TOPIC.test(topic)) throw new Error('canal ntfy invalide');
+  PropertiesService.getScriptProperties().deleteProperty(PUSH_PREFIX + pushId_(topic));
+  return JSON.stringify({ ok: true });
+}
+
+/** L'appli est ouverte à l'écran : le serveur se tait 3 min (pas de notification en double). */
+function pushSeen(topic) {
+  if (!NTFY_TOPIC.test(topic)) return '0';
+  CacheService.getScriptCache().put('pseen_' + pushId_(topic), '1', 180);
+  return '1';
+}
+
+function testPush(topic) {
+  if (!NTFY_TOPIC.test(topic)) throw new Error('canal ntfy invalide');
+  ntfySend_(topic, '🧪 Test du serveur Car Jaune', 'Ton serveur peut te prévenir même quand l’appli est fermée.', 3);
+  return JSON.stringify({ ok: true, trigger: ensurePushTrigger_() });
+}
+
+function ensurePushTrigger_() {
+  try {
+    const has = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'pushTick'; });
+    if (!has) ScriptApp.newTrigger('pushTick').timeBased().everyMinutes(1).create();
+    return true;
+  } catch (e) {
+    return false;   // autorisation manquante : exécuter installPushTrigger une fois dans l'éditeur
+  }
+}
+
+/** À exécuter UNE fois dans l'éditeur Apps Script (▶ Exécuter) pour autoriser les déclencheurs. */
+function installPushTrigger() { Logger.log(ensurePushTrigger_() ? 'Déclencheur pushTick actif.' : 'Échec : autorise le script.'); }
+
+function ntfySend_(topic, title, message, priority) {
+  UrlFetchApp.fetch('https://ntfy.sh/', {
+    method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    payload: JSON.stringify({ topic: topic, title: title, message: message, priority: priority || 4, tags: ['bus'] })
+  });
+}
+
+/** Lancé chaque minute par le déclencheur. */
+function pushTick() {
+  const all = PropertiesService.getScriptProperties().getProperties();
+  const cfgs = Object.keys(all).filter(function (k) { return k.indexOf(PUSH_PREFIX) === 0; })
+    .map(function (k) { try { return JSON.parse(all[k]); } catch (e) { return null; } }).filter(Boolean);
+  if (!cfgs.length) return;
+
+  const now = new Date();
+  const p = Utilities.formatDate(now, 'Indian/Reunion', 'u|HH|mm|ss|yyyyMMdd').split('|');
+  const wd = +p[0], hmNow = p[1] + ':' + p[2], ymd = p[4];
+  const midnight = now.getTime() - ((+p[1]) * 3600 + (+p[2]) * 60 + (+p[3])) * 1000;
+  const cache = CacheService.getScriptCache();
+
+  // créneaux actifs maintenant (élargis de l'avance demandée)
+  const work = [];
+  cfgs.forEach(function (c) {
+    if (cache.get('pseen_' + pushId_(c.topic))) return;           // appli ouverte : elle s'en charge
+    if (c.muteUntil && c.muteUntil > now.getTime()) return;      // notifications en pause
+    c.windows.forEach(function (w) {
+      if (w.days.indexOf(wd) < 0) return;
+      if (hmNow >= addMin_(w.from, -c.lead) && hmNow <= w.to) work.push({ c: c, w: w });
+    });
+  });
+  if (!work.length) return;
+
+  const S = JSON.parse(getStatic());
+  const active = activeServices_(S.service, ymd, wd);
+  let rt = {};
+  try { rt = decodeTripUpdates_(Utilities.base64Decode(getRealtime().b64)); } catch (e) { console.warn('RT : ' + e.message); }
+
+  work.forEach(function (job) {
+    const c = job.c, w = job.w;
+    const boards = JSON.parse(getStopBoard(w.fromIds.concat(w.toIds).slice(0, 60)));
+    const toSec = {};
+    w.toIds.forEach(function (id) { (boards[id] || []).forEach(function (r) { toSec[r[0]] = Math.max(toSec[r[0]] || 0, r[1]); }); });
+    w.fromIds.forEach(function (sid) {
+      (boards[sid] || []).forEach(function (r) {
+        const tid = r[0], sec = r[1], t = S.trips[tid];
+        if (!t || (active && !active[t[7]])) return;
+        if (t[6] === sid) return;                                   // terminus : pas un départ
+        if (w.toIds.length && !(toSec[tid] > sec)) return;          // ne va pas vers ma destination
+        const route = S.routes[t[0]] || { s: '?' };
+        if (c.lines.length && c.lines.indexOf(route.s) < 0) return;
+        const sched = midnight + sec * 1000;
+        const tu = rt[tid];
+        const delay = tu ? stopDelay_(tu, sid) : null;
+        const eff = sched + (delay || 0) * 1000;
+        const mins = (eff - now.getTime()) / 60000;
+        const hm = Utilities.formatDate(new Date(eff), 'Indian/Reunion', 'HH:mm');
+        const lateTxt = delay == null ? 'horaire prévu' : Math.abs(delay) < 60 ? 'à l’heure' : (delay > 0 ? 'retard ' : 'avance ') + Math.round(Math.abs(delay) / 60) + ' min';
+        const dest = w.toName || t[1] || '';
+        const send = function (kind, title, body, prio) {
+          const key = 'psent_' + pushId_(c.topic) + '_' + kind + '_' + tid + '_' + ymd;
+          if (cache.get(key)) return;
+          cache.put(key, '1', 6 * 3600);
+          ntfySend_(c.topic, title, body, prio);
+        };
+        if (mins <= c.lead + 0.75 && mins > c.lead - 1.5)
+          send('lead', '🚌 ' + route.s + ' → ' + dest + ' dans ' + Math.max(1, Math.round(mins)) + ' min',
+               'Départ de ' + (w.fromName || 'ton arrêt') + ' à ' + hm + ' (' + lateTxt + ').', 4);
+        if (c.quai && tu && mins <= 1 && mins > -1.5)
+          send('quai', '🚏 ' + route.s + ' arrive à quai', (w.fromName || 'Ton arrêt') + ' · ' + hm + ' (' + lateTxt + ').', 5);
+      });
+    });
+  });
+}
+
+function addMin_(hm, m) {
+  const t = (+hm.slice(0, 2)) * 60 + (+hm.slice(3)) + m;
+  const c = Math.max(0, Math.min(24 * 60 - 1, t));
+  return ('0' + Math.floor(c / 60)).slice(-2) + ':' + ('0' + (c % 60)).slice(-2);
+}
+
+/** Services qui circulent ce jour-là (null si le calendrier est inconnu). */
+function activeServices_(sv, ymd, wd) {
+  if (!sv || !sv.cal) return null;
+  const out = {};
+  Object.keys(sv.cal).forEach(function (sid) {
+    const c = sv.cal[sid];
+    if (c[1] <= ymd && ymd <= c[2] && c[0].charAt(wd - 1) === '1') out[sid] = true;
+  });
+  const ex = (sv.dates || {})[ymd];
+  if (ex) { ex.add.forEach(function (s) { out[s] = true; }); ex.rem.forEach(function (s) { delete out[s]; }); }
+  return Object.keys(out).length || ex ? out : null;
+}
+
+/** Retard (s) du car à un arrêt : celui de l'arrêt, sinon du dernier arrêt connu avant, sinon du trajet. */
+function stopDelay_(tu, stopId) {
+  const s = tu.stops.filter(function (x) { return x.stopId === stopId; })[0] || tu.stops[0];
+  if (s && s.delay != null) return s.delay;
+  return tu.delay != null ? tu.delay : null;
+}
+
+/* ---- lecture minimale du flux GTFS-RT (protobuf) : retards des trajets ---- */
+function decodeTripUpdates_(bytes) {
+  const b = bytes.map(function (x) { return x & 255; });
+  const out = {};
+  pbEach_(b, 0, b.length, function (f, wt, v) {                       // FeedMessage
+    if (f !== 2 || wt !== 2) return;
+    pbEach_(b, v.s, v.e, function (f2, wt2, v2) {                      // FeedEntity
+      if (f2 !== 3 || wt2 !== 2) return;
+      const tu = { tripId: '', stops: [], delay: null };
+      pbEach_(b, v2.s, v2.e, function (f3, wt3, v3) {                  // TripUpdate
+        if (f3 === 1 && wt3 === 2) pbEach_(b, v3.s, v3.e, function (f4, wt4, v4) { if (f4 === 1 && wt4 === 2) tu.tripId = pbStr_(b, v4); });
+        else if (f3 === 5 && wt3 === 0) tu.delay = pbInt_(v3);
+        else if (f3 === 2 && wt3 === 2) {
+          const st = { stopId: '', delay: null };
+          pbEach_(b, v3.s, v3.e, function (f4, wt4, v4) {               // StopTimeUpdate
+            if (f4 === 4 && wt4 === 2) st.stopId = pbStr_(b, v4);
+            else if ((f4 === 2 || f4 === 3) && wt4 === 2) pbEach_(b, v4.s, v4.e, function (f5, wt5, v5) {
+              if (f5 === 1 && wt5 === 0 && (st.delay == null || f4 === 3)) st.delay = pbInt_(v5);
+            });
+          });
+          tu.stops.push(st);
+        }
+      });
+      if (tu.tripId) out[tu.tripId] = tu;
+    });
+  });
+  return out;
+}
+function pbEach_(b, i, end, cb) {
+  while (i < end) {
+    const key = pbVar_(b, i); i = key.i;
+    const f = Number(key.v >> 3n), wt = Number(key.v & 7n);
+    if (wt === 0) { const r = pbVar_(b, i); i = r.i; cb(f, wt, r.v); }
+    else if (wt === 2) { const r = pbVar_(b, i); const len = Number(r.v); cb(f, wt, { s: r.i, e: r.i + len }); i = r.i + len; }
+    else if (wt === 1) i += 8;
+    else if (wt === 5) i += 4;
+    else break;
+  }
+}
+function pbVar_(b, i) {
+  let v = 0n, shift = 0n;
+  while (i < b.length) {
+    const x = b[i++];
+    v |= BigInt(x & 127) << shift;
+    if (!(x & 128)) break;
+    shift += 7n;
+  }
+  return { v: v, i: i };
+}
+function pbInt_(v) { return Number(BigInt.asIntN(64, v)); }
+function pbStr_(b, r) { return Utilities.newBlob(b.slice(r.s, r.e).map(function (x) { return x > 127 ? x - 256 : x; })).getDataAsString('UTF-8'); }

@@ -90,6 +90,18 @@ Au premier lancement, colle l'adresse `/exec` de l'étape 1 (bouton **⚙️ Ser
 - Pour les recevoir appli fermée : option **ntfy** (appli gratuite, sans compte).
 - Si refusées : iPhone → Réglages → Notifications → Car Jaune ; Android → paramètres du site → Notifications.
 
+
+## Nouveautés (réglages uniques)
+
+- **Test avant publication** : chaque modification est testée par GitHub (téléphone + ordinateur) avant d'être mise en ligne.
+  Réglage unique : **Settings → Pages → Source : « GitHub Actions »**. Résultats dans l'onglet **Actions**.
+- **Alertes appli fermée** : ⚙️ → *Alertes appli fermée*. Ton serveur surveille ton car pendant tes créneaux
+  et t'envoie la notification par l'appli **ntfy**. Une seule fois dans l'éditeur Apps Script :
+  exécute **installPushTrigger** (autorisation du déclencheur).
+- **Appli Android (APK)** : position partagée même appli fermée. Téléchargement :
+  <https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk>
+  (reconstruite par GitHub à chaque changement du dossier `android-app/`).
+
 ## Mettre à jour l'appli
 
 Remplace `index.html`, puis dans `sw.js` change `const VERSION = 'cj-v1'` → `'cj-v2'`,

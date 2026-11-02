@@ -1,0 +1,67 @@
+# Car Jaune Live — test automatique puis publication sur GitHub Pages.
+# Si le test trouve une erreur, la version en ligne N'EST PAS remplacée (ton appli continue de marcher).
+#
+# Réglage unique : Settings → Pages → Build and deployment → Source : « GitHub Actions ».
+
+name: Tester et publier l'appli
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['apps-script/**', 'android/**', 'README.md']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installer le navigateur de test
+        run: |
+          npm init -y >/dev/null
+          npm install --no-save playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Tester l'appli (téléphone + ordinateur)
+        run: |
+          python3 -m http.server 8765 >/dev/null 2>&1 &
+          sleep 2
+          node tests/smoke.mjs
+      - name: Captures d'écran du test
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: captures
+          path: test-*.png
+          if-no-files-found: ignore
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Préparer les fichiers publiés
+        run: |
+          mkdir -p _site
+          cp -r index.html manifest.webmanifest sw.js icons _site/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4

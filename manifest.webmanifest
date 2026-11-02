@@ -10,14 +10,64 @@
   "orientation": "portrait",
   "background_color": "#F2F4F7",
   "theme_color": "#F6BE00",
-  "categories": ["travel", "navigation", "utilities"],
+  "categories": [
+    "travel",
+    "navigation",
+    "utilities"
+  ],
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Mon trajet", "short_name": "Trajet", "url": "./?vue=trip", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Horaires à l'arrêt", "short_name": "Horaires", "url": "./?vue=board", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+    {
+      "name": "Mon prochain car",
+      "short_name": "Prochain car",
+      "url": "./?vue=next",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Mon trajet",
+      "short_name": "Trajet",
+      "url": "./?vue=trip",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Horaires à l'arrêt",
+      "short_name": "Horaires",
+      "url": "./?vue=board",
+      "icons": [
+        {
+          "src": "icons/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }

@@ -1,0 +1,16 @@
+{
+  "appId": "re.svperman.carjaune",
+  "appName": "Car Jaune",
+  "webDir": "www",
+  "server": {
+    "url": "https://svperman.github.io/Car-Jaune-Live/",
+    "allowNavigation": ["svperman.github.io", "script.google.com", "*.googleusercontent.com", "ntfy.sh", "geo.api.gouv.fr", "www.carjaune.re"]
+  },
+  "android": {
+    "useLegacyBridge": true
+  },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true },
+    "LocalNotifications": { "smallIcon": "ic_launcher", "iconColor": "#F6BE00" }
+  }
+}

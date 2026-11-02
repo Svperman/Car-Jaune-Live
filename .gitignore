@@ -1,0 +1,5 @@
+_test.html
+test-*.png
+node_modules
+package.json
+package-lock.json

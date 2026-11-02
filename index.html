@@ -25,15 +25,54 @@
     --texte:#444; --titre:#222; --gris:#7A7F87; --fond:#F2F4F7; --carte:#FFFFFF; --ligne:#E3E6EA;
     --ombre:0 0 5px rgba(0,0,0,.2);
     --ok:#1E8A4C; --retard:#D9480F; --avance:#1D6FD8;
+    color-scheme: light;
   }
   *{box-sizing:border-box}
+  /* ---------- mode sombre (auto le soir / selon le téléphone, ou forcé dans ⚙️) ---------- */
+  html.dark{
+    --jaune-clair:#3A3218; --texte:#D5D9DE; --titre:#F2F4F7; --gris:#9AA1AA; --fond:#121417; --carte:#1E2228; --ligne:#323840;
+    --ombre:0 0 0 1px #2A2F36; --ok:#3FBF77; --retard:#FF7A45; --avance:#5B9BFF; color-scheme: dark;
+  }
+  html.dark .leaflet-tile-pane{filter:invert(.92) hue-rotate(180deg) brightness(.9) contrast(.92) saturate(.6)}
+  html.dark .leaflet-popup-content-wrapper,html.dark .leaflet-popup-tip,html.dark .leaflet-bar a,html.dark .leaflet-control-layers{background:var(--carte);color:var(--texte)}
+  html.dark .leaflet-control-attribution{background:rgba(30,34,40,.8)!important;color:#aaa}
+  html.dark .leaflet-control-attribution a{color:#9cc3ff}
+  html.dark .btn,html.dark .tab.on,html.dark .set-head h2,html.dark .near-btn.on,html.dark .chip.on{color:#1A1A1A}
+  html.dark .btn.ghost{color:var(--titre)}
+  html.dark #alStrip{background:rgba(30,34,40,.94)}
+  html.dark .dchip.late{background:#4A2414} html.dark .dchip.early{background:#14284A} html.dark .dchip.ok{background:#143A24}
+  html.dark .notif-box.ok{background:#143A24;border-color:#2C6B47} html.dark .notif-box.ko{background:#4A2414;border-color:#8A4A2A}
+  html.dark .al-status.on{background:#143A24;color:#BDEBCF}
+  html.dark #bellMenu .bm-it.new{background:#3A3218}
+  html.dark .chk-row label:has(input:checked){background:#3A3218}
+  html.dark input,html.dark select,html.dark textarea{background:var(--carte);color:var(--texte);border-color:var(--ligne)}
+  html.dark .hd-btn{background:#2A2F36} html.dark .hd-btn.on{background:#143A24} html.dark .hd-btn.paused{background:#3A3218}
+  html.dark .pill{background:#2A2F36}
+  html.dark .stop-dot{border-color:#ddd}
+  html.dark .tag-s,html.dark .pill.period.p-scolaire,html.dark .sens-aller .pillx,html.dark .sens-banner.aller{background:#16294A;color:#CFE0FF}
+  html.dark .tag-v,html.dark .pill.period.p-vacances,html.dark .sens-retour .pillx,html.dark .sens-banner.retour{background:#3F2A16;color:#FFD9B8}
+  html.dark .tag-f,html.dark .pill.period.p-ferie{background:#2E2246;color:#E2D4FF}
+  html.dark .sens-banner .route{color:var(--titre)}
+  html.dark .sens-banner.aller .big{color:#8FB6FF} html.dark .sens-banner.retour .big{color:#FFB27A}
+  html.dark .far-note{background:#3A3218}
+  html.dark .switch span{background:#4A515B}
+  html.dark #map{background:#1B2026}
+  html.dark .grp button,html.dark .seg button{background:var(--carte);color:var(--titre)}
+  html.dark .grp button.on,html.dark .seg button.on{background:var(--jaune);color:#1A1A1A}
+  html.dark .fr-mk,html.dark .fr-mk::after{background:var(--carte);border-top-color:var(--carte)}
+  html.dark .tabs{background:var(--carte)}
+  html.dark .map-ctl button{background:var(--carte);color:var(--titre)}
+  /* texte plus grand (pages et panneaux ; la carte garde son échelle) */
+  html.big .wrap,html.big aside,html.big .set-box,html.big #bellMenu,html.big .modal-box{zoom:1.15}
+  html.huge .wrap,html.huge aside,html.huge .set-box,html.huge #bellMenu,html.huge .modal-box{zoom:1.3}
+  @media (prefers-reduced-motion: reduce){ *,*::before,*::after{animation:none!important;transition:none!important} }
   html,body{margin:0;height:100%}
   body{font-family:"Nunito Sans",Arial,"Helvetica Neue",Helvetica,sans-serif;font-size:15px;color:var(--texte);background:var(--fond);
        display:flex;flex-direction:column;height:100dvh;overflow:hidden}
   button,input{font-family:inherit}
 
   /* ---------- en-tête ---------- */
-  .top{background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.08);flex:none;position:relative;z-index:1000}
+  .top{background:var(--carte);box-shadow:0 2px 6px rgba(0,0,0,.08);flex:none;position:relative;z-index:1000}
   .top-in{display:flex;align-items:stretch;gap:18px;padding:0 20px;min-height:64px}
   .brand{display:flex;align-items:center;gap:10px;flex:none}
   .mark{width:38px;height:38px;border-radius:10px;background:var(--jaune);display:grid;place-items:center}
@@ -88,14 +127,14 @@
   body.fs #mapCard{border-radius:0}
   /* boutons sur la carte */
   .map-ctl{display:flex;flex-direction:column;gap:6px}
-  .map-ctl button{border:none;background:#fff;color:var(--titre);font:700 13px "Nunito Sans",sans-serif;border-radius:25px;
+  .map-ctl button{border:none;background:var(--carte);color:var(--titre);font:700 13px "Nunito Sans",sans-serif;border-radius:25px;
                   padding:8px 13px;box-shadow:0 1px 5px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap;text-align:left}
   .map-ctl button:hover,.map-ctl button.on{background:var(--jaune)}
   .leaflet-control-layers{border-radius:10px !important;border:none !important;box-shadow:0 1px 5px rgba(0,0,0,.35) !important;font-family:"Nunito Sans",sans-serif}
   .leaflet-control-layers-expanded{padding:8px 12px}
   .crumb.hide{display:none}
   .toolbar{display:flex;gap:8px;align-items:center;padding:14px 14px 8px}
-  .search{flex:1;min-width:0;border:1px solid var(--ligne);background:#fff;color:var(--texte);border-radius:25px;padding:9px 14px;font-size:14px;outline:none}
+  .search{flex:1;min-width:0;border:1px solid var(--ligne);background:var(--carte);color:var(--texte);border-radius:25px;padding:9px 14px;font-size:14px;outline:none}
   .search:focus{border-color:var(--jaune);box-shadow:0 0 0 3px var(--jaune-clair)}
   .toolbar label{font-size:12px;color:var(--gris);display:flex;align-items:center;gap:4px;white-space:nowrap}
   .round{border:none;background:var(--jaune);color:var(--titre);border-radius:50%;width:38px;height:38px;font-size:18px;cursor:pointer;flex:none;display:grid;place-items:center}
@@ -103,7 +142,7 @@
   .spin{animation:spin 1s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   #chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 14px 12px;border-bottom:1px solid var(--ligne)}
-  .chip{border:1.5px solid var(--ligne);background:#fff;color:var(--titre);border-radius:25px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer}
+  .chip{border:1.5px solid var(--ligne);background:var(--carte);color:var(--titre);border-radius:25px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer}
   .chip:hover{border-color:var(--jaune)}
   .chip.on{border-color:var(--jaune);background:var(--jaune)}
   .chip .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
@@ -123,7 +162,7 @@
   .muted{color:var(--gris);font-weight:400}
   s.muted{font-size:11px}
   .pdf{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;text-decoration:none;white-space:nowrap;
-       color:var(--titre);border:1.5px solid var(--jaune);border-radius:25px;padding:3px 10px;background:#fff}
+       color:var(--titre);border:1.5px solid var(--jaune);border-radius:25px;padding:3px 10px;background:var(--carte)}
   .pdf:hover{background:var(--jaune)}
   .pdf-links{display:flex;gap:5px;flex-wrap:wrap}
   .bus-item .pdf-links{margin-top:6px}
@@ -155,7 +194,7 @@
   .sleep-cd{font-size:26px !important;font-weight:800;color:var(--titre) !important}
   .btn{border:none;background:var(--jaune);color:var(--titre);border-radius:25px;padding:9px 18px;font-size:14px;font-weight:700;cursor:pointer}
   .btn:hover{background:var(--jaune-fonce)}
-  .btn.ghost{background:#fff;border:1.5px solid var(--jaune)}
+  .btn.ghost{background:var(--carte);border:1.5px solid var(--jaune)}
   .sleep .btn{margin-top:14px}
 
   /* ---------- départs à l'arrêt ---------- */
@@ -164,7 +203,7 @@
   #stopInput{flex:1;font-size:15px;padding:11px 16px}
   .star{width:42px;height:42px;font-size:20px}
   .star.on{background:var(--titre);color:var(--jaune)}
-  #suggest{position:absolute;left:0;right:52px;top:calc(100% + 4px);background:#fff;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);
+  #suggest{position:absolute;left:0;right:52px;top:calc(100% + 4px);background:var(--carte);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);
            list-style:none;margin:0;padding:6px;z-index:50;max-height:320px;overflow:auto}
   #suggest[hidden]{display:none}
   #suggest li{padding:9px 12px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
@@ -221,7 +260,7 @@
   .line-chip.on .badge{outline:3px solid var(--titre);outline-offset:2px}
   .stops-dir h4{font-size:12px;color:var(--titre);margin:12px 0 6px;font-weight:700}
   .stop-btns{display:flex;flex-wrap:wrap;gap:6px}
-  .stop-btn{border:1.5px solid var(--ligne);background:#fff;border-radius:25px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--titre);cursor:pointer}
+  .stop-btn{border:1.5px solid var(--ligne);background:var(--carte);border-radius:25px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--titre);cursor:pointer}
   .stop-btn:hover{border-color:var(--jaune)}
   .stop-btn.on{background:var(--jaune);border-color:var(--jaune)}
   .stop-btn .n{color:var(--gris);font-weight:700;margin-right:4px;font-size:11px}
@@ -231,7 +270,7 @@
   .btn.small{padding:6px 12px;font-size:12.5px}
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;display:flex;align-items:center;justify-content:center;padding:14px}
   .modal[hidden]{display:none}
-  .modal-box{background:#fff;border-radius:12px;max-width:1150px;width:100%;max-height:92dvh;overflow:auto;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+  .modal-box{background:var(--carte);border-radius:12px;max-width:1150px;width:100%;max-height:92dvh;overflow:auto;padding:18px 20px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
   .modal-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
   .modal-head h2{margin:0;font-size:20px;color:var(--titre);display:flex;gap:10px;align-items:center}
   .ptabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
@@ -240,7 +279,7 @@
   .tt-wrap{overflow:auto;border:1px solid var(--ligne);border-radius:8px}
   table.fiche{border-collapse:collapse;font-size:12px;white-space:nowrap}
   table.fiche td{padding:5px 7px;border-bottom:1px solid var(--ligne);text-align:center;font-variant-numeric:tabular-nums}
-  table.fiche td:first-child{position:sticky;left:0;background:#fff;text-align:left;font-weight:700;color:var(--titre);z-index:1;border-right:1px solid var(--ligne)}
+  table.fiche td:first-child{position:sticky;left:0;background:var(--carte);text-align:left;font-weight:700;color:var(--titre);z-index:1;border-right:1px solid var(--ligne)}
   table.fiche td.past{color:#B9BDC3}
   table.fiche td.next{background:var(--jaune-clair);font-weight:800;color:var(--titre)}
   table.fiche tr.here td:first-child{background:var(--jaune-clair)}
@@ -248,7 +287,7 @@
   /* ---------- alertes d'arrivée ---------- */
   #alertCard h2{display:flex;align-items:center;gap:8px}
   .al-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:10px 0;font-size:14px}
-  .al-row select{font:inherit;border:1px solid var(--ligne);border-radius:25px;padding:6px 10px;background:#fff}
+  .al-row select{font:inherit;border:1px solid var(--ligne);border-radius:25px;padding:6px 10px;background:var(--carte)}
   .al-row label{display:flex;align-items:center;gap:6px;cursor:pointer}
   .al-stop{font-weight:800;color:var(--titre)}
   .al-status{font-size:13px;margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--fond)}
@@ -279,7 +318,7 @@
   #alStrip.warn .bar{background:var(--retard)}
   /* menu de la cloche : état + pause + historique */
   #bellMenu{position:fixed;top:calc(var(--hdrH, 64px) + 6px);right:12px;z-index:2600;width:min(380px, calc(100vw - 24px));
-    max-height:min(70dvh, 560px);display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden}
+    max-height:min(70dvh, 560px);display:flex;flex-direction:column;background:var(--carte);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden}
   #bellMenu[hidden]{display:none}
   #bellMenu .bm-h{padding:12px 14px;border-bottom:1px solid var(--ligne)}
   #bellMenu .bm-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -296,7 +335,7 @@
   #bellMenu .bm-f{display:flex;justify-content:space-between;padding:8px 14px;border-top:1px solid var(--ligne)}
   .hd-btn .cnt{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;border-radius:9px;background:var(--retard);color:#fff;font:800 10.5px/17px 'Nunito Sans',sans-serif;padding:0 4px;text-align:center}
   .hd-btn .cnt[hidden]{display:none}
-  .al-pop{background:#fff;border-left:6px solid var(--jaune);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:12px 14px;
+  .al-pop{background:var(--carte);border-left:6px solid var(--jaune);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:12px 14px;
           font-size:13.5px;animation:popin .25s ease-out;cursor:pointer}
   .al-pop b{display:block;color:var(--titre);font-size:14.5px;margin-bottom:2px}
   .al-pop.warn{border-left-color:var(--retard)}
@@ -311,7 +350,7 @@
   .sens-retour .pillx{background:#FFE9D6;color:#B4470A}
   .sens-h small{font-weight:600;color:var(--gris);font-size:12px}
   .grp{display:inline-flex;border:1.5px solid var(--ligne);border-radius:25px;overflow:hidden;margin-left:8px;vertical-align:middle}
-  .grp button,.seg button{border:none;background:#fff;padding:5px 12px;font:700 12px "Nunito Sans",sans-serif;color:var(--titre);cursor:pointer}
+  .grp button,.seg button{border:none;background:var(--carte);padding:5px 12px;font:700 12px "Nunito Sans",sans-serif;color:var(--titre);cursor:pointer}
   .grp button.on,.seg button.on{background:var(--jaune)}
   .trip-form{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:end}
   .trip-form label{display:block;font-size:13px;font-weight:600;color:var(--titre);margin-bottom:6px}
@@ -335,7 +374,7 @@
 
   /* ---------- autour de moi ---------- */
   .near-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-  .near-btn{border:1.5px solid var(--ligne);background:#fff;border-radius:25px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:var(--titre);font-weight:600}
+  .near-btn{border:1.5px solid var(--ligne);background:var(--carte);border-radius:25px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:var(--titre);font-weight:600}
   .near-btn:hover{border-color:var(--jaune)}
   .near-btn.on{background:var(--jaune);border-color:var(--jaune)}
   .near-btn small{color:var(--gris);font-weight:600;margin-left:4px}
@@ -348,7 +387,7 @@
   .me-head{position:absolute;left:0;top:0;width:44px;height:44px;transition:transform .4s}
   .me-head::before{content:'';position:absolute;left:15px;top:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:15px solid #1D6FD8}
   .me-wrap.onbus .me-dot{background:var(--jaune);border-color:#222}
-  #rideBanner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1000;background:#fff;border-radius:12px;
+  #rideBanner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1000;background:var(--carte);border-radius:12px;
               box-shadow:0 4px 18px rgba(0,0,0,.3);padding:10px 14px;font-size:13px;max-width:min(560px,calc(100% - 150px));line-height:1.45}
   #rideBanner,#rideBanner[hidden]{display:none!important}
   /* mode navigation (façon Waze / Google Maps) */
@@ -393,7 +432,7 @@
   .set-row:last-child{border-bottom:none}
   .set-row b{display:block;font-size:15px;color:var(--titre)}
   .set-row small{display:block;font-size:12.5px;color:var(--gris);margin-top:2px;line-height:1.4}
-  .set-row select{font:inherit;border:1px solid var(--ligne);border-radius:25px;padding:6px 10px;background:#fff}
+  .set-row select{font:inherit;border:1px solid var(--ligne);border-radius:25px;padding:6px 10px;background:var(--carte)}
   .switch{position:relative;flex:none;width:50px;height:30px;cursor:pointer}
   .switch input{opacity:0;width:0;height:0;position:absolute}
   .switch span{position:absolute;inset:0;background:#CBD2D9;border-radius:30px;transition:.2s}
@@ -401,15 +440,40 @@
   .switch input:checked + span{background:var(--ok)}
   .switch input:checked + span::before{transform:translateX(20px)}
   .pseg{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:58%}
-  .pseg button{border:1.5px solid var(--ligne);background:#fff;border-radius:25px;padding:6px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .pseg button{border:1.5px solid var(--ligne);background:var(--carte);border-radius:25px;padding:6px 11px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
   .pseg button:active{background:var(--fond)}
   .set-sec .notif-box{margin:10px 0 4px}
   .set-sec .ntfy{margin:8px 0 0}
   .set-foot{padding:14px 18px 22px;font-size:12px;color:var(--gris);text-align:center}
   .al-link{border:none;background:none;color:var(--titre);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
 
+  /* ---------- alertes appli fermée ---------- */
+  .pw{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px;font-size:13.5px}
+  .pw .days{display:flex;gap:4px}
+  .pw .days button{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--ligne);background:var(--carte);color:var(--titre);font:700 12px 'Nunito Sans',sans-serif;cursor:pointer}
+  .pw .days button.on{background:var(--jaune);border-color:var(--jaune);color:#1A1A1A}
+  .pw .t{width:auto;padding:6px 8px}
+
+  /* ---------- correspondances ---------- */
+  .tr-h{font-size:15px;color:var(--titre);margin:18px 0 8px}
+  .tr-card{display:flex;align-items:center;gap:12px;border:1.5px solid var(--ligne);border-radius:12px;padding:10px 12px;margin:8px 0;background:var(--carte)}
+  .tr-when{flex:none;min-width:52px;font-size:20px;font-weight:800;color:var(--titre);text-align:center}
+  .tr-when small{font-size:11px;font-weight:700;margin-left:2px}
+  .tr-legs{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;font-size:13.5px}
+  .tr-wait{font-size:12px;color:var(--gris);padding-left:6px;border-left:2px dashed var(--ligne);margin-left:12px}
+  .tr-dur{flex:none;font-size:12px;color:var(--gris);font-weight:700}
+  /* ---------- mon prochain car ---------- */
+  #nextSheet .modal-box{max-width:520px}
+  .nx-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--ligne)}
+  .nx-row:last-child{border-bottom:none}
+  .nx-min{flex:none;min-width:64px;text-align:center;font-size:28px;font-weight:800;color:var(--titre);line-height:1}
+  .nx-min small{display:block;font-size:11px;font-weight:700;color:var(--gris);margin-top:3px}
+  .nx-min.soon{color:var(--retard)}
+  .nx-info{flex:1;min-width:0;font-size:14px}
+  .nx-info b{color:var(--titre)}
+
   /* ---------- cars dans ma ville ---------- */
-  .city-chip{display:flex;align-items:center;gap:8px;background:#fff;border:none;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.2);
+  .city-chip{display:flex;align-items:center;gap:8px;background:var(--carte);border:none;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.2);
     padding:7px 11px;font:inherit;font-size:12.5px;text-align:left;cursor:pointer;color:var(--texte)}
   .city-chip b{color:var(--titre)} .city-chip small{display:block;color:var(--gris)}
   .chk-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
@@ -419,14 +483,14 @@
 
   /* ---------- proches ---------- */
   .fr-mk{position:relative;display:flex;align-items:center;gap:5px;transform:translate(-50%, calc(-100% - 22px));width:max-content;
-    background:#fff;border-radius:999px;padding:3px 9px 3px 3px;box-shadow:0 3px 12px rgba(0,0,0,.3);font:800 12.5px/1 'Nunito Sans',sans-serif;color:var(--titre)}
+    background:var(--carte);border-radius:999px;padding:3px 9px 3px 3px;box-shadow:0 3px 12px rgba(0,0,0,.3);font:800 12.5px/1 'Nunito Sans',sans-serif;color:var(--titre)}
   .fr-mk::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-top-color:#fff;border-bottom:0}
   .fr-mk .av{width:24px;height:24px;border-radius:50%;background:#7C3AED;color:#fff;display:grid;place-items:center;font-size:12.5px}
   .fr-mk .ln{border-radius:6px;padding:2px 5px;font-size:11px}
   .fr-mk.old{opacity:.6} .fr-mk.old .av{background:#9AA0A6}
   .fr-dot{width:14px;height:14px;border-radius:50%;background:#7C3AED;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);transform:translate(-50%,-50%)}
   .fr-ctl{display:flex;flex-direction:column;gap:6px;max-width:min(320px, calc(100vw - 90px))}
-  .fr-chip{display:flex;align-items:center;gap:8px;background:#fff;border:none;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.2);
+  .fr-chip{display:flex;align-items:center;gap:8px;background:var(--carte);border:none;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.2);
     padding:7px 11px 7px 7px;font:inherit;font-size:12.5px;text-align:left;cursor:pointer;color:var(--texte)}
   .fr-chip .av{flex:none;width:28px;height:28px;border-radius:50%;background:#7C3AED;color:#fff;display:grid;place-items:center;font-weight:800}
   .fr-chip b{color:var(--titre)} .fr-chip small{display:block;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -458,11 +522,11 @@
 
   /* ---------- fiches & infos trafic ---------- */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-  .fcard{background:#fff;border-radius:10px;box-shadow:var(--ombre);padding:16px;display:flex;flex-direction:column;gap:10px}
+  .fcard{background:var(--carte);border-radius:10px;box-shadow:var(--ombre);padding:16px;display:flex;flex-direction:column;gap:10px}
   .fcard .hd{display:flex;gap:10px;align-items:center}
   .fcard .nm{font-weight:700;color:var(--titre);font-size:14px;line-height:1.3}
   .note{font-size:12px;color:var(--gris);margin-top:16px}
-  .alert{background:#fff;border-radius:10px;box-shadow:var(--ombre);padding:16px 18px;border-left:5px solid var(--jaune)}
+  .alert{background:var(--carte);border-radius:10px;box-shadow:var(--ombre);padding:16px 18px;border-left:5px solid var(--jaune)}
   .alert + .alert{margin-top:12px}
   .alert b{color:var(--titre);font-size:15px}
   .alert p{margin:6px 0 0;white-space:pre-line;line-height:1.5}
@@ -487,7 +551,7 @@
     .hd-btn{min-width:40px;min-height:40px;padding:0 10px;font-size:17px}
     #status{display:none}
     /* onglets : barre fixe en bas, au pouce, comme une vraie appli */
-    .tabs{position:fixed;left:0;right:0;bottom:0;z-index:2400;background:#fff;box-shadow:0 -2px 10px rgba(0,0,0,.1);
+    .tabs{position:fixed;left:0;right:0;bottom:0;z-index:2400;background:var(--carte);box-shadow:0 -2px 10px rgba(0,0,0,.1);
           padding-bottom:env(safe-area-inset-bottom);overflow:visible}
     .tab{flex:1;flex-direction:column;justify-content:center;gap:2px;padding:7px 2px 6px;min-height:56px;font-size:11px;font-weight:700;color:#5F6670}
     .tab .ti{font-size:20px;line-height:1;filter:grayscale(.6);opacity:.75;transition:.15s}
@@ -525,6 +589,7 @@
     #periodPill .sub{display:none}
     .live .pill{padding:6px 10px}
   }
+  @media (max-width:860px){ html.dark .tab{color:#AEB4BC} html.dark .tab.on{color:var(--titre)} }
 </style>
 </head>
 <body>
@@ -534,14 +599,14 @@
       <div class="mark"><svg viewBox="0 0 24 24" fill="#222"><path d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-1 1.7V20a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 3 16V5a2 2 0 0 1 2-2Zm0 3v5h14V6H5Zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm10 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg></div>
       <div><b>Car Jaune Live</b><small>Suivi en temps réel · non officiel</small></div>
     </div>
-    <nav class="tabs">
+    <nav class="tabs" aria-label="Sections">
       <button class="tab" data-view="map"><span class="ti">🗺️</span><span class="tl">Carte<span class="lg"> en direct</span></span></button>
       <button class="tab" data-view="trip"><span class="ti">🧭</span><span class="tl"><span class="lg">Mon </span>trajet</span></button>
       <button class="tab" data-view="board"><span class="ti">🕒</span><span class="tl">Horaires<span class="lg"> à l'arrêt</span></span></button>
       <button class="tab" data-view="fiches"><span class="ti">📄</span><span class="tl">Fiches<span class="lg"> horaires</span></span></button>
       <button class="tab" data-view="trafic"><span class="ti">⚠️</span><span class="tl"><span class="lg">Infos </span>trafic</span><span class="n" id="alertCount" hidden></span></button>
     </nav>
-    <div class="live"><button id="bellBtn" class="hd-btn" title="Notifications"><span id="bellIco">🔕</span><span class="cnt" id="bellCnt" hidden></span></button><button id="gearBtn" class="hd-btn" title="Paramètres">⚙️<span class="gdot" id="gearDot"></span></button><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
+    <div class="live"><button id="bellBtn" class="hd-btn" title="Notifications" aria-label="Notifications" aria-haspopup="true"><span id="bellIco">🔕</span><span class="cnt" id="bellCnt" hidden></span></button><button id="gearBtn" class="hd-btn" title="Paramètres" aria-label="Paramètres">⚙️<span class="gdot" id="gearDot"></span></button><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
   </div>
 </header>
 <div class="crumb">Accueil › <b id="crumbCur">Carte en direct</b></div>
@@ -553,7 +618,7 @@
       <div class="toolbar">
         <input id="search" class="search" type="search" placeholder="Ligne, destination, arrêt…">
         <label><input type="checkbox" id="showShapes" checked> Tracés</label>
-        <button id="refresh" class="round" title="Actualiser">↻</button>
+        <button id="refresh" class="round" title="Actualiser" aria-label="Actualiser">↻</button>
       </div>
       <div id="chips"></div>
       <div id="countdown"></div>
@@ -570,7 +635,7 @@
       <div class="card">
         <div class="trip-form">
           <div><label for="tripA">Aller : je pars de</label><input id="tripA" class="search" list="stopList" placeholder="ex. Gare de St-Paul" autocomplete="off"></div>
-          <button class="round" id="tripSwap" title="Inverser départ et arrivée">⇄</button>
+          <button class="round" id="tripSwap" title="Inverser départ et arrivée" aria-label="Inverser départ et arrivée">⇄</button>
           <div><label for="tripB">Aller : j’arrive à</label><input id="tripB" class="search" list="stopList" placeholder="ex. Gare de St-Denis" autocomplete="off"></div>
         </div>
         <div class="al-row">
@@ -591,7 +656,7 @@
         <label for="stopInput">Nom de l'arrêt</label>
         <div class="field-row">
           <input id="stopInput" class="search" type="search" placeholder="Arrêt, gare… (ex. Gare de St-Denis)" autocomplete="off">
-          <button id="favBtn" class="round star" title="Ajouter aux favoris">☆</button>
+          <button id="favBtn" class="round star" title="Ajouter aux favoris" aria-label="Ajouter aux favoris">☆</button>
           <ul id="suggest" hidden></ul>
         </div>
         <div class="favs" id="favs"></div>
@@ -625,6 +690,7 @@
       <div class="card" id="calCard" style="margin-bottom:16px"><h2>Calendrier scolaire · La Réunion</h2><p class="muted">Chargement…</p></div>
       <div class="grid" id="fichesGrid"><div class="card">Chargement…</div></div>
       <div class="note" id="fichesNote"></div>
+      <div class="alert" id="ficheWarn" hidden style="margin-top:12px;border-left-color:var(--retard)"></div>
       <div class="fiche-prog"></div>
     </div>
   </section>
@@ -648,6 +714,10 @@
 <div class="modal" id="ficheModal" hidden><div class="modal-box" id="ficheModalBox"></div></div>
 
 <datalist id="stopList"></datalist>
+<div class="modal" id="nextSheet" hidden><div class="modal-box" role="dialog" aria-label="Mon prochain car">
+  <div class="set-head"><h2>🚌 Mon prochain car</h2><button class="x" data-close-next aria-label="Fermer">✕</button></div>
+  <div style="padding:6px 18px 18px" id="nextBody"></div>
+</div></div>
 <div class="modal" id="settingsModal" hidden><div class="modal-box set-box" role="dialog" aria-label="Paramètres">
   <div class="set-head"><h2>⚙️ Paramètres</h2><button class="x" id="setClose" aria-label="Fermer">✕</button></div>
 
@@ -668,6 +738,25 @@
     <div class="set-row"><div><b>Arrivée à quai</b><small>quand le car arrive à l’arrêt</small></div><label class="switch"><input type="checkbox" id="alQuai" checked><span></span></label></div>
     <div class="set-row"><div><b>Avance / retard</b><small>si le retard du car change de 2 min ou plus</small></div><label class="switch"><input type="checkbox" id="alLate" checked><span></span></label></div>
     <div class="set-row"><div><b>Aucun car dans l’heure</b><small>prévenir quand il n’y a plus de car</small></div><label class="switch"><input type="checkbox" id="alNoBus" checked><span></span></label></div>
+  </div>
+
+  <div class="set-sec"><h3>🎨 Apparence</h3>
+    <div class="set-row"><div><b>Thème</b><small id="themeTxt">automatique : sombre le soir et selon ton téléphone</small></div>
+      <select id="themeSel" aria-label="Thème"><option value="auto">automatique</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
+    <div class="set-row"><div><b>Taille du texte</b><small>pages, listes et réglages</small></div>
+      <select id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
+  </div>
+
+  <div class="set-sec" id="pushSec"><h3>📴 Alertes appli fermée</h3>
+    <div class="set-row"><div><b>Prévenir même appli fermée</b><small id="pushStatus">Ton serveur surveille ton car pendant tes créneaux et t’envoie la notification par l’appli ntfy, téléphone verrouillé.</small></div>
+      <label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
+    <div class="set-row" style="display:block"><b id="pushW0Lbl">Créneau aller</b><small id="pushW0Txt"></small>
+      <div class="pw" data-w="0"><div class="days"></div><span>de <input type="time" class="set-in t" data-k="from"> à <input type="time" class="set-in t" data-k="to"></span></div></div>
+    <div class="set-row" style="display:block"><b id="pushW1Lbl">Créneau retour</b><small id="pushW1Txt"></small>
+      <div class="pw" data-w="1"><div class="days"></div><span>de <input type="time" class="set-in t" data-k="from"> à <input type="time" class="set-in t" data-k="to"></span></div></div>
+    <div class="set-row" style="display:block"><b>Canal ntfy</b><small>installe l’appli gratuite <b>ntfy</b> et abonne-toi à ce nom :</small>
+      <div class="al-row"><code id="pushTopic" class="sh-code" style="font-size:14px"></code>
+        <button class="btn ghost small" id="pushCopy">Copier</button><button class="btn ghost small" id="pushTest">🧪 Tester</button></div></div>
   </div>
 
   <div class="set-sec"><h3>🔊 Son et écran</h3>
@@ -719,9 +808,18 @@
     </details>
   </div>
 
+  <div class="set-sec"><h3>🛠️ Diagnostic</h3>
+    <div class="set-row"><div><b>Journal de trajet</b><small id="diagTxt">Enregistre ce que l’appli détecte (position, car repéré, retards, alertes) pour corriger les erreurs. Rien n’est envoyé.</small></div>
+      <label class="switch"><input type="checkbox" id="diagOn"><span></span></label></div>
+    <div class="set-row"><button class="btn ghost small" id="diagShare">📤 Envoyer le journal</button><button class="btn ghost small" id="diagClear">🗑️ Effacer</button></div>
+  </div>
+
   <div class="set-sec"><h3>📲 Application</h3>
+    <div class="set-row"><div><b>Raccourci « Mon prochain car »</b><small>une icône qui ouvre directement ton prochain car</small></div><button class="btn small ghost" id="nextShortcut">➕ Créer</button></div>
     <div class="set-row" id="installRow" hidden><div><b>Installer l’appli</b><small>sur l’écran d’accueil, comme une vraie appli</small></div><button id="installBtn" class="btn small">📲 Installer</button></div>
     <div class="set-row" id="apiRow" hidden><div><b>Serveur</b><small id="apiTxt">adresse Apps Script /exec</small></div><button id="apiBtn" class="btn small ghost">Modifier</button></div>
+    <div class="set-row" id="apkRow" hidden><div><b>Appli Android</b><small>partage de ta position même appli fermée, à pied comme en car</small></div>
+      <a class="btn small" href="https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk">📥 APK</a></div>
     <div class="set-row"><div><b>Mise à jour</b><small>automatique à chaque ouverture</small></div><button class="btn small ghost" id="reloadBtn">↻ Recharger</button></div>
   </div>
   <div class="set-foot">Car Jaune Live · application personnelle, non affiliée à Car Jaune<br>Données : Région Réunion · réseau Car Jaune (Licence Ouverte)</div>
@@ -892,7 +990,70 @@ function apiUrl(){
   try { u = localStorage.getItem('cj_api') || API_URL; } catch(e){}
   return u;
 }
-function call(fn, ...args){
+/* ---------- appli Android (APK Capacitor) : position en arrière-plan et notifications natives ---------- */
+const NATIVE = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+const BGGEO = NATIVE && Capacitor.Plugins ? Capacitor.Plugins.BackgroundGeolocation : null;
+const LNOTIF = NATIVE && Capacitor.Plugins ? Capacitor.Plugins.LocalNotifications : null;
+let lnPerm = 'prompt';
+if (LNOTIF) LNOTIF.checkPermissions().then(p => { lnPerm = p.display; }).catch(() => {});
+/** Suivi de position : en arrière-plan dans l'APK (notification permanente), sinon celui du navigateur. */
+function watchPos(onFix, onErr, opts, why){
+  if (BGGEO){
+    const w = { native:true, id:null };
+    BGGEO.addWatcher({ backgroundTitle:'Car Jaune Live', backgroundMessage: why || 'Position utilisée pour tes cars jaunes',
+      requestPermissions:true, stale:false, distanceFilter:15 }, (loc, err) => {
+      if (err){ if (err.code === 'NOT_AUTHORIZED') onErr({ code:1 }); else onErr({ code:2 }); return; }
+      if (loc) onFix({ coords:{ latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy, speed: loc.speed, heading: loc.bearing }, timestamp: loc.time });
+    }).then(id => { w.id = id; }).catch(() => onErr({ code:2 }));
+    return w;
+  }
+  return navigator.geolocation.watchPosition(onFix, onErr, opts);
+}
+function clearPos(w){
+  if (w == null) return;
+  if (w.native){ if (w.id) BGGEO.removeWatcher({ id: w.id }).catch(() => {}); else setTimeout(() => clearPos(w), 500); }
+  else navigator.geolocation.clearWatch(w);
+}
+
+/* ---------- mémoire du téléphone (IndexedDB) : ouverture instantanée et hors ligne ---------- */
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try {
+      const r = indexedDB.open('carjaune', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('kv');
+      r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    } catch(e){ rej(e); }
+  }));
+  const tx = (mode, fn) => open().then(db => new Promise((res, rej) => {
+    const t = db.transaction('kv', mode), st = t.objectStore('kv'), q = fn(st);
+    t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error);
+  }));
+  return {
+    get: k => tx('readonly', s => s.get(k)).catch(() => null),
+    set: (k, v) => tx('readwrite', s => s.put(v, k)).catch(() => null)
+  };
+})();
+// données fixes : gardées sur le téléphone, réutilisées hors ligne
+const CACHED = { getStatic:1, getSchoolCalendar:1, getTimetables:1, getParsedFiches:1, getStopBoard:1 };
+let offline = false;
+async function call(fn, ...args){
+  if (!CACHED[fn]) return rawCall(fn, ...args);
+  const key = fn + '|' + JSON.stringify(args);
+  try {
+    const v = await rawCall(fn, ...args);
+    offline = false;
+    idb.set(key, { v, t: Date.now() });
+    return v;
+  } catch(e){
+    const c = await idb.get(key);
+    if (c){ offline = true; return c.v; }                 // pas de réseau : la dernière version gardée
+    throw e;
+  }
+}
+/** Version gardée sur le téléphone (ou null), sans attendre le réseau. */
+async function cachedValue(fn, ...args){ const c = await idb.get(fn + '|' + JSON.stringify(args)); return c ? c.v : null; }
+function rawCall(fn, ...args){
   if (IN_GAS) return new Promise((resolve, reject) => {
     google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
   });
@@ -946,6 +1107,21 @@ function b64ToBytes(b64){
 }
 
 /* ====================== Démarrage ====================== */
+/** (Re)construit tout ce qui dépend des données fixes. */
+function applyStatic(){
+  Object.keys(shapeCache).forEach(k => delete shapeCache[k]);   // tracés rechargés
+  Object.keys(tripGeomCache || {}).forEach(k => delete tripGeomCache[k]);
+  classifyServices();
+  renderPeriod();
+  buildChips();
+  drawShapes();
+  buildStopGroups();
+  fillStopList();
+  renderFavs();
+  if (!applyStatic.done){ applyStatic.done = true; loadFiches(); }   // en parallèle, sans bloquer la carte
+  else { render(); if (view === 'trip') renderTrip(); if (view === 'board') renderBoard(); }
+}
+var openNextAtStart = false;
 async function init(){
   loadPrefs();
   if (!IN_GAS && !apiUrl()){ setupApiScreen(); return; }
@@ -955,19 +1131,19 @@ async function init(){
   } catch(e){ toast('Décodeur GTFS-RT indisponible : ' + errMsg(e)); return; }
 
   setStatus('Chargement des lignes…');
-  const [st, cal] = await Promise.allSettled([call('getStatic'), call('getSchoolCalendar')]);
-  if (st.status === 'fulfilled') S = JSON.parse(st.value);
-  else toast('Horaires théoriques indisponibles : ' + errMsg(st.reason));
-  if (cal.status === 'fulfilled') CAL = JSON.parse(cal.value);
-  Object.keys(shapeCache).forEach(k => delete shapeCache[k]);   // tracés rechargés
-  classifyServices();
-  renderPeriod();
-  buildChips();
-  drawShapes();
-  buildStopGroups();
-  fillStopList();
-  renderFavs();
-  loadFiches();                 // en parallèle, sans bloquer la carte
+  // 1. ce qui est gardé sur le téléphone : affichage tout de suite (même sans réseau)
+  const [cs, cc] = await Promise.all([cachedValue('getStatic'), cachedValue('getSchoolCalendar')]);
+  let fromCache = false;
+  if (cs){ try { S = JSON.parse(cs); if (cc) CAL = JSON.parse(cc); applyStatic(); fromCache = true; } catch(e){} }
+  // 2. version fraîche du serveur (en arrière-plan si on a déjà le cache)
+  const fresh = Promise.allSettled([call('getStatic'), call('getSchoolCalendar')]).then(([st, cal]) => {
+    let changed = false;
+    if (st.status === 'fulfilled' && st.value !== cs){ S = JSON.parse(st.value); changed = true; }
+    else if (st.status !== 'fulfilled' && !fromCache) toast('Horaires théoriques indisponibles : ' + errMsg(st.reason));
+    if (cal.status === 'fulfilled' && cal.value !== cc){ CAL = JSON.parse(cal.value); changed = true; }
+    if (changed || !fromCache) applyStatic();
+  });
+  if (!fromCache) await fresh;
   loadAlertCfg();
   renderSettings();
   applyWake();
@@ -976,6 +1152,8 @@ async function init(){
   if (view === 'trip') renderTrip();
   updateMode();
   if (mode === 'live') await refresh(); else render();
+  if (openNextAtStart) openNext();
+  if (pushCfg.on) syncPush();
   setInterval(tick, 1000);
 }
 
@@ -1375,17 +1553,40 @@ async function loadFicheData(){
   for (const url of missing){
     try {
       const parsed = await parseFichePdf(lib, b64ToBytes(await call('getPdfB64', url)));
+      if (!parsed.tables.length) ficheBad[url] = 'aucun tableau d’horaires reconnu';
       if (parsed.tables.length){
         FICHE_DATA[url] = parsed;
         call('saveParsedFiche', url, JSON.stringify(parsed)).catch(() => {});   // partagé avec les prochaines ouvertures
       }
-    } catch(e){ ficheJob.error = errMsg(e); }
+    } catch(e){ ficheJob.error = errMsg(e); ficheBad[url] = errMsg(e).slice(0, 80); }
     ficheJob.done++;
     renderFicheProgress();
     afterFicheData();
   }
   ficheJob.running = false;
   renderFicheProgress();
+  checkFicheHealth();
+}
+/* Si carjaune.re change la présentation de ses fiches, la lecture échoue : on te prévient (une fois par fiche). */
+const ficheBad = {};
+function checkFicheHealth(){
+  const bad = Object.keys(ficheBad).filter(u => !FICHE_DATA[u]);
+  const box = $('#ficheWarn');
+  if (!bad.length){ if (box) box.hidden = true; return; }
+  const names = bad.map(u => decodeURIComponent(u.split('/').pop()).replace(/\.pdf$/i, ''));
+  if (box){
+    box.hidden = false;
+    box.innerHTML = `⚠️ <b>${bad.length} fiche${bad.length > 1 ? 's' : ''} carjaune.re illisible${bad.length > 1 ? 's' : ''}</b> : ${esc(names.join(', '))}.<br>
+      <small>carjaune.re a peut-être changé la présentation de ses PDF. Pour ces lignes, l’appli utilise les horaires officiels GTFS ; le PDF reste consultable.</small>`;
+  }
+  let known = '';
+  try { known = localStorage.getItem('cj_fiche_warn') || ''; } catch(e){}
+  const sig = bad.sort().join('|');
+  if (sig !== known){
+    try { localStorage.setItem('cj_fiche_warn', sig); } catch(e){}
+    notify('⚠️ Fiches horaires à vérifier', `${names.join(', ')} : lecture impossible (format changé sur carjaune.re ?). Horaires GTFS utilisés à la place.`, 'none');
+  }
+  diag('fiches', { illisibles: names, raisons: bad.map(u => ficheBad[u]) });
 }
 
 function afterFicheData(){
@@ -1486,7 +1687,7 @@ function openFicheModal(short, k){
   const nowMin = k === 'auto' ? Math.round((Date.now() - today) / 60000) : null;
   const pTxt = k !== 'auto' ? v.t : di.type === 'ferie' ? `jour férié (${esc(di.p.name)})` : di.type === 'vacances' ? 'vacances scolaires' : 'période scolaire';
   let html = `<div class="modal-head"><h2>${badge(routeByShort(short))} Horaires ${k === 'auto' ? 'du jour' : ''}</h2>
-      <button class="round" data-close title="Fermer">✕</button></div>
+      <button class="round" data-close title="Fermer" aria-label="Fermer">✕</button></div>
     <div class="src-note" style="margin-top:6px">D’après la fiche officielle carjaune.re · ${k === 'auto' ? `aujourd’hui : <b>${pTxt}</b> (choisi automatiquement)` : `<b>${pTxt}</b>`}</div>
     <div class="ptabs">${DAY_VIEWS.map(x => `<button class="chip${x.k === k ? ' on' : ''}" data-day="${x.k}" data-line="${esc(short)}">${x.t}</button>`).join('')}</div>`;
   if (!tables.length) html += `<div class="placeholder"><div class="big">🚫</div>Pas de service ce jour-là selon la fiche.</div>`;
@@ -1651,6 +1852,59 @@ function journeyRows(from, to){
             .sort((a, b) => a.eff - b.eff);
 }
 
+/* ---------- correspondances : 1 changement dans une gare commune aux deux lignes ---------- */
+let transfer = { key:'', loading:false, done:false, hubs:[] };
+const transferKey = (A, B) => A.name + '>' + B.name;
+/** Gares où l'on peut changer : desservies après A par une ligne, et avant B par une autre. Les gares d'abord. */
+function transferHubs(A, B){
+  const rs = S.routeStops || {}, grpOf = {};
+  stopGroups.forEach(g => g.ids.forEach(id => grpOf[id] = g));
+  const fromA = new Map(), toB = new Map();
+  Object.keys(rs).forEach(rid => (rs[rid] || []).forEach(list => {
+    if (!list) return;
+    const ia = list.findIndex(id => A.ids.includes(id));
+    if (ia >= 0) list.slice(ia + 1).forEach(id => { const g = grpOf[id]; if (g) fromA.set(g.name, g); });
+    const ib = list.findIndex(id => B.ids.includes(id));
+    if (ib > 0) list.slice(0, ib).forEach(id => { const g = grpOf[id]; if (g) toB.set(g.name, g); });
+  }));
+  const det = g => (isFinite(A.lat) && isFinite(g.lat) ? distM(A.lat, A.lon, g.lat, g.lon) + distM(g.lat, g.lon, B.lat, B.lon) : 1e9);
+  return [...fromA.keys()].filter(n => toB.has(n) && n !== A.name && n !== B.name).map(n => fromA.get(n))
+    .sort((a, b) => (isGare(b) - isGare(a)) || det(a) - det(b)).slice(0, 3);
+}
+async function loadTransfers(A, B){
+  const key = transferKey(A, B);
+  if (transfer.loading && transfer.key === key) return;
+  if (!tripBoard.data || !S.routeStops) return;
+  transfer = { key, loading:true, done:false, hubs: transferHubs(A, B) };
+  const ids = [...new Set(transfer.hubs.flatMap(g => g.ids))].filter(id => !(id in tripBoard.data));
+  try {
+    for (let i = 0; i < ids.length; i += 60) Object.assign(tripBoard.data, JSON.parse(await call('getStopBoard', ids.slice(i, i + 60))));
+  } catch(e){}
+  if (transfer.key !== key) return;
+  transfer.loading = false; transfer.done = true;
+  if (view === 'trip') renderTrip();
+}
+/** Combinaisons car 1 → changement → car 2 (3 à 60 min d'attente), triées par heure d'arrivée. */
+function transferRows(A, B){
+  if (transfer.key !== transferKey(A, B) || !transfer.done) return [];
+  const out = [], seen = new Set();
+  transfer.hubs.forEach(X => {
+    const l1 = journeyRows(A, X).slice(0, 10), l2 = journeyRows(X, B);
+    l1.forEach(a => {
+      const arr1 = a.rarr != null ? a.rarr : a.arr;
+      const b = l2.find(r => r.eff >= arr1 + 3 * 60e3 && r.route.s !== a.route.s);
+      if (!b || b.eff - arr1 > 60 * 60e3) return;
+      const arrive = b.rarr != null ? b.rarr : b.arr, k = a.eff + '|' + arrive;
+      if (seen.has(k)) return; seen.add(k);
+      out.push({ a, b, X, arr1, wait: b.eff - arr1, arrive });
+    });
+  });
+  // pour une même heure d'arrivée, on garde le départ le plus tardif (moins d'attente)
+  const best = new Map();
+  out.forEach(x => { const o = best.get(x.arrive); if (!o || x.a.eff > o.a.eff) best.set(x.arrive, x); });
+  return [...best.values()].sort((p, q) => p.arrive - q.arrive);
+}
+
 function renderTrip(){
   const card = $('#tripCard');
   if (!card) return;
@@ -1679,7 +1933,7 @@ function renderTrip(){
   if (dFrom != null) html += `<p class="src-note">📍 Tu es à <b>${fmtDist(dFrom)}</b> de ${esc(from.name)} (${fmtWalk(dFrom)})${
     dFrom > 6000 ? ' : prévois un autre moyen pour rejoindre la gare.' : walk > 1 ? ' : les cars que tu ne peux plus attraper à pied sont grisés.' : '.'}</p>`;
   if (!rows.length){
-    html += `<div class="placeholder"><div class="big">🤔</div>Aucun car direct de ${esc(from.name)} vers ${esc(to.name)} dans les prochaines 24 h.<br>Vérifie les noms des gares (elles doivent être sur la même ligne).</div>`;
+    html += `<div class="placeholder"><div class="big">🤔</div>Aucun car direct de ${esc(from.name)} vers ${esc(to.name)} dans les prochaines 24 h.</div>`;
   } else {
     let lastDay = midnightMs(now), t = '';
     rows.forEach(r => {
@@ -1699,14 +1953,36 @@ function renderTrip(){
     });
     html += `<table class="board jt"><thead><tr><th>Départ</th><th>Ligne</th><th>Part de ${esc(from.name)}</th><th>Arrive à ${esc(to.name)}</th><th>Durée</th><th>Info</th></tr></thead><tbody>${t}</tbody></table>`;
   }
+  // trajets avec une correspondance : s'il n'y a pas de car direct, ou si c'est plus rapide
+  const tr = transferRows(from, to);
+  const firstDirect = rows.find(r => (r.rarr != null ? r.rarr : r.arr) > now);
+  const firstDirectArr = firstDirect ? (firstDirect.rarr != null ? firstDirect.rarr : firstDirect.arr) : Infinity;
+  const useful = tr.filter(x => !rows.length || x.arrive < firstDirectArr - 5 * 60e3);
+  if (transfer.loading) html += `<p class="src-note">🔄 Recherche de trajets avec correspondance…</p>`;
+  if (useful.length){
+    html += `<h3 class="tr-h">🔄 ${rows.length ? 'Plus rapide avec une correspondance' : 'Avec une correspondance'}</h3>` + useful.slice(0, 5).map(x => {
+      const dep = x.a.eff, mins = Math.round((dep - now) / 60000);
+      return `<div class="tr-card">
+        <div class="tr-when">${mins <= 0 ? 'À quai' : mins < 60 ? mins + '<small>min</small>' : fmtHM(dep)}</div>
+        <div class="tr-legs">
+          <div>${badge(x.a.route)} ${esc(from.name)} <b>${fmtHM(dep)}</b> → ${esc(x.X.name)} <b>${fmtHM(x.arr1)}</b>${x.a.real != null ? ' ' + delayChip(x.a.real - x.a.sched, x.a.approx).split('<br>')[0] : ''}</div>
+          <div class="tr-wait">🚶 changement à ${esc(x.X.name)} · ${Math.round(x.wait / 60000)} min d’attente</div>
+          <div>${badge(x.b.route)} ${esc(x.X.name)} <b>${fmtHM(x.b.eff)}</b> → ${esc(to.name)} <b>${fmtHM(x.arrive)}</b></div>
+        </div>
+        <div class="tr-dur">${Math.round((x.arrive - dep) / 60000)} min</div></div>`;
+    }).join('');
+  } else if (!rows.length && transfer.done && transfer.key === transferKey(from, to))
+    html += `<p class="src-note">Pas de trajet avec une seule correspondance trouvé dans les prochaines heures.</p>`;
+  if (!transfer.done || transfer.key !== transferKey(from, to)) loadTransfers(from, to);
+
   const on = alertCfg.on && alertCfg.journey;
   html += `<div class="al-row" style="margin-top:14px"><button class="btn${on ? ' ghost' : ''}" id="tripAlert">${on ? '🔕 Arrêter les alertes du trajet' : '🔔 M’alerter pour ce trajet'}</button>
     <span class="src-note" style="margin:0">Alerte ${alertCfg.lead} min avant chaque car vers ${esc(to.name)}, et quand il arrive à quai. Le sens change tout seul quand tu te déplaces.</span></div>`;
   card.innerHTML = html;
 }
 
-$('#tripA').addEventListener('change', e => { trip.a = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; savePrefs(); renderTrip(); });
-$('#tripB').addEventListener('change', e => { trip.b = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; savePrefs(); renderTrip(); });
+$('#tripA').addEventListener('change', e => { trip.a = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; transfer = { key:'', loading:false, done:false, hubs:[] }; savePrefs(); renderTrip(); });
+$('#tripB').addEventListener('change', e => { trip.b = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; transfer = { key:'', loading:false, done:false, hubs:[] }; savePrefs(); renderTrip(); });
 $('#tripSwap').addEventListener('click', () => {
   [trip.a, trip.b] = [trip.b, trip.a];
   $('#tripA').value = trip.a; $('#tripB').value = trip.b;
@@ -1875,6 +2151,7 @@ function onLiveFix(p){
   lastFix = { lat: c.latitude, lon: c.longitude, t: now };
   gpsWeak = false;
   myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed, heading };
+  diag('gps', { lat: +c.latitude.toFixed(5), lon: +c.longitude.toFixed(5), acc: Math.round(c.accuracy), kmh: speed != null ? Math.round(speed * 3.6) : null });
   showMeOnMap();
   if (meFollow && !userPanned && !navOn) map.panTo([myPos.lat, myPos.lon], { animate: true, duration: .8 });
   detectMyBus();
@@ -1894,6 +2171,7 @@ function detectMyBus(){
       if (d < tol && (!best || d < best.d)) best = { v, d };
     });
   }
+  if (sp > 3 || onBus) diag('car', { vitesse: Math.round(sp * 3.6), proche: best ? best.v.route.s + ' ' + best.v.id + ' à ' + Math.round(best.d) + ' m' : 'aucun', dedans: onBus || '', candidat: busCand ? busCand.id + '×' + busCand.n : '' });
   if (best){
     busMiss = 0;
     if (onBus === best.v.id) return renderRide();
@@ -2129,7 +2407,8 @@ function notify(title, body, kind, opt = {}){
   if (isMuted() && !opt.force) return;                    // en pause : rien du tout
   const lvl = kind === 'warn' ? 'warn' : kind === 'none' ? 'info' : 'bus';
   const visible = document.visibilityState === 'visible';
-  inbox.unshift({ t: Date.now(), title, body, lvl }); inbox.length = Math.min(inbox.length, 30); saveInbox();
+  inbox.unshift({ t: Date.now(), title, body, lvl });
+  diag('alerte', { titre: title, texte: body.slice(0, 140), visible: document.visibilityState }); inbox.length = Math.min(inbox.length, 30); saveInbox();
   if (!visible || $('#bellMenu').hidden) unread++;
   renderBell();
   if (visible){
@@ -2140,7 +2419,7 @@ function notify(title, body, kind, opt = {}){
     }
   } else if (lvl !== 'info' || opt.show){
     // 2. notification du téléphone : seulement quand tu ne regardes pas l'appli
-    if ('Notification' in window && Notification.permission === 'granted') showPhoneNotif(title, body);
+    if (LNOTIF ? lnPerm === 'granted' : ('Notification' in window && Notification.permission === 'granted')) showPhoneNotif(title, body);
   }
   // 3. téléphone via ntfy : quand l'appli n'est pas à l'écran (ou test)
   if (alertCfg.ntfy && (opt.ntfy || (!visible && lvl !== 'info'))){
@@ -2337,7 +2616,7 @@ async function setAlertsOn(on, quiet){
     }
     setTimeout(checkAlerts, 500);
   } else if (!quiet) toast('🔕 Notifications coupées. Rallume-les avec la cloche ou ⚙️.');
-  saveAlertCfg(); applyWake(); updateAlertUI(); renderSettings();
+  saveAlertCfg(); applyWake(); updateAlertUI(); renderSettings(); syncPush();
 }
 async function toggleAlerts(){
   if (!alertCfg.on && !board.group && !(alertCfg.journey && tripReady())) toast('Notifications activées : choisis un arrêt (ou Mon trajet) pour être prévenu.');
@@ -2348,7 +2627,7 @@ function setPause(v){
   if (v === 'tomorrow'){ const d = new Date(midnightMs(Date.now()) + 864e5 + 5 * 3600e3); alertCfg.muteUntil = d.getTime(); }
   else alertCfg.muteUntil = +v ? Date.now() + v * 60000 : 0;
   if (alertCfg.muteUntil && !alertCfg.on) alertCfg.on = true;
-  saveAlertCfg(); applyWake(); updateAlertUI(); renderSettings(); renderBell();
+  saveAlertCfg(); applyWake(); updateAlertUI(); renderSettings(); renderBell(); syncPush();
   toast(alertCfg.muteUntil ? `⏸️ Notifications en pause jusqu’à ${fmtDayHM(alertCfg.muteUntil)}.` : '▶ Notifications reprises.');
 }
 function fmtDayHM(ms){ return (midnightMs(ms) === midnightMs(Date.now()) ? '' : 'demain ') + fmtHM(ms); }
@@ -2366,6 +2645,194 @@ document.addEventListener('pointerdown', () => {
   try { if (alertCfg.sound){ audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } } catch(e){}
 }, { once:true });
 
+/* ---------- mon prochain car (raccourci d'écran d'accueil, ou touche le compteur de cars) ---------- */
+let nextTimer = null;
+function openNext(){ $('#nextSheet').hidden = false; renderNext(); clearInterval(nextTimer); nextTimer = setInterval(renderNext, 15000); }
+function closeNext(){ $('#nextSheet').hidden = true; clearInterval(nextTimer); }
+function renderNext(){
+  const body = $('#nextBody');
+  let rows = [], head = '', more = '';
+  if (tripReady()){
+    const s = detectSens(), from = s.sens === 'aller' ? s.A : s.B, to = s.sens === 'aller' ? s.B : s.A;
+    if (!tripBoard.data){ loadTripBoard().then(() => { if (!$('#nextSheet').hidden) renderNext(); }); body.innerHTML = '<p class="muted">Chargement…</p>'; return; }
+    rows = journeyRows(from, to);
+    head = `<p class="src-note">${s.sens === 'aller' ? '➡️ Aller' : '⬅️ Retour'} · <b>${esc(from.name)} → ${esc(to.name)}</b></p>`;
+    more = 'trip';
+  } else if (board.group){
+    rows = alertRows();
+    head = `<p class="src-note">🚏 Départs de <b>${esc(board.group.name)}</b></p>`;
+    more = 'board';
+  } else {
+    body.innerHTML = `<div class="placeholder"><div class="big">🧭</div>Remplis <b>Mon trajet</b> (ou choisis un arrêt) : ton prochain car s’affichera ici.</div>
+      <button class="btn" style="width:100%" data-next-go="trip">Remplir Mon trajet</button>`;
+    return;
+  }
+  const now = Date.now();
+  const list = rows.filter(r => r.eff > now - 60e3).slice(0, 3);
+  body.innerHTML = head + (list.length ? list.map(r => {
+    const m = Math.round((r.eff - now) / 60000);
+    return `<div class="nx-row"><div class="nx-min${m <= 3 ? ' soon' : ''}">${m <= 0 ? 'À quai' : m < 100 ? m + '<small>min</small>' : fmtHM(r.eff)}</div>
+      <div class="nx-info">${badge(r.route)} <b>→ ${esc(r.dest)}</b><br>départ ${fmtHM(r.eff)}${r.arr ? ` · arrivée ${fmtHM(r.rarr != null ? r.rarr : r.arr)}` : ''}</div>
+      <div>${r.real != null ? delayChip(r.real - r.sched, r.approx) : '<span class="th">prévu</span>'}</div></div>`;
+  }).join('') : '<div class="placeholder">Plus de car aujourd’hui.</div>')
+    + `<button class="btn ghost" style="width:100%;margin-top:12px" data-next-go="${more}">Voir tous les horaires</button>`;
+}
+$('#nextSheet').addEventListener('click', e => {
+  if (e.target.id === 'nextSheet' || e.target.closest('[data-close-next]')) { closeNext(); return; }
+  const g = e.target.closest('[data-next-go]'); if (g){ closeNext(); setView(g.dataset.nextGo); }
+});
+$('#livePill').style.cursor = 'pointer';
+$('#livePill').title = 'Mon prochain car';
+$('#livePill').setAttribute('role', 'button');
+$('#livePill').addEventListener('click', openNext);
+
+/* ---------- alertes appli fermée (serveur Apps Script + ntfy) ---------- */
+const pushCfg = Object.assign({ on:false, topic:'', w:[{ days:[1,2,3,4,5], from:'06:00', to:'09:00' }, { days:[1,2,3,4,5], from:'15:30', to:'19:00' }] },
+  (() => { try { return JSON.parse(localStorage.getItem('cj_push') || '{}'); } catch(e){ return {}; } })());
+if (!pushCfg.topic) pushCfg.topic = 'cjl_a_' + [...crypto.getRandomValues(new Uint8Array(6))].map(b => b.toString(16).padStart(2, '0')).join('');
+let pushState = { ok:null, msg:'', trigger:true }, pushSyncT = null;
+function savePush(){ try { localStorage.setItem('cj_push', JSON.stringify(pushCfg)); } catch(e){} }
+/** Ce que le serveur doit surveiller : Mon trajet (aller A→B, retour B→A) sinon l'arrêt surveillé. */
+function pushWatch(){
+  if (tripReady()){
+    const A = findGroup(trip.a), B = findGroup(trip.b);
+    if (A.ids.length && B.ids.length) return [{ fromIds: A.ids, toIds: B.ids, fromName: A.name, toName: B.name }, { fromIds: B.ids, toIds: A.ids, fromName: B.name, toName: A.name }];
+  }
+  if (board.group) { const g = { fromIds: board.group.ids, toIds: [], fromName: board.group.name, toName: '' }; return [g, g]; }
+  return null;
+}
+function syncPush(){ clearTimeout(pushSyncT); pushSyncT = setTimeout(doSyncPush, 800); }
+async function doSyncPush(){
+  if (IN_GAS && !pushCfg.on) return;
+  try {
+    if (!pushCfg.on || !alertCfg.on){
+      if (pushCfg.registered){ await call('deletePushAlert', pushCfg.topic); pushCfg.registered = false; savePush(); }
+      pushState = { ok:'off', msg:'' };
+    } else {
+      const wt = pushWatch();
+      if (!wt){ pushState = { ok:false, msg:'Remplis Mon trajet (ou choisis un arrêt) pour que le serveur sache quoi surveiller.' }; renderPushUI(); return; }
+      const cfg = { topic: pushCfg.topic, lead: alertCfg.lead, lines: alertCfg.line ? [alertCfg.line] : [], quai: alertCfg.quai,
+        muteUntil: isMuted() ? alertCfg.muteUntil : 0,
+        windows: pushCfg.w.map((w, i) => Object.assign({ days: w.days, from: w.from, to: w.to }, wt[i])) };
+      const r = JSON.parse(await call('setPushAlert', JSON.stringify(cfg)));
+      pushState = { ok:true, trigger: r.trigger !== false, msg:'' };
+      if (!pushCfg.registered){ pushCfg.registered = true; savePush(); }
+    }
+  } catch(e){ pushState = { ok:false, msg: /Action inconnue/.test(errMsg(e)) ? 'ton serveur n’a pas encore la nouvelle version (déploiement automatique à régler).' : errMsg(e).slice(0, 100) }; }
+  renderPushUI();
+}
+function renderPushUI(){
+  if (!$('#pushOn')) return;
+  $('#pushOn').checked = pushCfg.on;
+  $('#pushTopic').textContent = pushCfg.topic;
+  const wt = pushWatch();
+  ['0', '1'].forEach(i => {
+    const w = pushCfg.w[i], box = document.querySelector(`.pw[data-w="${i}"]`);
+    box.querySelector('.days').innerHTML = ['L','M','M','J','V','S','D'].map((d, k) => `<button data-day="${k + 1}" class="${w.days.includes(k + 1) ? 'on' : ''}" aria-label="jour ${k + 1}">${d}</button>`).join('');
+    box.querySelector('[data-k=from]').value = w.from; box.querySelector('[data-k=to]').value = w.to;
+    $('#pushW' + i + 'Txt').textContent = !wt ? '' : wt[i].toName ? `${wt[i].fromName} → ${wt[i].toName}` : `départs de ${wt[i].fromName}`;
+  });
+  $('#pushW0Lbl').textContent = wt && wt[0].toName ? 'Créneau aller' : 'Créneau 1';
+  $('#pushW1Lbl').textContent = wt && wt[0].toName ? 'Créneau retour' : 'Créneau 2';
+  $('#pushStatus').textContent = !pushCfg.on ? 'Ton serveur surveille ton car pendant tes créneaux et t’envoie la notification par l’appli ntfy, téléphone verrouillé.'
+    : pushState.ok === true ? (pushState.trigger ? '✅ Enregistré sur ton serveur : alertes même appli fermée pendant tes créneaux.'
+                                                 : '⚠️ Enregistré, mais le serveur doit être autorisé une fois : dans Apps Script, exécute « installPushTrigger ».')
+    : pushState.ok === false ? '⚠️ ' + pushState.msg
+    : !alertCfg.on ? '🔕 Notifications coupées : le serveur ne t’enverra rien.' : 'Enregistrement…';
+}
+$('#pushOn').addEventListener('change', e => { pushCfg.on = e.target.checked; savePush(); pushState.ok = null; renderPushUI(); syncPush();
+  if (pushCfg.on) toast('Installe l’appli ntfy et abonne-toi au nom affiché pour recevoir les alertes appli fermée.'); });
+$('#pushSec').addEventListener('click', e => {
+  const d = e.target.closest('[data-day]'); if (!d) return;
+  const w = pushCfg.w[+d.closest('.pw').dataset.w], n = +d.dataset.day;
+  w.days = w.days.includes(n) ? w.days.filter(x => x !== n) : w.days.concat(n).sort();
+  savePush(); renderPushUI(); syncPush();
+});
+$('#pushSec').addEventListener('change', e => {
+  const t = e.target.closest('.t'); if (!t) return;
+  pushCfg.w[+t.closest('.pw').dataset.w][t.dataset.k] = t.value; savePush(); syncPush();
+});
+$('#pushCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(pushCfg.topic); toast('Nom copié : colle-le dans ntfy → « S’abonner ».'); } catch(e){ prompt('Nom du canal ntfy :', pushCfg.topic); } });
+$('#pushTest').addEventListener('click', async () => {
+  try { const r = JSON.parse(await call('testPush', pushCfg.topic)); toast(r.trigger === false ? 'Test envoyé · ⚠️ exécute « installPushTrigger » une fois dans Apps Script.' : '🧪 Test envoyé par ton serveur : regarde l’appli ntfy.'); }
+  catch(e){ toast('Test impossible : ' + errMsg(e).slice(0, 80)); }
+});
+// appli ouverte à l'écran : le serveur se tait (pas de notification en double)
+setInterval(() => { if (pushCfg.on && alertCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); }, 120e3);
+document.addEventListener('visibilitychange', () => { if (pushCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); });
+
+/* ---------- raccourci d'écran d'accueil ---------- */
+$('#nextShortcut').addEventListener('click', async () => {
+  const url = SHARE_BASE + '?vue=next';
+  if (/Android/i.test(navigator.userAgent) && !isIOS){
+    toast('Android : appui long sur l’icône Car Jaune → « Mon prochain car » (ou fais-le glisser sur l’écran d’accueil).');
+    return;
+  }
+  try { await navigator.clipboard.writeText(url); } catch(e){}
+  if (confirm('iPhone : je vais ouvrir la page « Mon prochain car » dans Safari.\nTouche alors Partager → « Sur l’écran d’accueil » pour créer l’icône.\n\nOuvrir maintenant ?')) window.open(url, '_blank');
+});
+
+/* ---------- journal de diagnostic (sur le téléphone uniquement) ---------- */
+let diagOn = false, diagLog = [];
+try { diagOn = localStorage.getItem('cj_diag_on') === '1'; diagLog = JSON.parse(localStorage.getItem('cj_diag') || '[]'); } catch(e){}
+let diagSaveT = null;
+function diag(type, data){
+  if (!diagOn) return;
+  diagLog.push({ t: new Date().toISOString().slice(11, 19), d: new Date().toISOString().slice(0, 10), type, ...data });
+  if (diagLog.length > 600) diagLog.splice(0, diagLog.length - 600);
+  clearTimeout(diagSaveT);
+  diagSaveT = setTimeout(() => { try { localStorage.setItem('cj_diag', JSON.stringify(diagLog)); } catch(e){} renderDiag(); }, 1500);
+}
+function renderDiag(){
+  if (!$('#diagOn')) return;
+  $('#diagOn').checked = diagOn;
+  $('#diagTxt').textContent = diagOn ? `🔴 Enregistrement en cours · ${diagLog.length} lignes` + (diagLog.length ? ` depuis ${diagLog[0].d} ${diagLog[0].t} (UTC)` : '')
+    : diagLog.length ? `${diagLog.length} lignes enregistrées. Envoie-les pour analyse.` : 'Enregistre ce que l’appli détecte (position, car repéré, retards, alertes) pour corriger les erreurs. Rien n’est envoyé.';
+}
+$('#diagOn').addEventListener('change', e => {
+  diagOn = e.target.checked;
+  try { localStorage.setItem('cj_diag_on', diagOn ? '1' : '0'); } catch(err){}
+  if (diagOn){
+    diag('debut', { appli: 'Car Jaune Live', ecran: innerWidth + 'x' + innerHeight, ua: navigator.userAgent.slice(0, 120), installee: isStandalone(), notif: 'Notification' in window ? Notification.permission : 'non' });
+    if (meWatch == null && navigator.geolocation)              // pour savoir si le car est bien repéré, il faut la position
+      toast('Journal activé. Active aussi « Partager ma position » ou « Cars dans ma ville » pour enregistrer ta position pendant le trajet.');
+  }
+  renderDiag();
+});
+$('#diagClear').addEventListener('click', () => { if (!confirm('Effacer le journal ?')) return; diagLog = []; try { localStorage.removeItem('cj_diag'); } catch(e){} renderDiag(); });
+$('#diagShare').addEventListener('click', async () => {
+  if (!diagLog.length){ toast('Journal vide : active-le, fais un trajet, puis reviens ici.'); return; }
+  const txt = JSON.stringify(diagLog);
+  const file = new File([txt], `car-jaune-journal-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.json`, { type:'application/json' });
+  try { if (navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file], title:'Journal Car Jaune Live' }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+});
+
+/* ---------- apparence : thème et taille du texte ---------- */
+const look = Object.assign({ theme:'auto', text:'' }, (() => { try { return JSON.parse(localStorage.getItem('cj_look') || '{}'); } catch(e){ return {}; } })());
+const darkMq = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+function isDark(){
+  if (look.theme !== 'auto') return look.theme === 'dark';
+  if (darkMq && darkMq.matches) return true;
+  const hr = reuDate(Date.now()).h;
+  return hr >= 19 || hr < 6;                                  // le soir et tôt le matin
+}
+function applyLook(){
+  const d = isDark();
+  document.documentElement.classList.toggle('dark', d);
+  document.documentElement.classList.toggle('big', look.text === 'big');
+  document.documentElement.classList.toggle('huge', look.text === 'huge');
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = d ? '#1E2228' : '#F6BE00';
+  if ($('#themeSel')){ $('#themeSel').value = look.theme; $('#textSel').value = look.text; }
+}
+function saveLook(){ try { localStorage.setItem('cj_look', JSON.stringify(look)); } catch(e){} applyLook(); }
+$('#themeSel').addEventListener('change', e => { look.theme = e.target.value; saveLook(); });
+$('#textSel').addEventListener('change', e => { look.text = e.target.value; saveLook(); });
+if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', applyLook);
+setInterval(applyLook, 5 * 60e3);
+applyLook();
+
 /* ---------- panneau Paramètres (engrenage) ---------- */
 function openSettings(){ renderSettings(); $('#settingsModal').hidden = false; }
 function closeSettings(){ $('#settingsModal').hidden = true; }
@@ -2378,7 +2845,8 @@ function renderSettings(){
   $('#pauseOff').hidden = !muted;
   $('#alSound').checked = alertCfg.sound; $('#alVibe').checked = alertCfg.vibe; $('#alWake').checked = alertCfg.wake;
   $('#alFollow').checked = alertCfg.follow;
-  renderShareUI(); renderCityUI();
+  renderShareUI(); renderCityUI(); renderDiag(); renderPushUI();
+  $('#apkRow').hidden = NATIVE || !/Android/i.test(navigator.userAgent);
   if (!IN_GAS){ $('#apiRow').hidden = false; $('#apiTxt').textContent = API_URL ? '…' + API_URL.slice(-34) : 'pas encore réglé'; }
   renderNotif();
 }
@@ -2399,6 +2867,9 @@ $('#reloadBtn').addEventListener('click', () => location.reload());
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = () => !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
 function notifStatus(){
+  if (LNOTIF) return lnPerm === 'granted' ? { k:'ok', t:'Notifications de l’appli Android : <b>activées ✅</b>' }
+    : lnPerm === 'denied' ? { k:'denied', t:'Notifications <b>refusées</b> : Paramètres Android → Applis → Car Jaune → Notifications.' }
+    : { k:'ask', t:'Notifications de l’appli Android : <b>pas encore activées</b>.' };
   if (IN_GAS) return { k:'gas', t:'Dans Apps Script, les notifications du téléphone ne sont pas possibles : utilise l’appli installée (svperman.github.io/Car-Jaune-Live).' };
   if (!('Notification' in window)){
     if (isIOS && !isStandalone()) return { k:'install', t:'Sur iPhone, les notifications marchent seulement depuis l’<b>appli installée</b> : Safari → Partager → <b>Sur l’écran d’accueil</b>, puis ouvre l’appli depuis son icône.' };
@@ -2419,6 +2890,10 @@ function renderNotif(){
   btn.textContent = s.k === 'ok' ? '🧪 Tester' : '🔔 Activer les notifications';
 }
 async function showPhoneNotif(title, body){
+  if (LNOTIF){
+    try { await LNOTIF.schedule({ notifications:[{ id: Math.floor(Math.random() * 2e9), title, body, smallIcon:'ic_launcher' }] }); return true; }
+    catch(e){ return false; }
+  }
   const opt = { body, icon:'icons/icon-192.png', badge:'icons/icon-192.png', vibrate:[250, 120, 250], tag:'cj-' + Date.now() };
   try {
     const reg = swReg || ('serviceWorker' in navigator ? await Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(r, 1500))]) : null);
@@ -2431,7 +2906,8 @@ async function enableNotifications(){
   if (s.k === 'ok'){ await showPhoneNotif('🧪 Test Car Jaune Live', 'Les notifications fonctionnent : tu seras prévenu à l’approche de tes cars.'); return; }
   if (s.k !== 'ask'){ openSettings(); return; }
   let perm = 'default';
-  try { perm = await Notification.requestPermission(); } catch(e){}
+  if (LNOTIF){ try { const p = await LNOTIF.requestPermissions(); lnPerm = p.display; perm = p.display === 'granted' ? 'granted' : 'denied'; } catch(e){} }
+  else try { perm = await Notification.requestPermission(); } catch(e){}
   renderNotif();
   if (perm === 'granted'){
     const ok = await showPhoneNotif('🔔 Notifications activées', 'Active une alerte (arrêt ou Mon trajet) et je te préviens avant chaque car.');
@@ -2441,7 +2917,7 @@ async function enableNotifications(){
 $('#notifBtn').addEventListener('click', enableNotifications);
 $('#bellBtn').addEventListener('click', () => toggleBellMenu());
 
-function saveAlertCfg(){ try { localStorage.setItem('cj_alerts', JSON.stringify(alertCfg)); } catch(e){} }
+function saveAlertCfg(){ try { localStorage.setItem('cj_alerts', JSON.stringify(alertCfg)); } catch(e){} try { syncPush(); } catch(e){} }
 function loadAlertCfg(){
   try { Object.assign(alertCfg, JSON.parse(localStorage.getItem('cj_alerts') || '{}')); } catch(e){}
   if (alertCfg.muteUntil && Date.now() >= alertCfg.muteUntil) alertCfg.muteUntil = 0;   // pause terminée
@@ -2574,6 +3050,7 @@ function updateSleepCountdown(){
 }
 
 /* ====================== Temps réel ====================== */
+addEventListener('online', () => { toast('📶 Réseau retrouvé : temps réel en cours…'); nextAt = 0; });
 async function refresh(){
   if (busy) return;
   busy = true;
@@ -2583,15 +3060,23 @@ async function refresh(){
     const msg = FeedMessage.decode(b64ToBytes(r.b64));
     const feed = FeedMessage.toObject(msg, { longs:Number, defaults:false });
     parseFeed(feed);
+    diag('temps-reel', { cars: vehicles.length, flux: feedTime ? new Date(feedTime).toISOString().slice(11, 19) : '',
+      retards: vehicles.filter(v => v.delay != null && !v.delayEst).length, estimes: vehicles.filter(v => v.delayEst).length,
+      details: vehicles.slice(0, 40).map(v => `${v.route.s}:${v.id}:${v.delay == null ? '?' : Math.round(v.delay / 60) + 'min' + (v.delayEst ? '~' : '')}`).join(' ') });
     render();
     if (view === 'trip') renderTrip();
     checkAlerts();
     if (meWatch != null){ detectMyBus(); renderRide(); }
   } catch(e){
+    diag('erreur-temps-reel', { msg: errMsg(e).slice(0, 120), enLigne: navigator.onLine });
+    if (navigator.onLine === false){
+      setStatus('Hors ligne · horaires théoriques');
+      toast('📴 Pas de réseau : horaires des fiches gardées sur ton téléphone. Le temps réel reviendra tout seul.');
+    } else
     toast(/injoignable|Load failed|Failed to fetch|NetworkError/i.test(errMsg(e))
       ? '📡 Temps réel indisponible pour le moment · réessai automatique (touche pour vérifier le serveur)'
       : '📡 Temps réel : ' + errMsg(e).slice(0, 90), IN_GAS ? null : () => openSettings());
-    setStatus('Flux temps réel injoignable');
+    if (navigator.onLine !== false) setStatus('Flux temps réel injoignable');
   } finally {
     busy = false;
     nextAt = Date.now() + REFRESH_MS;
@@ -3210,6 +3695,7 @@ document.addEventListener('click', e => { if (!e.target.closest('.field-row')) $
 
 async function selectStop(g){
   board = { group: g, data: null, loading: true, at: 0 };
+  try { syncPush(); } catch(e){}
   savePrefs();
   updateFavBtn();
   renderBoard();
@@ -3479,6 +3965,7 @@ function tick(){
 
 /* ====================== Préférences & divers ====================== */
 function savePrefs(){
+  try { syncPush(); } catch(e){}
   try {
     localStorage.setItem('cj_prefs', JSON.stringify({ sel:[...selected], shapes:$('#showShapes').checked, view, favs, line: selLine }));
     if (board.group) localStorage.setItem('cj_stop', board.group.name);
@@ -3493,7 +3980,8 @@ function loadPrefs(){
     if (p.view) view = p.view;
     if (Array.isArray(p.favs)) favs = p.favs;
     const qv = new URLSearchParams(location.search).get('vue');   // raccourcis de l'appli installée
-    if (qv) view = qv;
+    if (qv === 'next'){ openNextAtStart = true; }
+    else if (qv) view = qv;
     if (linkView) view = linkView;                                  // lien d'un proche : on ouvre la carte
     if (typeof p.line === 'string') selLine = p.line;
     const tp = JSON.parse(localStorage.getItem('cj_trip') || '{}');
@@ -3541,6 +4029,7 @@ async function updateCity(){
     if (c && c.contour){
       const changed = city.name && city.name !== c.nom;
       city = { name: c.nom, poly: c.contour, at: Date.now(), loading:false };
+      diag('commune', { nom: c.nom });
       cityState = {};                                         // nouveau secteur : on repart de zéro (pas d'annonce en rafale)
       if (changed && cityCfg.on && alertCfg.on) notify(`🏙️ Tu es maintenant à ${c.nom}`, 'Je t’annonce les cars jaunes de cette ville.', 'none');
     }
@@ -3563,13 +4052,13 @@ function onCityFix(p){
   renderCityUI();
 }
 function startCity(){
-  if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return false; }
-  if (cityWatch == null) cityWatch = navigator.geolocation.watchPosition(onCityFix, e => {
+  if (!navigator.geolocation && !BGGEO){ toast('Localisation indisponible sur cet appareil.'); return false; }
+  if (cityWatch == null) cityWatch = watchPos(onCityFix, e => {
     if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour « Cars dans ma ville ».'); setCityOn(false); }
-  }, { enableHighAccuracy:false, maximumAge:60000, timeout:30000 });
+  }, { enableHighAccuracy:false, maximumAge:60000, timeout:30000 }, 'Annonce des cars jaunes dans ta ville');
   return true;
 }
-function stopCity(){ if (cityWatch != null) navigator.geolocation.clearWatch(cityWatch); cityWatch = null; cityState = {}; cityLayer.clearLayers(); }
+function stopCity(){ if (cityWatch != null) clearPos(cityWatch); cityWatch = null; cityState = {}; cityLayer.clearLayers(); }
 function setCityOn(on){
   cityCfg.on = on && startCity(); saveCity();
   if (!cityCfg.on) stopCity();
@@ -3704,13 +4193,13 @@ let shareLast = { t:0, lat:0, lon:0, bus:'' }, shareTimer = null, shareOwnWatch 
 function newCode(){ return String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000); }
 function saveShare(){ try { localStorage.setItem('cj_share', JSON.stringify(shareCfg)); } catch(e){} }
 function startShare(){
-  if (!navigator.geolocation || !window.crypto || !crypto.subtle){ toast('Partage impossible sur cet appareil.'); return false; }
+  if ((!navigator.geolocation && !BGGEO) || !window.crypto || !crypto.subtle){ toast('Partage impossible sur cet appareil.'); return false; }
   if (meWatch == null){
     shareOwnWatch = true;
-    meWatch = navigator.geolocation.watchPosition(p => { onLiveFix(p); rideTick(); sendShare(); }, e => {
+    meWatch = watchPos(p => { onLiveFix(p); rideTick(); sendShare(); }, e => {
       if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour partager.'); setShareOn(false); }
       else gpsWeak = true;
-    }, { enableHighAccuracy:true, maximumAge:5000, timeout:30000 });
+    }, { enableHighAccuracy:true, maximumAge:5000, timeout:30000 }, 'Ta position est partagée avec tes proches');
   }
   clearInterval(shareTimer); shareTimer = setInterval(() => sendShare(), 20000);
   setTimeout(() => sendShare(true), 1500);
@@ -3718,7 +4207,7 @@ function startShare(){
 }
 function stopShare(){
   clearInterval(shareTimer); shareTimer = null;
-  if (shareOwnWatch && meWatch != null){ navigator.geolocation.clearWatch(meWatch); meWatch = null; onBus = null; busCand = null; }
+  if (shareOwnWatch && meWatch != null){ clearPos(meWatch); meWatch = null; onBus = null; busCand = null; }
   shareOwnWatch = false;
 }
 async function setShareOn(on){
@@ -3755,7 +4244,7 @@ async function sendShare(force, extra){
 // l'appli passe en arrière-plan : on prévient les proches que la position peut ne plus suivre
 document.addEventListener('visibilitychange', () => {
   if (!shareCfg.on) return;
-  if (document.visibilityState === 'hidden') sendShare(true, { bg: true });
+  if (document.visibilityState === 'hidden') sendShare(true, BGGEO ? {} : { bg: true });   // l'APK continue en arrière-plan
   else sendShare(true);
 });
 /* ----- messages automatiques aux proches : j'attends / je pars / j'arrive bientôt / je suis arrivé ----- */
@@ -3783,6 +4272,7 @@ function nearStop(maxM){
   return n ? n.g : null;
 }
 function shareEvent(ev){
+  diag('proches', { evenement: ev.k, arret: ev.stop || ev.to || '' });
   if (!shareCfg.on || !shareCfg.events) return;
   ev.at = Date.now();
   sendShare(true, { ev });
@@ -3867,7 +4357,7 @@ function renderShareUI(){
   $('#shEvents').checked = shareCfg.events !== false;
   $('#shStatus').textContent = !shareCfg.on ? 'Tes proches voient où tu es et dans quel car jaune tu es monté.'
     : shareErr ? '⚠️ Partage actif, mais ' + shareErr + '.'
-    : shareLast.t ? `✅ Partage actif · envoyé à ${fmtHM(shareLast.t)}${shareLast.bus ? ' · dans le car' : ''} · s’arrête si tu fermes l’appli`
+    : shareLast.t ? `✅ Partage actif · envoyé à ${fmtHM(shareLast.t)}${shareLast.bus ? ' · dans le car' : ''} · ${BGGEO ? 'continue même appli fermée' : 's’arrête si tu fermes l’appli'}`
     : '✅ Partage actif · en attente de ta position…';
   renderFriendList();
 }
