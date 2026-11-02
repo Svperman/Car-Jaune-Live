@@ -8,7 +8,7 @@ qui récupère les données officielles. Rien à payer, pas de carte bancaire.
 
 ## 1. Le serveur Apps Script (Google Sheet « Car Jaune »)
 
-Les fichiers du serveur sont dans `apps-script/` : `Code.gs`, `Index.html`, `appsscript.json`
+Les fichiers du serveur sont dans `apps-script/` : `Code.gs` (le seul fichier à coller) et `appsscript.json`
 (fuseau Indian/Reunion, application Web exécutée « en tant que moi », accès « Tout le monde »).
 
 **Avec clasp (une commande)** :

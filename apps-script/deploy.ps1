@@ -22,11 +22,10 @@ if (-not (Get-Command clasp -ErrorAction SilentlyContinue)) {
 @"
 **/**
 !Code.gs
-!Index.html
 !appsscript.json
 "@ | Set-Content -Encoding ascii .claspignore
 
-Write-Host "Envoi de Code.gs, Index.html et appsscript.json…" -ForegroundColor Yellow
+Write-Host "Envoi de Code.gs et appsscript.json…" -ForegroundColor Yellow
 clasp push --force
 if ($LASTEXITCODE -ne 0) {
   Write-Host "Échec de l'envoi. Vérifie : 'clasp login' fait, et l'API Apps Script activée sur https://script.google.com/home/usersettings" -ForegroundColor Red
