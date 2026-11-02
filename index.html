@@ -49,6 +49,11 @@
   .tab.on{background:var(--jaune)}
   .tab .n{background:var(--retard);color:#fff;border-radius:999px;font-size:11px;padding:1px 7px}
   .tab .n[hidden]{display:none}
+  .pill[hidden]{display:none}
+  .tl{display:inline-block}
+  .tl::first-letter{text-transform:uppercase}
+  :focus-visible{outline:3px solid var(--avance);outline-offset:2px}
+  button{-webkit-tap-highlight-color:transparent}
   .live{display:flex;align-items:center;gap:8px;flex:none;font-size:13px}
   .pill{display:flex;align-items:center;gap:8px;border-radius:25px;background:var(--fond);padding:7px 14px;white-space:nowrap}
   .pill .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(30,138,76,.5);animation:pulse 2s infinite}
@@ -253,7 +258,44 @@
   details.ntfy summary{cursor:pointer;font-weight:700;color:var(--titre)}
   details.ntfy p{color:var(--gris);margin:6px 0}
   details.ntfy input{font:inherit;border:1px solid var(--ligne);border-radius:25px;padding:7px 12px;min-width:220px}
-  #alertFeed{position:fixed;right:16px;top:76px;z-index:2500;display:flex;flex-direction:column;gap:8px;max-width:min(380px,calc(100vw - 32px))}
+  /* bandeau d'alerte : une seule ligne fine sous l'en-tête, disparaît tout seul */
+  #alStrip{position:fixed;left:50%;top:calc(var(--hdrH, 64px) + 8px);transform:translate(-50%, 0);z-index:2500;
+    width:max-content;max-width:min(520px, calc(100vw - 24px));display:flex;align-items:center;gap:8px;
+    background:rgba(255,255,255,.94);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    border-radius:999px;box-shadow:0 4px 18px rgba(0,0,0,.18);padding:6px 6px 6px 12px;font-size:13.5px;
+    transition:transform .3s ease, opacity .3s ease;touch-action:pan-x;cursor:pointer}
+  #alStrip.hide{transform:translate(-50%, -140%);opacity:0;pointer-events:none}
+  #alStrip.open{border-radius:16px;align-items:flex-start}
+  #alStrip .k{flex:none;width:9px;height:9px;border-radius:50%;background:var(--jaune);margin-top:1px}
+  #alStrip.open .k{margin-top:6px}
+  #alStrip.warn .k{background:var(--retard)} #alStrip.info .k{background:#9AA0A6}
+  #alStrip .tx{min-width:0;flex:1}
+  #alStrip .t1{font-weight:800;color:var(--titre);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #alStrip .t2{display:none;color:#444;font-size:13px;line-height:1.4;margin-top:2px}
+  #alStrip.open .t1{white-space:normal} #alStrip.open .t2{display:block}
+  #alStrip .more{flex:none;font-size:11.5px;font-weight:800;color:var(--gris)}
+  #alStrip .cl{flex:none;border:none;background:var(--fond);border-radius:50%;width:26px;height:26px;font-size:12px;cursor:pointer}
+  #alStrip .bar{position:absolute;left:14px;right:14px;bottom:2px;height:2px;border-radius:2px;background:var(--jaune);transform-origin:left;opacity:.7}
+  #alStrip.warn .bar{background:var(--retard)}
+  /* menu de la cloche : état + pause + historique */
+  #bellMenu{position:fixed;top:calc(var(--hdrH, 64px) + 6px);right:12px;z-index:2600;width:min(380px, calc(100vw - 24px));
+    max-height:min(70dvh, 560px);display:flex;flex-direction:column;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden}
+  #bellMenu[hidden]{display:none}
+  #bellMenu .bm-h{padding:12px 14px;border-bottom:1px solid var(--ligne)}
+  #bellMenu .bm-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  #bellMenu .bm-row b{font-size:15px;color:var(--titre)}
+  #bellMenu .bm-sub{font-size:12.5px;color:var(--gris);margin-top:2px}
+  #bellMenu .pseg{max-width:none;justify-content:flex-start;margin-top:10px}
+  #bellMenu .bm-list{overflow:auto;flex:1}
+  #bellMenu .bm-it{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--ligne);font-size:13px}
+  #bellMenu .bm-it.new{background:#FFFBEA}
+  #bellMenu .bm-it .k{flex:none;width:8px;height:8px;border-radius:50%;background:var(--jaune);margin-top:6px}
+  #bellMenu .bm-it.warn .k{background:var(--retard)} #bellMenu .bm-it.info .k{background:#9AA0A6}
+  #bellMenu .bm-it b{display:block;color:var(--titre)} #bellMenu .bm-it small{color:var(--gris)}
+  #bellMenu .bm-empty{padding:22px 14px;text-align:center;color:var(--gris);font-size:13px}
+  #bellMenu .bm-f{display:flex;justify-content:space-between;padding:8px 14px;border-top:1px solid var(--ligne)}
+  .hd-btn .cnt{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;border-radius:9px;background:var(--retard);color:#fff;font:800 10.5px/17px 'Nunito Sans',sans-serif;padding:0 4px;text-align:center}
+  .hd-btn .cnt[hidden]{display:none}
   .al-pop{background:#fff;border-left:6px solid var(--jaune);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.25);padding:12px 14px;
           font-size:13.5px;animation:popin .25s ease-out;cursor:pointer}
   .al-pop b{display:block;color:var(--titre);font-size:14.5px;margin-bottom:2px}
@@ -397,16 +439,45 @@
 
   footer{background:var(--jaune);color:var(--titre);font-size:12px;padding:7px 20px;flex:none;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 
-  #toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);background:var(--titre);color:#fff;padding:10px 16px;
-         border-radius:25px;font-size:13px;z-index:9999;max-width:90vw;box-shadow:0 4px 18px rgba(0,0,0,.3)}
+  #toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);background:var(--titre);color:#fff;padding:9px 16px;
+         border-radius:18px;font-size:13px;line-height:1.35;z-index:9999;width:max-content;max-width:min(460px, calc(100vw - 32px));box-shadow:0 4px 18px rgba(0,0,0,.3);
+         display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;text-align:center}
+  #toast[hidden]{display:none}
+  #toast.act{background:#0B3B8C}
 
   @media (max-width:860px){
-    .top-in{flex-wrap:wrap;padding:8px 14px 0;gap:8px 12px}
-    .brand{order:1}
-    .live{order:2;margin-left:auto}
+    /* en-tête compact sur une ligne (+ encoche de l'iPhone) */
+    .top-in{flex-wrap:nowrap;align-items:center;padding:calc(6px + env(safe-area-inset-top)) 12px 6px;gap:8px;min-height:52px}
+    .brand{order:1;min-width:0;flex:1}
+    .brand small{display:none}
+    .brand b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mark{width:34px;height:34px}
+    .live{order:2;margin-left:auto;gap:6px}
+    #periodPill{display:none}
+    .hd-btn{min-width:40px;min-height:40px;padding:0 10px;font-size:17px}
     #status{display:none}
-    .tabs{order:3;flex-basis:100%;margin:0 -14px}
-    .tab{padding:12px 14px;font-size:13px}
+    /* onglets : barre fixe en bas, au pouce, comme une vraie appli */
+    .tabs{position:fixed;left:0;right:0;bottom:0;z-index:2400;background:#fff;box-shadow:0 -2px 10px rgba(0,0,0,.1);
+          padding-bottom:env(safe-area-inset-bottom);overflow:visible}
+    .tab{flex:1;flex-direction:column;justify-content:center;gap:2px;padding:7px 2px 6px;min-height:56px;font-size:11px;font-weight:700;color:#5F6670}
+    .tab .ti{font-size:20px;line-height:1;filter:grayscale(.6);opacity:.75;transition:.15s}
+    .tab .lg{display:none}
+    .tab.on{background:transparent;color:var(--titre)}
+    .tab.on::before{content:'';position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--jaune)}
+    .tab.on .ti{filter:none;opacity:1;transform:scale(1.12)}
+    .tab:hover{background:transparent}
+    .tab .n{position:absolute;top:4px;left:calc(50% + 6px);font-size:10px;padding:0 5px}
+    main{margin-bottom:calc(56px + env(safe-area-inset-bottom))}
+    footer{display:none}
+    #toast{bottom:calc(68px + env(safe-area-inset-bottom))}
+    body.strip-on #toast{bottom:calc(120px + env(safe-area-inset-bottom))}
+    /* bandeau d'alerte : en bas, au-dessus des onglets, sans cacher les boutons de la carte */
+    #alStrip{top:auto;bottom:calc(66px + env(safe-area-inset-bottom));left:12px;right:12px;width:auto;max-width:none;transform:none}
+    #alStrip.hide{transform:translateY(160%)}
+    #bellMenu{left:8px;right:8px;width:auto}
+    .near-btn{padding:8px 13px;font-size:13px}
+    .leaflet-control-attribution{font-size:9.5px;max-width:calc(100vw - 80px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .al-row select,.set-row select{min-height:38px}
     .crumb{display:none}
     /* mobile : carte plein écran, la liste s'ouvre en panneau par-dessus (bouton « Liste ») */
     #view-map.on{display:block;padding:0}
@@ -434,13 +505,13 @@
       <div><b>Car Jaune Live</b><small>Suivi en temps réel · non officiel</small></div>
     </div>
     <nav class="tabs">
-      <button class="tab" data-view="map">🗺️ Carte en direct</button>
-      <button class="tab" data-view="trip">🧭 Mon trajet</button>
-      <button class="tab" data-view="board">🕒 Horaires à l'arrêt</button>
-      <button class="tab" data-view="fiches">📄 Fiches horaires</button>
-      <button class="tab" data-view="trafic">⚠️ Infos trafic <span class="n" id="alertCount" hidden></span></button>
+      <button class="tab" data-view="map"><span class="ti">🗺️</span><span class="tl">Carte<span class="lg"> en direct</span></span></button>
+      <button class="tab" data-view="trip"><span class="ti">🧭</span><span class="tl"><span class="lg">Mon </span>trajet</span></button>
+      <button class="tab" data-view="board"><span class="ti">🕒</span><span class="tl">Horaires<span class="lg"> à l'arrêt</span></span></button>
+      <button class="tab" data-view="fiches"><span class="ti">📄</span><span class="tl">Fiches<span class="lg"> horaires</span></span></button>
+      <button class="tab" data-view="trafic"><span class="ti">⚠️</span><span class="tl"><span class="lg">Infos </span>trafic</span><span class="n" id="alertCount" hidden></span></button>
     </nav>
-    <div class="live"><button id="bellBtn" class="hd-btn" title="Notifications : appuie pour couper / remettre">🔕</button><button id="gearBtn" class="hd-btn" title="Paramètres">⚙️<span class="gdot" id="gearDot"></span></button><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
+    <div class="live"><button id="bellBtn" class="hd-btn" title="Notifications"><span id="bellIco">🔕</span><span class="cnt" id="bellCnt" hidden></span></button><button id="gearBtn" class="hd-btn" title="Paramètres">⚙️<span class="gdot" id="gearDot"></span></button><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
   </div>
 </header>
 <div class="crumb">Accueil › <b id="crumbCur">Carte en direct</b></div>
@@ -497,6 +568,9 @@
         <div class="lines-box" id="linesBox"></div>
         <div class="fiche-prog"></div>
       </div>
+      <div class="card" id="boardCard">
+        <div class="placeholder"><div class="big">🚏</div>Choisis un arrêt pour voir ses prochains départs.</div>
+      </div>
       <div class="card" id="alertCard">
         <h2>🔔 Alertes d'arrivée en gare</h2>
         <div class="al-row">
@@ -509,9 +583,6 @@
         <div class="al-row"><button class="btn" id="alToggle">🔔 Activer les alertes</button>
           <button class="al-link" data-open-settings>⚙️ Réglages des notifications</button></div>
         <div class="al-status" id="alStatus"></div>
-      </div>
-      <div class="card" id="boardCard">
-        <div class="placeholder"><div class="big">🚏</div>Choisis un arrêt pour voir ses prochains départs.</div>
       </div>
     </div>
   </section>
@@ -591,10 +662,18 @@
     <div class="set-row" id="apiRow" hidden><div><b>Serveur</b><small id="apiTxt">adresse Apps Script /exec</small></div><button id="apiBtn" class="btn small ghost">Modifier</button></div>
     <div class="set-row"><div><b>Mise à jour</b><small>automatique à chaque ouverture</small></div><button class="btn small ghost" id="reloadBtn">↻ Recharger</button></div>
   </div>
-  <div class="set-foot">Car Jaune Live · application personnelle, non affiliée à Car Jaune</div>
+  <div class="set-foot">Car Jaune Live · application personnelle, non affiliée à Car Jaune<br>Données : Région Réunion · réseau Car Jaune (Licence Ouverte)</div>
 </div></div>
 
-<div id="alertFeed"></div>
+<div id="alStrip" class="hide" role="status" aria-live="polite"><span class="k"></span><div class="tx"><div class="t1"></div><div class="t2"></div></div><span class="more"></span><button class="cl" aria-label="Fermer">✕</button><span class="bar"></span></div>
+<div id="bellMenu" hidden>
+  <div class="bm-h">
+    <div class="bm-row"><div><b id="bmState">Notifications actives</b><div class="bm-sub" id="bmSub"></div></div><label class="switch"><input type="checkbox" id="bmOn"><span></span></label></div>
+    <div class="pseg" id="bmPause"><button data-pause="60">⏸️ 1 h</button><button data-pause="180">3 h</button><button data-pause="tomorrow">Jusqu’à demain</button><button data-pause="0" id="bmResume" hidden>▶ Reprendre</button></div>
+  </div>
+  <div class="bm-list" id="bmList"></div>
+  <div class="bm-f"><button class="al-link" id="bmClear">Tout effacer</button><button class="al-link" data-open-settings>⚙️ Réglages</button></div>
+</div>
 <div id="toast" hidden></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1975,27 +2054,123 @@ function beep(kind){
   } catch(e){}
 }
 const isMuted = () => alertCfg.muteUntil && Date.now() < alertCfg.muteUntil;
-function notify(title, body, kind){
-  if (isMuted()) return;                                  // en pause : rien du tout
-  // 1. dans la page (toujours)
-  const el = document.createElement('div');
-  el.className = 'al-pop' + (kind ? ' ' + kind : '');
-  el.innerHTML = `<b>${esc(title)}</b>${esc(body)}<div class="muted" style="font-size:11px;margin-top:3px">${fmtHM(Date.now())}</div>`;
-  el.onclick = () => el.remove();
-  $('#alertFeed').prepend(el);
-  setTimeout(() => el.remove(), 60000);
-  while ($('#alertFeed').children.length > 4) $('#alertFeed').lastChild.remove();
-  if (alertCfg.sound) beep(kind);
-  if (alertCfg.vibe) try { if (navigator.vibrate) navigator.vibrate(kind === 'warn' ? [200, 100, 200, 100, 200] : [250, 120, 250]); } catch(e){}
-  // 2. notification du navigateur (si autorisée)
-  if ('Notification' in window && Notification.permission === 'granted') showPhoneNotif(title, body);
-  // 3. téléphone via ntfy (si configuré)
-  if (alertCfg.ntfy){
+/* Alertes « intelligentes » :
+   - appli à l'écran  → un bandeau fin d'une ligne sous l'en-tête (pas de notification système en double),
+                        qui se cache tout seul, se ferme d'un geste, et s'efface dès que tu touches la carte ;
+   - appli en arrière-plan → vraie notification du téléphone (+ ntfy si réglé) ;
+   - infos secondaires (kind 'none') → seulement dans l'historique de la cloche (pastille), sans rien cacher ;
+   - tout est gardé dans l'historique de la cloche 🔔. */
+const inbox = (() => { try { return JSON.parse(localStorage.getItem('cj_inbox') || '[]'); } catch(e){ return []; } })();
+let unread = 0;
+function saveInbox(){ try { localStorage.setItem('cj_inbox', JSON.stringify(inbox.slice(0, 30))); } catch(e){} }
+function notify(title, body, kind, opt = {}){
+  if (isMuted() && !opt.force) return;                    // en pause : rien du tout
+  const lvl = kind === 'warn' ? 'warn' : kind === 'none' ? 'info' : 'bus';
+  const visible = document.visibilityState === 'visible';
+  inbox.unshift({ t: Date.now(), title, body, lvl }); inbox.length = Math.min(inbox.length, 30); saveInbox();
+  if (!visible || $('#bellMenu').hidden) unread++;
+  renderBell();
+  if (visible){
+    if (lvl !== 'info' || opt.show) showStrip(title, body, lvl);
+    if (lvl !== 'info'){
+      if (alertCfg.sound) beep(kind);
+      if (alertCfg.vibe) try { if (navigator.vibrate) navigator.vibrate(lvl === 'warn' ? [200, 100, 200] : [180]); } catch(e){}
+    }
+  } else if (lvl !== 'info' || opt.show){
+    // 2. notification du téléphone : seulement quand tu ne regardes pas l'appli
+    if ('Notification' in window && Notification.permission === 'granted') showPhoneNotif(title, body);
+  }
+  // 3. téléphone via ntfy : quand l'appli n'est pas à l'écran (ou test)
+  if (alertCfg.ntfy && (opt.ntfy || (!visible && lvl !== 'info'))){
     fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({
       topic: alertCfg.ntfy, title, message: body, priority: kind === 'warn' ? 5 : 4, tags: [kind === 'warn' ? 'warning' : 'bus']
     }) }).catch(() => {});
   }
 }
+
+/* ---------- bandeau ---------- */
+const strip = { q: [], timer: null, cur: null };
+function showStrip(title, body, lvl){
+  strip.q.push({ title, body, lvl });
+  if (!strip.cur) nextStrip();
+  else $('#alStrip .more').textContent = '+' + strip.q.length;
+}
+function nextStrip(){
+  clearTimeout(strip.timer);
+  const it = strip.q.shift(), el = $('#alStrip');
+  strip.cur = it || null;
+  document.body.classList.toggle('strip-on', !!it);
+  if (!it){ el.classList.add('hide'); el.classList.remove('open'); return; }
+  el.className = (it.lvl === 'warn' ? 'warn' : it.lvl === 'info' ? 'info' : '');
+  $('#alStrip .t1').textContent = it.title;
+  $('#alStrip .t2').textContent = it.body;
+  $('#alStrip .more').textContent = strip.q.length ? '+' + strip.q.length : '';
+  const ms = it.lvl === 'warn' ? 9000 : it.lvl === 'info' ? 4000 : 7000;
+  const bar = $('#alStrip .bar');
+  bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)';
+  requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = `transform ${ms}ms linear`; bar.style.transform = 'scaleX(0)'; }));
+  strip.timer = setTimeout(nextStrip, ms);
+}
+function hideStrip(all){ if (all) strip.q.length = 0; nextStrip(); }
+$('#alStrip').addEventListener('click', e => {
+  if (e.target.closest('.cl')){ e.stopPropagation(); hideStrip(true); return; }
+  const el = $('#alStrip');
+  if (!el.classList.contains('open')){                    // 1er toucher : je déplie et je garde affiché
+    el.classList.add('open'); clearTimeout(strip.timer);
+    const bar = $('#alStrip .bar'); bar.style.transition = 'none'; bar.style.transform = 'scaleX(0)';
+    strip.timer = setTimeout(nextStrip, 15000);
+  } else nextStrip();                                     // 2e toucher : suivant / fermer
+});
+// glisser vers le haut (ou sur le côté) pour fermer
+(() => { let y0 = null, x0 = null;
+  $('#alStrip').addEventListener('touchstart', e => { y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; }, { passive:true });
+  $('#alStrip').addEventListener('touchend', e => {
+    if (y0 == null) return;
+    const dy = e.changedTouches[0].clientY - y0, dx = e.changedTouches[0].clientX - x0;
+    if (dy < -25 || Math.abs(dx) > 60) hideStrip(true);
+    y0 = null;
+  });
+})();
+// tu touches la carte : le bandeau s'efface pour te laisser la vue (il reste dans l'historique)
+map.on('dragstart zoomstart', () => { if (strip.cur && !$('#alStrip').classList.contains('open')) hideStrip(true); });
+
+/* ---------- menu de la cloche ---------- */
+function renderBell(){
+  const muted = isMuted();
+  $('#bellIco').textContent = !alertCfg.on ? '🔕' : muted ? '⏸️' : '🔔';
+  const b = $('#bellBtn');
+  b.className = 'hd-btn' + (alertCfg.on && !muted ? ' on' : alertCfg.on ? ' paused' : '');
+  $('#bellCnt').hidden = !unread; $('#bellCnt').textContent = unread > 9 ? '9+' : unread;
+  if ($('#bellMenu').hidden) return;
+  $('#bmOn').checked = alertCfg.on;
+  $('#bmState').textContent = !alertCfg.on ? 'Notifications coupées' : muted ? 'Notifications en pause' : 'Notifications actives';
+  $('#bmSub').textContent = !alertCfg.on ? 'Active-les pour être prévenu avant chaque car.'
+    : muted ? `Reprise à ${fmtDayHM(alertCfg.muteUntil)}` : (alertContext().stop ? `Arrêt suivi : ${alertContext().stop}` : 'Choisis un arrêt ou Mon trajet.');
+  $('#bmResume').hidden = !muted;
+  $('#bmList').innerHTML = inbox.length ? inbox.map((n, i) => `<div class="bm-it ${n.lvl}${i < bmNew ? ' new' : ''}"><span class="k"></span><div><b>${esc(n.title)}</b>${esc(n.body)}<br><small>${fmtDayHM2(n.t)}</small></div></div>`).join('')
+    : `<div class="bm-empty">Aucune alerte pour l’instant.<br>Elles s’afficheront ici, sans te cacher la carte.</div>`;
+}
+let bmNew = 0;
+function fmtDayHM2(ms){ const d = midnightMs(ms), t = midnightMs(Date.now()); return (d === t ? 'aujourd’hui ' : d === t - 864e5 ? 'hier ' : new Date(ms).toLocaleDateString('fr-FR') + ' ') + fmtHM(ms); }
+function toggleBellMenu(open){
+  const m = $('#bellMenu');
+  open = open == null ? m.hidden : open;
+  if (open){ bmNew = unread; unread = 0; m.hidden = false; hideStrip(true); }
+  else m.hidden = true;
+  renderBell();
+}
+$('#bmOn').addEventListener('change', e => setAlertsOn(e.target.checked));
+$('#bmPause').addEventListener('click', e => { const b = e.target.closest('[data-pause]'); if (b) setPause(b.dataset.pause); });
+$('#bmClear').addEventListener('click', () => { inbox.length = 0; saveInbox(); bmNew = 0; renderBell(); });
+document.addEventListener('click', e => {
+  if ($('#bellMenu').hidden) return;
+  if (e.target.closest('#bellMenu') && !e.target.closest('[data-open-settings]')) return;
+  if (e.target.closest('#bellBtn')) return;
+  toggleBellMenu(false);
+});
+// hauteur réelle de l'en-tête (le bandeau et le menu se placent juste dessous)
+function setHdrH(){ try { document.documentElement.style.setProperty('--hdrH', Math.round($('header.top').getBoundingClientRect().bottom) + 'px'); } catch(e){} }
+setHdrH(); addEventListener('resize', setHdrH);
 
 /* ---------- surveillance ---------- */
 /** Contexte des alertes : trajet perso (sens détecté) ou arrêt affiché. */
@@ -2079,10 +2254,7 @@ function updateAlertUI(){
   sel.innerHTML = `<option value="">toutes les lignes</option>` + lines.map(l => `<option value="${esc(l)}"${l === cur ? ' selected' : ''}>ligne ${esc(l)}</option>`).join('');
   $('#alToggle').textContent = alertCfg.on ? '🔕 Couper les notifications' : '🔔 Activer les notifications';
   $('#alToggle').classList.toggle('ghost', alertCfg.on);
-  const bell = $('#bellBtn'), muted = isMuted();
-  bell.textContent = !alertCfg.on ? '🔕' : muted ? '⏸️' : '🔔';
-  bell.className = 'hd-btn' + (alertCfg.on && !muted ? ' on' : alertCfg.on ? ' paused' : '');
-  bell.title = !alertCfg.on ? 'Notifications coupées : appuie pour les activer' : muted ? 'En pause : appuie pour reprendre' : 'Notifications actives : appuie pour les couper';
+  renderBell();
   renderAlertStatus();
 }
 /** Active / coupe les notifications (le choix est gardé : elles restent actives aux prochaines ouvertures). */
@@ -2097,9 +2269,9 @@ async function setAlertsOn(on, quiet){
     nextAt = 0;
     if (!quiet){
       const c0 = alertContext();
-      notify('🔔 Notifications activées', !c0.stop ? 'Choisis un arrêt (ou Mon trajet) : je te préviens avant chaque car.'
-        : alertCfg.journey && c0.sens ? `Ton ${c0.sens} : je te préviens ${alertCfg.lead} min avant chaque car de ${c0.stop} vers ${c0.to}.`
-        : `Je te préviens ${alertCfg.lead} min avant chaque car à ${c0.stop}.`, 'none');
+      toast(!c0.stop ? '🔔 Notifications activées : choisis un arrêt (ou Mon trajet).'
+        : alertCfg.journey && c0.sens ? `🔔 Ton ${c0.sens} : prévenu ${alertCfg.lead} min avant chaque car de ${c0.stop}.`
+        : `🔔 Prévenu ${alertCfg.lead} min avant chaque car à ${c0.stop}.`);
     }
     setTimeout(checkAlerts, 500);
   } else if (!quiet) toast('🔕 Notifications coupées. Rallume-les avec la cloche ou ⚙️.');
@@ -2114,7 +2286,7 @@ function setPause(v){
   if (v === 'tomorrow'){ const d = new Date(midnightMs(Date.now()) + 864e5 + 5 * 3600e3); alertCfg.muteUntil = d.getTime(); }
   else alertCfg.muteUntil = +v ? Date.now() + v * 60000 : 0;
   if (alertCfg.muteUntil && !alertCfg.on) alertCfg.on = true;
-  saveAlertCfg(); applyWake(); updateAlertUI(); renderSettings();
+  saveAlertCfg(); applyWake(); updateAlertUI(); renderSettings(); renderBell();
   toast(alertCfg.muteUntil ? `⏸️ Notifications en pause jusqu’à ${fmtDayHM(alertCfg.muteUntil)}.` : '▶ Notifications reprises.');
 }
 function fmtDayHM(ms){ return (midnightMs(ms) === midnightMs(Date.now()) ? '' : 'demain ') + fmtHM(ms); }
@@ -2204,10 +2376,7 @@ async function enableNotifications(){
   } else toast('Notifications non autorisées.');
 }
 $('#notifBtn').addEventListener('click', enableNotifications);
-$('#bellBtn').addEventListener('click', () => {
-  if (isMuted()) setPause(0);
-  else setAlertsOn(!alertCfg.on);
-});
+$('#bellBtn').addEventListener('click', () => toggleBellMenu());
 
 function saveAlertCfg(){ try { localStorage.setItem('cj_alerts', JSON.stringify(alertCfg)); } catch(e){} }
 function loadAlertCfg(){
@@ -2229,7 +2398,7 @@ $('#ntfyTopic').addEventListener('change', e => { alertCfg.ntfy = e.target.value
 $('#ntfyTest').addEventListener('click', () => {
   alertCfg.ntfy = $('#ntfyTopic').value.trim().replace(/[^\w-]/g, ''); $('#ntfyTopic').value = alertCfg.ntfy; saveAlertCfg();
   if (!alertCfg.ntfy){ toast('Choisis d’abord un nom (le même que dans l’appli ntfy).'); return; }
-  notify('🧪 Test Car Jaune Live', 'Si tu lis ceci sur ton téléphone, les alertes fonctionnent.', 'none');
+  notify('🧪 Test Car Jaune Live', 'Si tu lis ceci sur ton téléphone, les alertes fonctionnent.', 'none', { show:true, ntfy:true, force:true });
 });
 $('#alToggle').addEventListener('click', () => { if (!alertCfg.on) alertCfg.journey = false; toggleAlerts(); });
 $('#geoInfo').addEventListener('click', e => {
@@ -2356,7 +2525,9 @@ async function refresh(){
     checkAlerts();
     if (meWatch != null){ detectMyBus(); renderRide(); }
   } catch(e){
-    toast('Erreur temps réel : ' + errMsg(e));
+    toast(/injoignable|Load failed|Failed to fetch|NetworkError/i.test(errMsg(e))
+      ? '📡 Temps réel indisponible pour le moment · réessai automatique (touche pour vérifier le serveur)'
+      : '📡 Temps réel : ' + errMsg(e).slice(0, 90), IN_GAS ? null : () => openSettings());
     setStatus('Flux temps réel injoignable');
   } finally {
     busy = false;
@@ -3266,10 +3437,17 @@ function loadPrefs(){
 }
 function setStatus(t){ $('#status').textContent = t; }
 let toastTimer;
-function toast(t){
+let toastAct = null, toastLast = { t:'', at:0 };
+function toast(t, act){
+  if (t === toastLast.t && Date.now() - toastLast.at < 120e3) return;   // même message : pas de répétition
+  toastLast = { t, at: Date.now() };
   const el = $('#toast'); el.textContent = t; el.hidden = false;
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, 6000);
+  toastAct = act || null; el.classList.toggle('act', !!act);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.hidden = true, act ? 8000 : 5000);
 }
+document.getElementById('toast').addEventListener('click', () => {
+  $('#toast').hidden = true; if (toastAct) toastAct();
+});
 
 document.getElementById('installBtn').addEventListener('click', async () => {
   if (!installEvt) return;
