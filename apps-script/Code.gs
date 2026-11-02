@@ -90,7 +90,9 @@ const API_ = {
   pushSeen:          function (topic) { return pushSeen(String(topic || '')); },
   saveTravel:        function (json) { return saveTravel(json); },
   getTravel:         function () { return getTravel(); },
-  getVersion:        function () { return getVersion(); }
+  getVersion:        function () { return getVersion(); },
+  saveStats:         function (json) { return saveStats(json); },
+  getStats:          function () { return getStats(); }
 };
 
 function api_(action, args) {
@@ -938,10 +940,39 @@ function weight_(row) { return (row || []).reduce(function (a, c) { return a + (
 /* ------------------------------------------------------------------ */
 /*  Version du serveur (l'appli affiche un voyant « à jour »)          */
 /* ------------------------------------------------------------------ */
-const SERVER_VERSION = '2026-11-02.3';
+const SERVER_VERSION = '2026-11-02.4';
 function getVersion() {
   let trigger = false;
   try { trigger = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'pushTick'; }); } catch (e) {}
   return JSON.stringify({ version: SERVER_VERSION, trigger: trigger,
     features: ['api', 'push', 'travel', 'pmr'] });
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  Fiabilité des lignes : { "E2": [ [mesures, à l'heure, en retard, somme retards s], ... 8 tranches ] } */
+/* ------------------------------------------------------------------ */
+const STATS_PROP = 'stats_v1';
+function getStats() { return propGet_(PropertiesService.getScriptProperties().getProperties(), STATS_PROP) || '{}'; }
+function saveStats(json) {
+  const add = typeof json === 'string' ? JSON.parse(json) : json;
+  if (!add || typeof add !== 'object') throw new Error('données invalides');
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const cur = JSON.parse(propGet_(props.getProperties(), STATS_PROP) || '{}');
+    Object.keys(add).slice(0, 100).forEach(function (line) {
+      if (!/^[\w-]{1,8}$/.test(line) || !Array.isArray(add[line])) return;
+      const row = cur[line] || (cur[line] = []);
+      add[line].slice(0, 8).forEach(function (c, i) {
+        if (!Array.isArray(c) || !(c[0] > 0)) return;
+        const m = row[i];
+        // le téléphone envoie ses compteurs complets : on garde le plus fourni (pas de double comptage)
+        if (!m || c[0] > m[0]) row[i] = c.slice(0, 4).map(function (x) { return Math.max(0, Math.round(+x || 0)); });
+      });
+    });
+    propPut_(props, STATS_PROP, JSON.stringify(cur));
+  } finally { lock.releaseLock(); }
+  return '1';
 }

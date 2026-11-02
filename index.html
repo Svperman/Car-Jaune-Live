@@ -404,14 +404,32 @@
   .set-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;background:var(--jaune,#F6BE00);padding:14px 18px}
   .set-head h2{margin:0;font-size:19px;color:#1A1A1A;display:flex;gap:8px;align-items:center}
   .set-head .x{border:none;background:rgba(0,0,0,.08);border-radius:50%;width:34px;height:34px;font-size:16px;cursor:pointer}
-  .set-sec{padding:4px 18px 12px;border-bottom:8px solid var(--fond);scroll-margin-top:110px}
+  .set-sec{border-bottom:1px solid var(--ligne);scroll-margin-top:70px}
+  .set-sec > summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px 18px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .set-sec > summary::-webkit-details-marker{display:none}
+  .set-sec > summary:hover{background:var(--fond)}
+  .sa-i{flex:none;width:38px;height:38px;border-radius:10px;background:var(--fond);display:grid;place-items:center;font-size:19px}
+  .sa-t{flex:1;min-width:0}
+  .sa-t b{display:block;font-size:16px;color:var(--titre)}
+  .sa-t small{display:block;font-size:12.5px;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sa-c{flex:none;font-size:22px;color:var(--gris);transition:transform .2s}
+  .set-sec[open] > summary .sa-c{transform:rotate(90deg)}
+  .set-sec[open] > summary{background:var(--fond)}
+  .sa-body{padding:2px 18px 12px}
+  .set-more{margin-top:4px}
+  .set-more > summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--gris);padding:10px 0;list-style:none}
+  .set-more > summary::-webkit-details-marker{display:none}
+  .set-more > summary::before{content:'＋ '}
+  .set-more[open] > summary::before{content:'－ '}
+  .set-todo{margin:12px 18px 4px;padding:12px 14px;border-radius:12px;background:#FFF4D6;border:1.5px solid #F2C94C;font-size:13.5px}
+  html.dark .set-todo{background:#3A3218;border-color:#6B5A1E}
+  .set-todo b{display:block;margin-bottom:6px;color:var(--titre)}
+  .td-it{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:4px 0}
+  #settingsModal .notif-box{margin:12px 18px 4px}
+  .set-row[hidden],.set-more[hidden],.notif-box[hidden],.set-todo[hidden]{display:none}
   .set-sec h3{font-size:17px;color:var(--titre);margin:16px 0 2px;display:flex;align-items:center;gap:8px}
   .set-intro{margin:0 0 6px;font-size:12.5px;color:var(--gris)}
   .set-sub{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--gris);margin:16px 0 0;padding-top:10px;border-top:1px dashed var(--ligne)}
-  .set-nav{position:sticky;top:62px;z-index:2;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:8px 18px;background:var(--carte);border-bottom:1px solid var(--ligne)}
-  .set-nav::-webkit-scrollbar{display:none}
-  .set-nav button{flex:none;border:1.5px solid var(--ligne);background:var(--carte);color:var(--titre);border-radius:25px;padding:6px 12px;font:700 12.5px 'Nunito Sans',sans-serif;cursor:pointer}
-  .set-nav button.on{background:var(--jaune);border-color:var(--jaune);color:#1A1A1A}
   .set-l{flex:1;min-width:0}
   .set-row.col{flex-direction:column;align-items:stretch;gap:8px}
   .set-ctl{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
@@ -481,6 +499,14 @@
   .pmr{font-size:11.5px;font-weight:700;color:var(--ok);white-space:nowrap} .pmr.no{color:var(--gris)}
   .pmr-i{display:inline-block;margin-left:4px;font-size:13px}
   .board-head h2 .pmr{font-size:12px;margin-left:6px;vertical-align:middle}
+
+  /* ---------- cars fantômes & fiabilité ---------- */
+  .dchip.ghost{background:#EEE;color:#555} html.dark .dchip.ghost{background:#33383F;color:#C9CED6}
+  table.board tr.ghost td{opacity:.6} table.board tr.ghost td:last-child{opacity:1}
+  .rel{margin-top:14px;padding:12px 14px;border-radius:12px;background:var(--fond);font-size:13px}
+  .rel.sm{margin:8px 0 0;padding:8px 10px;font-size:12px}
+  .rel-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+  .rel-it{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 
   /* ---------- correspondances ---------- */
   .tr-h{font-size:15px;color:var(--titre);margin:18px 0 8px}
@@ -705,7 +731,7 @@
           <select id="alLine"><option value="">toutes les lignes</option></select>
         </div>
         <div class="al-row"><button class="btn" id="alToggle">🔔 Activer les alertes</button>
-          <button class="al-link" data-open-settings>⚙️ Réglages des notifications</button></div>
+          <button class="al-link" data-open-settings="sec-alertes">⚙️ Réglages des notifications</button></div>
         <div class="al-status" id="alStatus"></div>
       </div>
     </div>
@@ -750,83 +776,88 @@
 </div></div>
 <div class="modal" id="settingsModal" hidden><div class="modal-box set-box" role="dialog" aria-label="Paramètres">
   <div class="set-head"><h2>⚙️ Paramètres</h2><button class="x" id="setClose" aria-label="Fermer">✕</button></div>
-  <nav class="set-nav" aria-label="Sections des paramètres">
-    <button data-sec="sec-alertes">🔔 Alertes</button><button data-sec="sec-proches">👥 Proches</button><button data-sec="citySec">🏙️ Ma ville</button><button data-sec="sec-carte">🗺️ Carte</button><button data-sec="sec-appli">📲 Appli</button>
-  </nav>
-
-  <section class="set-sec" id="sec-alertes"><h3>🔔 Alertes</h3>
-    <p class="set-intro">Être prévenu avant chaque car, à l’arrêt surveillé ou sur Mon trajet.</p>
-    <div class="set-row"><div class="set-l"><b>Notifications</b><small id="setOnTxt">Toujours actives, même après avoir fermé l’appli.</small></div><label class="switch"><input type="checkbox" id="setOn"><span></span></label></div>
-    <div class="set-row col"><div class="set-l"><b>Pause</b><small id="pauseTxt">Coupe-les un moment, elles reviennent toutes seules.</small></div><div class="pseg" id="pauseSeg"><button data-pause="60">1 h</button><button data-pause="180">3 h</button><button data-pause="tomorrow">Jusqu’à demain</button><button data-pause="0" id="pauseOff" hidden>▶ Reprendre</button></div></div>
-    <div class="notif-box" id="notifBox">
-      <div class="st" id="notifState">Notifications du téléphone : …</div>
-      <button class="btn small" id="notifBtn">🔔 Activer les notifications</button>
+  <div class="set-todo" id="setTodo" hidden></div>
+  <div class="notif-box" id="notifBox" hidden>
+    <div class="st" id="notifState"></div>
+    <button class="btn small" id="notifBtn">🔔 Activer</button>
+  </div>
+  <details class="set-sec" id="sec-alertes" data-acc>
+    <summary><span class="sa-i">🔔</span><span class="sa-t"><b>Alertes</b><small id="sum-sec-alertes"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+    <div class="sa-body">
+      <div class="set-row"><div class="set-l"><b>Notifications</b><small id="setOnTxt"></small></div><label class="switch"><input type="checkbox" id="setOn"><span></span></label></div>
+      <div class="set-row col"><div class="set-l"><b>Pause</b><small id="pauseTxt">Coupe-les un moment, elles reviennent toutes seules.</small></div><div class="pseg" id="pauseSeg"><button data-pause="60">1 h</button><button data-pause="180">3 h</button><button data-pause="tomorrow">Jusqu’à demain</button><button data-pause="0" id="pauseOff" hidden>▶ Reprendre</button></div></div>
+      <div class="set-row"><div class="set-l"><b>Me prévenir</b><small>avant chaque car</small></div><select class="set-sel" id="alLead" aria-label="Délai"><option value="2">2 min</option><option value="5" selected>5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></div>
+      <div class="set-row"><div class="set-l"><b>Même appli fermée</b><small id="pushStatus"></small></div><label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
+      <div class="set-row col dep-push" id="pushSec"><div class="set-l"><b>Canal ntfy</b><small>installe l’appli gratuite <b>ntfy</b> et abonne-toi à ce nom</small></div>
+        <div class="set-ctl"><code id="pushTopic" class="sh-code sm"></code><button class="btn ghost small" id="pushCopy">Copier</button><button class="btn ghost small" id="pushTest">🧪 Tester</button></div></div>
+      <details class="set-more"><summary>Plus d’options</summary>
+      <div class="set-row"><div class="set-l"><b>Arrivée à quai</b><small>quand le car arrive à l’arrêt</small></div><label class="switch"><input type="checkbox" id="alQuai" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>Avance / retard</b><small>si le retard change de 2 min ou plus</small></div><label class="switch"><input type="checkbox" id="alLate" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>Aucun car dans l’heure</b></div><label class="switch"><input type="checkbox" id="alNoBus" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>Arrêt le plus proche</b><small>choisi tout seul selon ta position</small></div><label class="switch"><input type="checkbox" id="alFollow"><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>Son</b></div><label class="switch"><input type="checkbox" id="alSound" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>Vibration</b><small>Android uniquement</small></div><label class="switch"><input type="checkbox" id="alVibe" checked><span></span></label></div>
+      </details>
     </div>
-    <h4 class="set-sub">Quand me prévenir</h4>
-    <div class="set-row"><div class="set-l"><b>Avant chaque car</b><small>délai avant le départ</small></div><select class="set-sel" id="alLead" aria-label="Délai"><option value="2">2 min</option><option value="5" selected>5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></div>
-    <div class="set-row"><div class="set-l"><b>Arrivée à quai</b><small>quand le car arrive à l’arrêt</small></div><label class="switch"><input type="checkbox" id="alQuai" checked><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>Avance / retard</b><small>si le retard du car change de 2 min ou plus</small></div><label class="switch"><input type="checkbox" id="alLate" checked><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>Aucun car dans l’heure</b><small>quand il n’y a plus de car</small></div><label class="switch"><input type="checkbox" id="alNoBus" checked><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>Arrêt le plus proche</b><small>choisi tout seul selon ta position (rien n’est affiché sur la carte)</small></div><label class="switch"><input type="checkbox" id="alFollow"><span></span></label></div>
-    <h4 class="set-sub">Son</h4>
-    <div class="set-row"><div class="set-l"><b>Son</b><small>petit bip à chaque alerte</small></div><label class="switch"><input type="checkbox" id="alSound" checked><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>Vibration</b><small>Android uniquement (l’iPhone ne le permet pas aux sites)</small></div><label class="switch"><input type="checkbox" id="alVibe" checked><span></span></label></div>
-    <h4 class="set-sub" id="pushSec">Même appli fermée</h4>
-    <div class="set-row"><div class="set-l"><b>Alertes appli fermée</b><small id="pushStatus">Ton serveur surveille ton car toute la journée et t’envoie la notification par l’appli ntfy, téléphone verrouillé.</small></div><label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
-    <div class="set-row col"><div class="set-l"><b>Canal ntfy</b><small>installe l’appli gratuite <b>ntfy</b> et abonne-toi à ce nom</small></div>
-      <div class="set-ctl"><code id="pushTopic" class="sh-code sm"></code><button class="btn ghost small" id="pushCopy">Copier</button><button class="btn ghost small" id="pushTest">🧪 Tester</button></div></div>
-  </section>
-
-  <section class="set-sec" id="sec-proches"><div id="shareSec"></div><h3>👥 Mes proches</h3>
-    <p class="set-intro">Tes proches voient où tu es et dans quel car jaune tu es, avec ton prénom.</p>
-    <div class="set-row col"><div class="set-l"><b>Mon prénom</b></div><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel"></div>
-    <div class="set-row"><div class="set-l"><b>Mon code secret</b><small>avec ton prénom, il protège ta position : seuls ceux qui l’ont te voient</small></div><div class="set-ctl col"><span class="sh-code" id="shCode">——</span><button class="al-link" id="shNew">↻ nouveau code</button></div></div>
-    <div class="set-row"><div class="set-l"><b>Automatique dans les cars jaunes</b><small>dès que tu montes dans un car, et jusqu’à 10 min après ta descente</small></div><label class="switch"><input type="checkbox" id="shAuto" checked><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>Partager tout le temps</b><small id="shStatus">même hors des cars, tant que l’appli est ouverte</small></div><label class="switch"><input type="checkbox" id="shOn"><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>Messages à mes proches</b><small>j’attends en gare, je pars, j’arrive bientôt, je suis descendu</small></div><label class="switch"><input type="checkbox" id="shEvents" checked><span></span></label></div>
-    <div class="set-row"><button class="btn set-wide" id="shSend">📤 Envoyer le lien à mes proches</button></div>
-    <h4 class="set-sub">Suivre un proche</h4>
-    <div class="set-row col"><div class="set-l"><small>son prénom et son code (ou ouvre simplement le lien qu’il t’a envoyé)</small></div>
-      <div class="fr-add"><input class="set-in" id="frName" placeholder="Prénom"><input class="set-in" id="frCode" inputmode="numeric" maxlength="7" placeholder="Code"><button class="btn small" id="frAdd">Ajouter</button></div>
-      <div class="fr-list" id="frList"></div></div>
-  </section>
-
-  <section class="set-sec" id="citySec"><h3>🏙️ Cars dans ma ville</h3>
-    <p class="set-intro">Arrivées et départs des cars jaunes là où tu te trouves, et seulement là.</p>
-    <div class="set-row"><div class="set-l"><b>M’annoncer les cars autour de moi</b><small id="cityStatus"></small></div><label class="switch"><input type="checkbox" id="cityOn"><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>Secteur</b><small>suit ta position tout seul</small></div><select class="set-sel" id="citySector" aria-label="Secteur"><option value="city">ma ville</option><option value="1000">1 km</option><option value="2000">2 km</option><option value="5000">5 km</option></select></div>
-    <div class="set-row"><div class="set-l"><b>🚏 Arrivée en gare</b></div><label class="switch"><input type="checkbox" id="cityGareIn" checked><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>🚌 Départ de la gare</b></div><label class="switch"><input type="checkbox" id="cityGareOut" checked><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>➡️ Entre dans le secteur</b></div><label class="switch"><input type="checkbox" id="cityEnter"><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>⬅️ Quitte le secteur</b></div><label class="switch"><input type="checkbox" id="cityLeave"><span></span></label></div>
-    <div class="set-row col"><div class="set-l"><b>Lignes</b><small>aucune cochée = toutes les lignes</small></div>
-      <div class="chk-row" id="cityLines"></div></div>
-    <div class="set-row"><div class="set-l"><b>Voir le secteur sur la carte</b><small>contour en pointillés</small></div><label class="switch"><input type="checkbox" id="cityShow" checked><span></span></label></div>
-  </section>
-
-  <section class="set-sec" id="sec-carte"><h3>🗺️ Carte et affichage</h3>
-    <p class="set-intro">Trafic routier, thème et confort de lecture.</p>
-    <div class="set-row"><div class="set-l"><b>Trafic sur la carte</b><small>routes colorées, accidents, travaux et bouchons repérés par les cars</small></div><label class="switch"><input type="checkbox" id="tfOn" checked><span></span></label></div>
-    <div class="set-row col"><div class="set-l"><b>Clé TomTom (gratuite)</b><small>pour les couleurs de circulation et les incidents. Crée-la sur <a href="https://developer.tomtom.com/" target="_blank" rel="noopener">developer.tomtom.com</a> (sans carte bancaire). Elle reste sur ton téléphone.</small></div>
-      <div class="tf-key"><input class="set-in" id="tfKey" placeholder="colle ta clé ici" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div>
-      <small class="set-note" id="tfKeyTxt"></small></div>
-    <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt">automatique : sombre le soir et selon ton téléphone</small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
-    <div class="set-row"><div class="set-l"><b>Taille du texte</b><small>pages, listes et réglages</small></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
-    <div class="set-row"><div class="set-l"><b>Économie de batterie</b><small id="ecoTxt">GPS approximatif quand tu ne bouges pas, précis dès que tu roules ; carte animée seulement à l’écran</small></div><label class="switch"><input type="checkbox" id="ecoOn" checked><span></span></label></div>
-    <div class="set-row"><div class="set-l"><b>Garder l’écran allumé</b><small>pendant les alertes ; use la batterie</small></div><label class="switch"><input type="checkbox" id="alWake"><span></span></label></div>
-  </section>
-
-  <section class="set-sec" id="sec-appli"><h3>📲 Application</h3>
-    <p class="set-intro">Installation, raccourcis, serveur et dépannage.</p>
-    <div class="set-row" id="installRow" hidden><div class="set-l"><b>Installer l’appli</b><small>sur l’écran d’accueil, comme une vraie appli</small></div><button id="installBtn" class="btn small">📲 Installer</button></div>
-    <div class="set-row"><div class="set-l"><b>Raccourci « Mon prochain car »</b><small>une icône qui ouvre directement ton prochain car</small></div><button class="btn small ghost" id="nextShortcut">➕ Créer</button></div>
-    <div class="set-row" id="apkRow" hidden><div class="set-l"><b>Appli Android</b><small>position partagée même appli fermée, à pied comme en car</small></div><a class="btn small ghost" href="https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk">📥 APK</a></div>
-    <div class="set-row col" id="apiRow" hidden><div class="set-l"><b>Serveur <span id="srvState"></span></b><small id="apiTxt">adresse Apps Script /exec</small></div>
-      <div class="set-ctl"><button class="btn small ghost" id="srvCheck">↻ Vérifier</button><button id="apiBtn" class="btn small ghost">Modifier l’adresse</button></div></div>
-    <div class="set-row"><div class="set-l"><b>Mise à jour</b><small>automatique à chaque ouverture</small></div><button class="btn small ghost" id="reloadBtn">↻ Recharger</button></div>
-    <div class="set-row"><div class="set-l"><b>Journal de trajet</b><small id="diagTxt">Enregistre ce que l’appli détecte (position, car repéré, retards, alertes) pour corriger les erreurs. Rien n’est envoyé.</small></div><label class="switch"><input type="checkbox" id="diagOn"><span></span></label></div>
-    <div class="set-row"><div class="set-ctl"><button class="btn ghost small" id="diagShare">📤 Envoyer le journal</button><button class="btn ghost small" id="diagClear">🗑️ Effacer</button></div></div>
-  </section>
+  </details>
+  <details class="set-sec" id="sec-proches" data-acc>
+    <summary><span class="sa-i">👥</span><span class="sa-t"><b>Mes proches</b><small id="sum-sec-proches"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+    <div class="sa-body"><div id="shareSec"></div>
+      <div class="set-row col"><div class="set-l"><b>Mon prénom</b><small>tes proches te retrouvent avec lui</small></div><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel"></div>
+      <div class="set-row dep-name"><div class="set-l"><b>Automatique dans les cars jaunes</b><small>dès que tu montes, jusqu’à 10 min après ta descente</small></div><label class="switch"><input type="checkbox" id="shAuto" checked><span></span></label></div>
+      <div class="set-row dep-name"><button class="btn set-wide" id="shSend">📤 Envoyer le lien à mes proches</button></div>
+      <details class="set-more dep-name"><summary>Plus d’options</summary>
+      <div class="set-row"><div class="set-l"><b>Mon code secret</b><small>avec ton prénom, il protège ta position</small></div><div class="set-ctl col"><span class="sh-code" id="shCode">——</span><button class="al-link" id="shNew">↻ nouveau code</button></div></div>
+      <div class="set-row"><div class="set-l"><b>Partager tout le temps</b><small id="shStatus">même hors des cars, appli ouverte</small></div><label class="switch"><input type="checkbox" id="shOn"><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>Messages à mes proches</b><small>j’attends, je pars, j’arrive, je suis descendu</small></div><label class="switch"><input type="checkbox" id="shEvents" checked><span></span></label></div>
+      </details>
+      <div class="set-row col"><div class="set-l"><b>Suivre un proche</b><small>son prénom et son code (ou ouvre le lien qu’il t’a envoyé)</small></div>
+        <div class="fr-add"><input class="set-in" id="frName" placeholder="Prénom"><input class="set-in" id="frCode" inputmode="numeric" maxlength="7" placeholder="Code"><button class="btn small" id="frAdd">Ajouter</button></div>
+        <div class="fr-list" id="frList"></div></div>
+    </div>
+  </details>
+  <details class="set-sec" id="citySec" data-acc>
+    <summary><span class="sa-i">🏙️</span><span class="sa-t"><b>Cars dans ma ville</b><small id="sum-citySec"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+    <div class="sa-body">
+      <div class="set-row"><div class="set-l"><b>M’annoncer les cars autour de moi</b><small id="cityStatus"></small></div><label class="switch"><input type="checkbox" id="cityOn"><span></span></label></div>
+      <div class="set-row dep-city"><div class="set-l"><b>Secteur</b><small>suit ta position tout seul</small></div><select class="set-sel" id="citySector" aria-label="Secteur"><option value="city">ma ville</option><option value="1000">1 km</option><option value="2000">2 km</option><option value="5000">5 km</option></select></div>
+      <div class="set-row dep-city"><div class="set-l"><b>🚏 Arrivée en gare</b></div><label class="switch"><input type="checkbox" id="cityGareIn" checked><span></span></label></div>
+      <div class="set-row dep-city"><div class="set-l"><b>🚌 Départ de la gare</b></div><label class="switch"><input type="checkbox" id="cityGareOut" checked><span></span></label></div>
+      <details class="set-more dep-city"><summary>Plus d’options</summary>
+      <div class="set-row"><div class="set-l"><b>➡️ Entre dans le secteur</b></div><label class="switch"><input type="checkbox" id="cityEnter"><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>⬅️ Quitte le secteur</b></div><label class="switch"><input type="checkbox" id="cityLeave"><span></span></label></div>
+      <div class="set-row col"><div class="set-l"><b>Lignes</b><small>aucune cochée = toutes</small></div><div class="chk-row" id="cityLines"></div></div>
+      <div class="set-row"><div class="set-l"><b>Voir le secteur sur la carte</b></div><label class="switch"><input type="checkbox" id="cityShow" checked><span></span></label></div>
+      </details>
+    </div>
+  </details>
+  <details class="set-sec" id="sec-carte" data-acc>
+    <summary><span class="sa-i">🗺️</span><span class="sa-t"><b>Carte et affichage</b><small id="sum-sec-carte"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+    <div class="sa-body">
+      <div class="set-row"><div class="set-l"><b>Trafic sur la carte</b><small>routes colorées et bouchons repérés par les cars</small></div><label class="switch"><input type="checkbox" id="tfOn" checked><span></span></label></div>
+      <div class="set-row col" id="tfKeyRow"><div class="set-l"><b>Clé TomTom</b><small id="tfKeyTxt"></small></div>
+        <div class="tf-key" id="tfKeyEdit"><input class="set-in" id="tfKey" placeholder="colle ta clé gratuite (developer.tomtom.com)" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div></div>
+      <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt"></small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
+      <div class="set-row"><div class="set-l"><b>Taille du texte</b></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
+      <div class="set-row"><div class="set-l"><b>Économie de batterie</b><small id="ecoTxt"></small></div><label class="switch"><input type="checkbox" id="ecoOn" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>Garder l’écran allumé</b><small>pendant les alertes</small></div><label class="switch"><input type="checkbox" id="alWake"><span></span></label></div>
+    </div>
+  </details>
+  <details class="set-sec" id="sec-appli" data-acc>
+    <summary><span class="sa-i">📲</span><span class="sa-t"><b>Application</b><small id="sum-sec-appli"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+    <div class="sa-body">
+      <div class="set-row" id="installRow" hidden><div class="set-l"><b>Installer l’appli</b><small>sur l’écran d’accueil</small></div><button id="installBtn" class="btn small">📲 Installer</button></div>
+      <div class="set-row"><div class="set-l"><b>Raccourci « Mon prochain car »</b></div><button class="btn small ghost" id="nextShortcut">➕ Créer</button></div>
+      <div class="set-row" id="apkRow" hidden><div class="set-l"><b>Appli Android</b><small>position partagée même appli fermée</small></div><a class="btn small ghost" href="https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk">📥 APK</a></div>
+      <div class="set-row col" id="apiRow" hidden><div class="set-l"><b>Serveur <span id="srvState"></span></b><small id="apiTxt"></small></div>
+        <div class="set-ctl"><button class="btn small ghost" id="srvCheck">↻ Vérifier</button><button id="apiBtn" class="btn small ghost">Modifier l’adresse</button></div></div>
+      <details class="set-more"><summary>Dépannage</summary>
+      <div class="set-row"><div class="set-l"><b>Recharger l’appli</b><small>si quelque chose semble bloqué</small></div><button class="btn small ghost" id="reloadBtn">↻ Recharger</button></div>
+      <div class="set-row"><div class="set-l"><b>Journal de trajet</b><small id="diagTxt">enregistre ce que l’appli détecte pendant un trajet (rien n’est envoyé)</small></div><label class="switch"><input type="checkbox" id="diagOn"><span></span></label></div>
+      <div class="set-row"><div class="set-ctl"><button class="btn ghost small" id="diagShare">📤 Envoyer le journal</button><button class="btn ghost small" id="diagClear">🗑️ Effacer</button></div></div>
+      </details>
+    </div>
+  </details>
   <div class="set-foot">Car Jaune Live · application personnelle, non affiliée à Car Jaune<br>Données : Région Réunion · réseau Car Jaune (Licence Ouverte)</div>
 </div></div>
 
@@ -1977,7 +2008,7 @@ function renderTrip(){
       t += `<tr class="${late ? 'toolate' : ''}"><td>${when}${leave}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched, r.approx)}</td>
         <td class="arr">${fmtTime(r.rarr, r.arr, r.rarr != null && r.real != null)}</td>
         <td><span class="dur">${Math.round((arrEff - r.eff) / 60000)} min</span></td>
-        <td>${r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>`}
+        <td>${r.ghost ? '<span class="dchip ghost">🚫 Pas vu en circulation</span>' : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>`}
           ${r.veh ? `<br><button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}</td></tr>`;
     });
     html += `<table class="board jt"><thead><tr><th>Départ</th><th>Ligne</th><th>Part de ${esc(from.name)}</th><th>Arrive à ${esc(to.name)}</th><th>Durée</th><th>Info</th></tr></thead><tbody>${t}</tbody></table>`;
@@ -2409,6 +2440,11 @@ function checkAlerts(){
                : delayMin === 0 ? 'à l’heure' : delayMin > 0 ? `retard ${delayMin} min` : `avance ${-delayMin} min`;
     const name = `${r.route.s} → ${r.dest}` + (ctx.sens ? ` (${ctx.sens})` : '');
     const arrTxt = r.arr ? ` Arrivée à ${r.dest} vers ${fmtHM(r.rarr != null ? r.rarr : r.arr)}.` : '';
+    if (r.ghost && !st.ghost && mins <= lead + 5 && mins > -5){
+      st.ghost = true; saveSent();
+      const nx = rows.find(x => x !== r && !x.ghost && x.eff > now && x.route.s === r.route.s) || rows.find(x => x !== r && !x.ghost && x.eff > now);
+      notify(`🚫 ${name} : pas vu en circulation`, `Le car de ${fmtHM(r.sched)} n’apparaît pas dans le temps réel (supprimé ou sans GPS).${nx ? ` Prochain : ${nx.route.s} → ${nx.dest} à ${fmtHM(nx.eff)}.` : ''}`, 'warn');
+    }
     if (!st.lead && mins <= lead && mins > 1){
       st.lead = true; st.delay = delayMin; saveSent();
       notify(`🚌 ${name}`, `Arrive à ${stop} dans ${Math.round(mins)} min, à ${fmtHM(r.eff)} (${dTxt}).${arrTxt}`);
@@ -2619,7 +2655,7 @@ setInterval(() => { if (pushCfg.on && alertCfg.on && document.visibilityState ==
 document.addEventListener('visibilitychange', () => { if (pushCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); });
 
 /* ---------- voyant du serveur : est-il à la dernière version ? ---------- */
-const SERVER_WANTED = '2026-11-02.3';                 // version de Code.gs attendue par cette version de l'appli
+const SERVER_WANTED = '2026-11-02.4';                 // version de Code.gs attendue par cette version de l'appli
 const srv = { state:'', version:'', trigger:false, at:0 };
 async function checkServer(){
   if (IN_GAS) return;
@@ -2742,27 +2778,64 @@ function renderSettings(){
   $('#pauseOff').hidden = !muted;
   $('#alSound').checked = alertCfg.sound; $('#alVibe').checked = alertCfg.vibe; $('#alWake').checked = alertCfg.wake;
   $('#alFollow').checked = alertCfg.follow;
-  renderShareUI(); renderCityUI(); renderDiag(); renderPushUI(); renderTfKey(); renderEcoUI();
+  renderShareUI(); renderCityUI(); renderDiag(); renderPushUI(); renderTfKey(); renderEcoUI(); renderSummaries();
   $('#apkRow').hidden = NATIVE || !/Android/i.test(navigator.userAgent);
   if (!IN_GAS){ $('#apiRow').hidden = false; renderServer(); }
   renderNotif();
 }
 $('#gearBtn').addEventListener('click', openSettings);
-$('.set-nav').addEventListener('click', e => {
-  const b = e.target.closest('[data-sec]'); if (!b) return;
-  document.getElementById(b.dataset.sec).scrollIntoView({ behavior:'smooth', block:'start' });   // scroll-margin-top : sous l'en-tête
+/** Une ligne par section, visible même repliée : on voit tout d'un coup d'œil. */
+function renderSummaries(){
+  if (!$('#sum-sec-alertes')) return;
+  const muted = isMuted();
+  const set = (id, t) => { const el = $('#sum-' + id); if (el) el.textContent = t; };
+  set('sec-alertes', !alertCfg.on ? 'coupées' : muted ? `en pause jusqu’à ${fmtDayHM(alertCfg.muteUntil)}`
+    : `actives · ${alertCfg.lead} min avant${pushCfg.on ? ' · même appli fermée' : ''}`);
+  set('sec-proches', !shareCfg.name.trim() ? 'pas encore réglé' : shareCfg.on ? `${shareCfg.name} · partage en cours`
+    : (typeof autoActive !== 'undefined' && autoActive) ? `${shareCfg.name} · partagé (dans le car)` : shareCfg.auto ? `${shareCfg.name} · automatique dans les cars` : `${shareCfg.name} · désactivé`)
+    ;
+  if (friends.length) $('#sum-sec-proches').textContent += ` · tu suis ${friends.map(f => f.name).join(', ')}`;
+  set('citySec', !cityCfg.on ? 'désactivé' : `${cityCfg.sector === 'city' ? (city.name || 'ma ville') : sectorName()} · ${[cityCfg.gareIn && 'arrivées', cityCfg.gareOut && 'départs'].filter(Boolean).join(' et ') || 'annonces'}`);
+  set('sec-carte', [TF.on ? 'trafic' + (TF.key ? ' TomTom' : '') : 'sans trafic', { auto:'thème auto', light:'clair', dark:'sombre' }[look.theme], look.eco !== false ? 'économie de batterie' : ''].filter(Boolean).join(' · '));
+  set('sec-appli', IN_GAS ? 'version Apps Script' : srv.state === 'ok' ? 'serveur à jour ✅' : srv.state === 'old' ? 'serveur à mettre à jour ⚠️' : srv.state === 'down' ? 'serveur injoignable' : 'installation, raccourcis, dépannage');
+  // options dépendantes : affichées seulement quand elles servent
+  document.querySelectorAll('#settingsModal .dep-push').forEach(el => el.hidden = !pushCfg.on);
+  document.querySelectorAll('#settingsModal .dep-name').forEach(el => el.hidden = !shareCfg.name.trim());
+  document.querySelectorAll('#settingsModal .dep-city').forEach(el => el.hidden = !cityCfg.on);
+  // « À régler » : uniquement ce qui demande une action
+  const todo = [];
+  const ns = notifStatus();
+  if (ns.k === 'ask') todo.push(`<div class="td-it">🔔 Autorise les notifications pour être prévenu <button class="btn small" data-todo="notif">Activer</button></div>`);
+  if (srv.state === 'old') todo.push(`<div class="td-it">⚠️ Ton serveur doit être mis à jour <button class="btn small ghost" data-todo="srv">Voir</button></div>`);
+  if (pushCfg.on && srv.state === 'ok' && !srv.trigger) todo.push(`<div class="td-it">⚠️ Alertes appli fermée : exécute « installPushTrigger » une fois dans Apps Script</div>`);
+  $('#setTodo').innerHTML = todo.length ? `<b>À régler</b>${todo.join('')}` : '';
+  $('#setTodo').hidden = !todo.length;
+}
+$('#setTodo').addEventListener('click', e => {
+  const t = e.target.closest('[data-todo]'); if (!t) return;
+  if (t.dataset.todo === 'notif') enableNotifications();
+  if (t.dataset.todo === 'srv'){ const d = $('#sec-appli'); d.open = true; setTimeout(() => d.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }
 });
-$('.set-box').addEventListener('scroll', () => {          // section visible = bouton en surbrillance
-  const box = $('.set-box'), lim = box.getBoundingClientRect().top + $('.set-head').offsetHeight + $('.set-nav').offsetHeight + 30;
-  let cur = 'sec-alertes';
-  document.querySelectorAll('.set-nav [data-sec]').forEach(b => { const s = document.getElementById(b.dataset.sec); if (s && s.getBoundingClientRect().top <= lim) cur = b.dataset.sec; });
-  if (box.scrollTop + box.clientHeight >= box.scrollHeight - 4) cur = 'sec-appli';     // tout en bas
-  document.querySelectorAll('.set-nav [data-sec]').forEach(b => b.classList.toggle('on', b.dataset.sec === cur));
-}, { passive:true });
+// à chaque changement dans les paramètres : résumés et options à jour
+$('#settingsModal').addEventListener('change', () => setTimeout(renderSummaries, 50));
+$('#settingsModal').addEventListener('click', e => { if (e.target.closest('button,label')) setTimeout(renderSummaries, 80); });
+// sections repliables : on se souvient de celles ouvertes
+document.querySelectorAll('#settingsModal [data-acc]').forEach(d => {
+  try { if ((sessionStorage.getItem('cj_acc') || '').split(',').includes(d.id)) d.open = true; } catch(e){}
+  d.addEventListener('toggle', () => {
+    try { sessionStorage.setItem('cj_acc', [...document.querySelectorAll('#settingsModal [data-acc]')].filter(x => x.open).map(x => x.id).join(',')); } catch(e){}
+    if (d.open) setTimeout(() => d.scrollIntoView({ behavior:'smooth', block:'nearest' }), 60);
+  });
+});
 $('#setClose').addEventListener('click', closeSettings);
 $('#settingsModal').addEventListener('click', e => { if (e.target.id === 'settingsModal') closeSettings(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#settingsModal').hidden) closeSettings(); });
-document.addEventListener('click', e => { if (e.target.closest('[data-open-settings]')) openSettings(); });
+document.addEventListener('click', e => {
+  const o = e.target.closest('[data-open-settings]'); if (!o) return;
+  openSettings();
+  const sec = o.dataset.openSettings && document.getElementById(o.dataset.openSettings);   // ouvre directement la bonne section
+  if (sec){ sec.open = true; setTimeout(() => sec.scrollIntoView({ block:'start' }), 60); }
+});
 $('#setOn').addEventListener('change', e => setAlertsOn(e.target.checked));
 $('#pauseSeg').addEventListener('click', e => { const b = e.target.closest('[data-pause]'); if (b) setPause(b.dataset.pause); });
 [['alSound', 'sound'], ['alVibe', 'vibe'], ['alWake', 'wake']].forEach(([id, k]) => $('#' + id).addEventListener('change', e => {
@@ -2794,8 +2867,10 @@ function renderNotif(){
   $('#gearDot').classList.toggle('show', s.k === 'ask' || s.k === 'denied' || srv.state === 'old');
   $('#notifState').innerHTML = s.t;
   box.className = 'notif-box' + (s.k === 'ok' ? ' ok' : s.k === 'denied' || s.k === 'install' ? ' ko' : '');
-  btn.hidden = !(s.k === 'ask' || s.k === 'ok');
-  btn.textContent = s.k === 'ok' ? '🧪 Tester' : '🔔 Activer les notifications';
+  box.hidden = s.k === 'ok' || s.k === 'gas';                         // tout va bien : rien à afficher
+  btn.hidden = s.k !== 'ask';
+  btn.textContent = '🔔 Activer';
+  try { renderSummaries(); } catch(e){}
 }
 async function showPhoneNotif(title, body){
   if (LNOTIF){
@@ -3136,6 +3211,7 @@ function parseFeed(feed){
   });
   Object.keys(motion).forEach(id => { if (!vehicles.some(v => v.id === id)) delete motion[id]; });
   applyEstimates();
+  try { recordStats(); } catch(e){}
   loadTripSchedules();          // horaires arrêt par arrêt des cars en circulation (une fois par ligne)
   try { cityTick(); renderCityChip(); } catch(e){}
   try { busJamTick(); } catch(e){}
@@ -3290,6 +3366,7 @@ async function openStopPopup(g, ll){
       return `<div class="sp-row">${badge(r.route)}<span class="sp-d">${esc(r.dest)}</span><b class="sp-t${m <= 2 ? ' soon' : ''}">${m <= 0 ? 'À quai' : m < 60 ? m + ' min' : fmtHM(r.eff)}</b>${
         r.real != null ? `<span class="delay ${fmtDelay((r.real - r.sched) / 1000, r.approx).c}">${fmtDelay((r.real - r.sched) / 1000, r.approx).t}</span>` : ''}</div>`; }).join('') + '</div>'
       : '<div class="muted">Aucun départ dans les prochaines heures.</div>'}
+    ${reliabilityHtml(next.map(r => r.route.s)).replace('<div class="rel">', '<div class="rel sm">')}
     <div class="sp-act"><button class="btn small" data-sp-board="${esc(g.name)}">🕒 Tous les départs</button><button class="btn small ghost" data-sp-watch="${esc(g.name)}">🔔 Surveiller</button></div>`);
 }
 document.addEventListener('click', e => {
@@ -3302,6 +3379,57 @@ document.addEventListener('click', e => {
   else { if (!alertCfg.on) setAlertsOn(true, true); alertCfg.journey = false; saveAlertCfg(); updateAlertUI(); toast(`🔔 Je surveille ${g.name} : prévenu ${alertCfg.lead} min avant chaque car.`); }
 });
 function stopPmr(g){ return g.wb === '1' ? ' <span class="pmr" title="Arrêt accessible en fauteuil roulant">♿ accessible</span>' : g.wb === '2' ? ' <span class="pmr no" title="Arrêt non accessible en fauteuil roulant">♿ non accessible</span>' : ''; }
+
+/* ====================== Fiabilité des lignes ======================
+   Chaque car observé (au plus une mesure par course toutes les 5 min) compte pour sa ligne et son moment
+   de la journée : à l'heure (−1 à +3 min), en retard, en avance. Gardé sur le téléphone et sur ton serveur. */
+let STATS = {}, statsDirty = {}, statsT = null;
+const statSeen = {};
+idb.get('stats').then(v => { if (v && typeof v === 'object') STATS = Object.assign(v, STATS); });
+function recordStats(){
+  const now = Date.now(), slot = hourSlot(now);
+  vehicles.forEach(v => {
+    if (v.delay == null || !v.route || (v.age != null && v.age > 90e3)) return;
+    const k = v.id + '|' + v.tripId;
+    if (statSeen[k] && now - statSeen[k] < 5 * 60e3) return;
+    statSeen[k] = now;
+    const line = v.route.s, row = STATS[line] || (STATS[line] = []);
+    const c = row[slot] || [0, 0, 0, 0];                              // [mesures, à l'heure, en retard, somme des retards (s)]
+    const d = v.delay;
+    c[0]++; if (d >= -60 && d <= 180) c[1]++; else if (d > 180) c[2]++;
+    c[3] += Math.max(0, d);
+    if (c[0] > 400){ c.forEach((x, i) => c[i] = Math.round(x / 2)); }  // on garde surtout le récent
+    row[slot] = c; statsDirty[line] = row;
+  });
+  clearTimeout(statsT); statsT = setTimeout(() => idb.set('stats', STATS), 5000);
+}
+/** « 78 % à l'heure · retard moyen 4 min » pour une ligne, au moment de la journée (ou toute la journée). */
+function lineReliability(line, at){
+  const row = STATS[line]; if (!row) return null;
+  let c = row[hourSlot(at || Date.now())], when = 'à cette heure';
+  if (!c || c[0] < 8){
+    c = row.reduce((a, x) => x ? a.map((y, i) => y + x[i]) : a, [0, 0, 0, 0]); when = 'sur la journée';
+  }
+  if (c[0] < 8) return null;
+  const pct = Math.round(100 * c[1] / c[0]), late = c[2] ? Math.round(c[3] / Math.max(1, c[2]) / 60) : 0;
+  return { pct, late, n: c[0], when, cls: pct >= 75 ? 'ok' : pct >= 50 ? 'early' : 'late' };
+}
+function reliabilityHtml(lines){
+  const items = [...new Set(lines)].map(l => ({ l, r: lineReliability(l) })).filter(x => x.r);
+  if (!items.length) return '';
+  return `<div class="rel"><b>📊 Ponctualité observée</b> <small class="muted">(${items[0].r.when})</small><div class="rel-list">` +
+    items.map(({ l, r }) => `<span class="rel-it">${badge(routeByShort(l))} <span class="dchip ${r.cls}">${r.pct} % à l’heure</span>${r.late ? ` <small class="muted">retard moyen ${r.late} min</small>` : ''}</span>`).join('') + '</div></div>';
+}
+async function syncStats(){
+  try {
+    const d = statsDirty; statsDirty = {};
+    if (Object.keys(d).length) await call('saveStats', JSON.stringify(d));
+    const all = JSON.parse(await call('getStats') || '{}');
+    Object.keys(all).forEach(l => { const m = STATS[l] || (STATS[l] = []); all[l].forEach((c, i) => { if (c && (!m[i] || c[0] > m[i][0])) m[i] = c; }); });
+    idb.set('stats', STATS);
+  } catch(e){}
+}
+setTimeout(syncStats, 25000); setInterval(() => { if (document.visibilityState === 'visible') syncStats(); }, 10 * 60e3);
 
 /* ====================== Temps de parcours appris ======================
    Chaque fois qu'un car passe un arrêt, on note l'heure. Entre deux arrêts consécutifs, on obtient le vrai
@@ -3791,6 +3919,18 @@ $('#favBtn').addEventListener('click', () => {
 });
 
 /** Passages GTFS à venir à l'arrêt (prévu + temps réel), triés par heure effective. */
+/* ---------- cars fantômes : un car prévu, déjà parti de son terminus, mais absent du temps réel ---------- */
+/** Fiable seulement si le flux suit bien les trajets du GTFS (sinon on ne dit rien plutôt que de se tromper). */
+function rtCoverage(){
+  const withTrip = vehicles.filter(v => v.tripId);
+  if (withTrip.length < 8) return 0;
+  return withTrip.filter(v => S.trips[v.tripId]).length / withTrip.length;
+}
+function isGhost(ti, dayBase, now){
+  if (mode !== 'live' || rtCoverage() < 0.7) return false;
+  const start = dayBase + ti[3] * 1000, end = dayBase + ti[4] * 1000;
+  return now > start + 8 * 60e3 && now < end - 2 * 60e3;              // parti depuis 8 min et toujours invisible
+}
 function gtfsRows(g){
   const data = board.data || {};
   const now = Date.now(), today = midnightMs(now);
@@ -3824,8 +3964,9 @@ function gtfsRows(g){
       if (eff < now - 60e3) return;                                // déjà parti
       const runNow = estVeh ? true : tu ? sameRun : Math.abs(schedMs - now) < 12 * 3600e3 && !(vehByTrip[tid] && vehByTrip[tid].est);
       const rt0 = S.routes[ti[0]] || { s:'?', c:'F6BE00', t:'222222' };
+      const ghost = !real && !vehByTrip[tid] && isGhost(ti, d, now);
       rows.push({ eff, sched: schedMs, real, approx, pmr: ti[8] || '', route: rt0, sens: sensFor(rt0.s, ti[1] || '', ti[2]),
-                  dest: ti[1] || '', tag: svcTag(ti[7]), veh: runNow ? vehByTrip[tid] : null, used: false });
+                  dest: ti[1] || '', tag: svcTag(ti[7]), veh: runNow ? vehByTrip[tid] : null, ghost, used: false });
     });
   }));
   return rows.sort((a, b) => a.eff - b.eff);
@@ -3874,7 +4015,7 @@ function ficheRows(g, pool){
           const real = mt && mt.real != null ? sched + (mt.real - mt.sched) : null;
           const eff = real != null ? real : sched;
           if (eff < now - 60e3) return;
-          out.push({ eff, sched, real, approx: !!(mt && mt.approx), pmr: mt ? mt.pmr : '', route: mt ? mt.route : routeByShort(line), sens: ficheSens(url, t.dir),
+          out.push({ eff, sched, real, approx: !!(mt && mt.approx), pmr: mt ? mt.pmr : '', ghost: !!(mt && mt.ghost), route: mt ? mt.route : routeByShort(line), sens: ficheSens(url, t.dir),
                      dest: t.dir, tag: '', veh: mt ? mt.veh : null, kind: tableKindLabel(t) });
         }));
       });
@@ -3928,9 +4069,10 @@ function renderBoard(){
       const when = mins <= 0 ? `<span class="when soon">À quai</span>`
                  : mins < 60 ? `<span class="when${mins <= 2 ? ' soon' : ''}">${mins}<small>min</small></span>`
                  : `<span class="when">${fmtHM(r.eff)}</span>`;
-      const status = r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>`;
+      const status = r.ghost ? `<span class="dchip ghost">🚫 Pas vu en circulation</span><br><small class="muted">peut-être supprimé</small>`
+        : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>`;
       const sensTag = boardGroupBy === 'heure' && r.sens ? `<span class="tag ${r.sens === 'aller' ? 'tag-s' : 'tag-v'}">${r.sens}</span>` : '';
-      html += `<tr>
+      html += `<tr class="${r.ghost ? 'ghost' : ''}">
         <td>${when}</td>
         <td>${badge(r.route)}${r.pmr === '1' ? '<span class="pmr-i" title="Car accessible en fauteuil roulant">♿</span>' : ''}</td>
         <td class="b-dest">${esc(r.dest)}${sensTag}${r.tag}<small>${r.veh && r.veh.stopName ? 'vers ' + esc(r.veh.stopName) : ''}</small>
@@ -3951,7 +4093,7 @@ function renderBoard(){
       body += `<div class="sens-h sens-${s}"><span class="pillx">${s === 'aller' ? '➡️ Aller' : '⬅️ Retour'}</span><small>${esc(dests)}</small></div>` + table(list);
     });
   } else body = table(rows);
-  card.innerHTML = head + src.replace('</p>', ` ${groupBtns}</p>`) + body;
+  card.innerHTML = head + src.replace('</p>', ` ${groupBtns}</p>`) + body + reliabilityHtml(all.map(r => r.route.s));
 }
 $('#boardCard').addEventListener('click', e => {
   const gb = e.target.closest('[data-grp]');
@@ -4218,11 +4360,15 @@ $('#tfOn').addEventListener('change', e => toggleTraffic(e.target.checked));
 function renderTfKey(){
   if (!$('#tfKey')) return;
   if (document.activeElement !== $('#tfKey')) $('#tfKey').value = TF.key ? TF.key.slice(0, 4) + '…' + TF.key.slice(-4) : '';
-  $('#tfKeyTxt').textContent = !TF.key ? '' : TF.err ? '⚠️ ' + TF.err : TF.at ? `✅ Clé active · ${TF.incidents.length} incident(s) sur l’île` : '✅ Clé enregistrée';
+  $('#tfKeyTxt').innerHTML = !TF.key ? 'facultative : ajoute toutes les routes de l’île (gratuite, sans carte bancaire)'
+    : (TF.err ? '⚠️ ' + esc(TF.err) : TF.at ? `✅ active · ${TF.incidents.length} incident(s) sur l’île` : '✅ enregistrée') + ' · <button class="al-link" id="tfKeyMod">modifier</button>';
+  $('#tfKeyEdit').hidden = !!TF.key && !tfEditing;
 }
+let tfEditing = false;
+document.addEventListener('click', e => { if (e.target.id === 'tfKeyMod'){ tfEditing = true; renderTfKey(); $('#tfKey').focus(); } });
 $('#tfKey').addEventListener('focus', e => { e.target.value = TF.key; });
 $('#tfKeySave').addEventListener('click', async () => {
-  TF.key = $('#tfKey').value.trim().replace(/\s+/g, '');
+  TF.key = $('#tfKey').value.trim().replace(/\s+/g, ''); tfEditing = false;
   try { localStorage.setItem('cj_tomtom', TF.key); } catch(e){}
   TF.at = 0; TF.err = '';
   await loadIncidents(true);

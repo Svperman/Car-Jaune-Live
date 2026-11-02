@@ -60,8 +60,9 @@ await scenario('tous les réglages activés puis réouverture', async pg => {
   await go(pg); await pg.evaluate('forceUntil = Date.now()+3600e3; updateMode(); refresh(); 1'); await pg.waitForTimeout(1200);
   await pg.evaluate("selectStop(stopGroups.find(g=>g.ids.includes('A'))); 1"); await pg.waitForTimeout(500);
   await pg.click('#gearBtn'); await pg.waitForTimeout(300);
+  await pg.evaluate("document.querySelectorAll('#settingsModal details').forEach(d => d.open = true); 1");
   await pg.fill('#shName', 'Samuel'); await pg.press('#shName', 'Tab');
-  for (const id of ['cityOn','shOn','pushOn','diagOn','cityEnter','cityLeave','alFollow','alWake']) { await pg.click(`#${id} + span`); await pg.waitForTimeout(250); }
+  for (const id of ['cityOn','shOn','pushOn','diagOn','cityEnter','cityLeave','alFollow','alWake']) { await pg.waitForTimeout(200); await pg.evaluate("document.querySelectorAll('#settingsModal details').forEach(d => d.open = true); 1"); await pg.click(`#${id} + span`); await pg.waitForTimeout(250); }
   await pg.selectOption('#themeSel', 'dark'); await pg.selectOption('#textSel', 'huge'); await pg.selectOption('#citySector', '2000'); await pg.selectOption('#alLead', '10');
   await pg.click('[data-pause="60"]'); await pg.waitForTimeout(200); await pg.click('#pauseOff'); await pg.waitForTimeout(200);
   await pg.click('#setClose');
@@ -102,7 +103,7 @@ await scenario('ordinateur + mode sombre + grand texte', async pg => {
 await scenario('lien d’un proche + puce + suppression', async pg => {
   await go(pg, '/_bug.html#proche=L%C3%A9a&code=123456'); await pg.waitForTimeout(1000);
   await pg.click('.fr-chip').catch(() => {}); await pg.waitForTimeout(400);
-  await pg.click('#gearBtn'); await pg.click('.set-nav [data-sec=sec-proches]'); await pg.waitForTimeout(500);
+  await pg.click('#gearBtn'); await pg.evaluate("$('#sec-proches').open = true; 1"); await pg.waitForTimeout(500);
   await pg.click('[data-frdel="0"]').catch(() => {}); await pg.waitForTimeout(300);
   return 'proches : ' + await pg.evaluate('friends.length');
 });
