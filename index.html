@@ -677,6 +677,8 @@
     <div class="set-row"><div style="flex:1"><b>Mon prénom</b><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel" style="margin-top:6px"></div></div>
     <div class="set-row"><div><b>Mon code secret</b><small>avec ton prénom, il protège ta position : seuls ceux qui l’ont te voient</small></div>
       <div style="text-align:right"><div class="sh-code" id="shCode">——</div><button class="al-link" id="shNew" style="font-size:12px">↻ nouveau code</button></div></div>
+    <div class="set-row"><div><b>Prévenir mes proches</b><small>quand j’attends en gare, quand je pars, peu avant d’arriver et à mon arrivée</small></div>
+      <label class="switch"><input type="checkbox" id="shEvents" checked><span></span></label></div>
     <div class="set-row"><button class="btn" id="shSend" style="width:100%">📤 Envoyer le lien à mes proches</button></div>
     <div class="set-row" style="display:block"><b>Suivre un proche</b><small>son prénom et son code (ou ouvre simplement le lien qu’il t’a envoyé)</small>
       <div class="fr-add"><input class="set-in" id="frName" placeholder="Prénom"><input class="set-in" id="frCode" inputmode="numeric" maxlength="7" placeholder="Code"><button class="btn small" id="frAdd">Ajouter</button></div>
@@ -3491,7 +3493,9 @@ async function shareKeys(name, code){
   const base = await crypto.subtle.importKey('raw', tEnc.encode(id), 'PBKDF2', false, ['deriveKey']);
   const key = await crypto.subtle.deriveKey({ name:'PBKDF2', salt: tEnc.encode('car-jaune-live'), iterations: 120000, hash:'SHA-256' },
     base, { name:'AES-GCM', length:256 }, false, ['encrypt', 'decrypt']);
-  return (keyCache[id] = { topic, key });
+  const hn = new Uint8Array(await crypto.subtle.digest('SHA-256', tEnc.encode('cjl-notif|' + id)));
+  const ntopic = 'cjl_n_' + [...hn.slice(0, 9)].map(b => b.toString(16).padStart(2, '0')).join('');
+  return (keyCache[id] = { topic, key, ntopic });
 }
 async function seal(key, obj){
   const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -3505,7 +3509,7 @@ async function unseal(key, s){
 }
 
 /* ----- je partage ----- */
-const shareCfg = Object.assign({ on:false, name:'', code:'' }, (() => { try { return JSON.parse(localStorage.getItem('cj_share') || '{}'); } catch(e){ return {}; } })());
+const shareCfg = Object.assign({ on:false, name:'', code:'', events:true }, (() => { try { return JSON.parse(localStorage.getItem('cj_share') || '{}'); } catch(e){ return {}; } })());
 if (!codeKey(shareCfg.code)) shareCfg.code = newCode();
 let shareLast = { t:0, lat:0, lon:0, bus:'' }, shareTimer = null, shareOwnWatch = false, shareErr = '';
 function newCode(){ return String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000); }
@@ -3514,7 +3518,7 @@ function startShare(){
   if (!navigator.geolocation || !window.crypto || !crypto.subtle){ toast('Partage impossible sur cet appareil.'); return false; }
   if (meWatch == null){
     shareOwnWatch = true;
-    meWatch = navigator.geolocation.watchPosition(p => { onLiveFix(p); sendShare(); }, e => {
+    meWatch = navigator.geolocation.watchPosition(p => { onLiveFix(p); rideTick(); sendShare(); }, e => {
       if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour partager.'); setShareOn(false); }
       else gpsWeak = true;
     }, { enableHighAccuracy:true, maximumAge:5000, timeout:30000 });
@@ -3538,7 +3542,7 @@ async function setShareOn(on){
 async function pushShare(payload){
   try {
     const { topic, key } = await shareKeys(shareCfg.name, shareCfg.code);
-    const r = await fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic, message: await seal(key, payload) }) });
+    const r = await fetch('https://ntfy.sh/', { method:'POST', keepalive:true, body: JSON.stringify({ topic, message: await seal(key, payload) }) });
     shareErr = r.ok ? '' : (r.status === 429 ? 'limite d’envois atteinte, réessai plus tard' : 'erreur ' + r.status);
     return r.ok;
   } catch(e){ shareErr = 'pas de réseau'; return false; }
@@ -3553,7 +3557,8 @@ async function sendShare(force, extra){
   const payload = { n: shareCfg.name.trim(), t: now, lat: r5(myPos.lat), lon: r5(myPos.lon), acc: Math.round(myPos.acc || 0),
     sp: Math.round((myPos.speed || 0) * 3.6), ...(extra || {}),
     bus: v ? { id: v.id, l: v.route.s, c: v.route.c, tc: v.route.t, d: v.headsign || '', s: v.stopName || '', dl: v.delay, de: v.delayEst,
-               arr: v.times ? (v.times.arr.real || v.times.arr.sched) : null, as: v.times ? v.times.arr.stop : '' } : null };
+               arr: v.times ? (v.times.arr.real || v.times.arr.sched) : null, as: v.times ? v.times.arr.stop : '' } : null,
+    ride: v ? rideInfo(v) : null };
   shareLast = { t: now, lat: myPos.lat, lon: myPos.lon, bus: busId };
   await pushShare(payload);
   renderShareUI();
@@ -3564,12 +3569,103 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') sendShare(true, { bg: true });
   else sendShare(true);
 });
+/* ----- messages automatiques aux proches : j'attends / je pars / j'arrive bientôt / je suis arrivé ----- */
+let ride = { phase:'idle', stop:'', since:0, sent:{}, veh:'', info:null };
+/** Où je descends : ma gare de Mon trajet si ce car y passe, sinon son terminus. Heure estimée (retard compris). */
+function rideInfo(v){
+  let to = v.times ? v.times.arr.stop : (v.headsign || ''), until = v.times ? (v.times.arr.real || v.times.arr.sched) : null;
+  const G = v.tripId && tripGeom(v.tripId, v.routeId), from = v.est ? v.est.next : 0;
+  if (G && tripReady()){
+    const groups = [findGroup(trip.a), findGroup(trip.b)].filter(g => g && g.ids.length);
+    for (let i = Math.max(0, from); i < G.stops.length && groups.length; i++){
+      const g = groups.find(g => g.ids.includes(G.stops[i].id));
+      if (g){
+        const base = v.est ? v.est.base : serviceDayMs(v.startDate, G.stops[0].sec);
+        to = g.name; until = base + G.stops[i].sec * 1000 + Math.max(0, v.delay || 0) * 1000;
+        break;
+      }
+    }
+  }
+  return { id: v.id, to, until, dl: v.delay };
+}
+function nearStop(maxM){
+  if (!myPos) return null;
+  const n = nearbyStops(myPos.lat, myPos.lon, 3).find(x => x.d <= (isGare(x.g) ? maxM * 1.7 : maxM));
+  return n ? n.g : null;
+}
+function shareEvent(ev){
+  if (!shareCfg.on || !shareCfg.events) return;
+  ev.at = Date.now();
+  sendShare(true, { ev });
+  // copie lisible pour ceux qui ont l'appli ntfy (prévenus même appli Car Jaune fermée)
+  shareKeys(shareCfg.name, shareCfg.code).then(({ ntopic }) => {
+    const m = evText(shareCfg.name.trim(), ev);
+    fetch('https://ntfy.sh/', { method:'POST', keepalive:true, body: JSON.stringify({ topic: ntopic, title: m.title, message: m.body, tags:['bus'], priority: ev.k === 'soon' ? 4 : 3 }) }).catch(() => {});
+  });
+}
+/** Texte d'un événement (le même chez moi et chez mes proches). */
+function evText(name, ev){
+  const line = ev.l ? ` dans le ${ev.l}${ev.d ? ' → ' + ev.d : ''}` : '';
+  const late = ev.dl != null && Math.abs(ev.dl) >= 60 ? ` (${ev.dl > 0 ? 'retard' : 'avance'} ${Math.round(Math.abs(ev.dl) / 60)} min)` : '';
+  switch (ev.k){
+    case 'wait':   return { title:`🚏 ${name} attend à ${ev.stop}`, body:`Depuis ${fmtHM(ev.since || ev.at)}.${ev.next ? ` Prochain car : ${ev.next}.` : ''}` };
+    case 'depart': return { title:`🚌 ${name} est parti${ev.stop ? ' de ' + ev.stop : ''}`, body:`${line.trim().replace(/^dans/, 'Dans')}${ev.to ? `. Arrivée prévue à ${ev.to} vers ${fmtHM(ev.eta)}` : ''}${late}.` };
+    case 'soon':   return { title:`⏱️ ${name} arrive bientôt à ${ev.to}`, body:`Dans ~${Math.max(1, Math.round((ev.eta - ev.at) / 60000))} min, vers ${fmtHM(ev.eta)}${line}${late}.` };
+    case 'arrive': return { title:`📍 ${name} est arrivé${ev.stop ? ' à ' + ev.stop : ''}`, body:`À ${fmtHM(ev.at)}${line}${late}.${ev.guess ? ' (estimé : son appli était fermée)' : ''}` };
+  }
+  return { title: name, body: '' };
+}
+/** À chaque position : reconnaît l'attente en gare, la montée, l'approche et la descente. */
+function rideTick(){
+  if (!shareCfg.on || !myPos) return;
+  const now = Date.now(), v = onBus && vehicles.find(x => x.id === onBus), sp = myPos.speed || 0;
+  if (v){
+    if (ride.phase !== 'ride'){
+      const from = ride.phase === 'wait' ? ride.stop : (nearStop(400) || {}).name || '';
+      const info = rideInfo(v);
+      ride = { phase:'ride', stop: from, since: now, sent:{}, veh: v.id, info };
+      shareEvent({ k:'depart', stop: from, l: v.route.s, d: v.headsign, to: info.to, eta: info.until, dl: v.delay });
+    } else {
+      ride.info = rideInfo(v);
+      const left = ride.info.until ? ride.info.until - now : null;
+      if (left != null && left > 0 && left <= 6 * 60e3 && !ride.sent.soon){
+        ride.sent.soon = true;
+        shareEvent({ k:'soon', to: ride.info.to, eta: ride.info.until, l: v.route.s, d: v.headsign, dl: v.delay });
+      }
+    }
+    return;
+  }
+  if (ride.phase === 'ride'){                                // descendu du car
+    const g = nearStop(500), last = ride.info || {};
+    shareEvent({ k:'arrive', stop: g ? g.name : (last.to || ''), l: (vehicles.find(x => x.id === ride.veh) || { route:{} }).route.s || '', dl: last.dl });
+    ride = { phase:'idle', stop:'', since: now, sent:{}, veh:'', info:null };
+    return;
+  }
+  const g = sp < 2 ? nearStop(150) : null;
+  if (g){
+    if (ride.phase !== 'wait' || ride.stop !== g.name) ride = { phase:'wait', stop: g.name, since: now, sent:{}, veh:'', info:null };
+    else if (!ride.sent.wait && now - ride.since > 2 * 60e3 && isGare(g)){   // 2 min immobile dans une gare
+      ride.sent.wait = true;
+      let next = '';
+      try {
+        if (board.group && board.group.name === g.name){
+          const r = alertRows().find(r => r.eff > now);
+          if (r) next = `${r.route.s} → ${r.dest} à ${fmtHM(r.eff)}`;
+        }
+      } catch(e){}
+      shareEvent({ k:'wait', stop: g.name, since: ride.since, next });
+    }
+  } else if (ride.phase === 'wait' && sp > 2 && !(nearStop(250))) ride = { phase:'idle', stop:'', since: now, sent:{}, veh:'', info:null };
+}
+
 function shareLink(){ return SHARE_BASE + '#proche=' + encodeURIComponent(shareCfg.name.trim()) + '&code=' + codeKey(shareCfg.code); }
 async function sendShareLink(){
   if (!shareCfg.name.trim()){ toast('Écris d’abord ton prénom.'); $('#shName').focus(); return; }
   if (!shareCfg.on) await setShareOn(true);
   const url = shareLink();
-  const text = `Suis-moi dans les cars jaunes 🚌 : ${url}\n(ou dans l’appli Car Jaune Live → ⚙️ → Suivre un proche : ${shareCfg.name.trim()}, code ${fmtCode(shareCfg.code)})`;
+  const { ntopic } = await shareKeys(shareCfg.name, shareCfg.code);
+  const text = `Suis-moi dans les cars jaunes 🚌 : ${url}\n(ou dans l’appli Car Jaune Live → ⚙️ → Suivre un proche : ${shareCfg.name.trim()}, code ${fmtCode(shareCfg.code)})`
+    + `\n🔔 Pour être prévenu quand je pars et quand j’arrive, même appli fermée : installe l’appli gratuite « ntfy » et abonne-toi à : ${ntopic}`;
   try { if (navigator.share){ await navigator.share({ title:'Car Jaune Live', text }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
   try { await navigator.clipboard.writeText(text); toast('Lien copié : colle-le dans un message à tes proches.'); }
   catch(e){ prompt('Copie ce lien pour tes proches :', url); }
@@ -3579,6 +3675,7 @@ function renderShareUI(){
   $('#shOn').checked = shareCfg.on;
   if (document.activeElement !== $('#shName')) $('#shName').value = shareCfg.name;
   $('#shCode').textContent = fmtCode(shareCfg.code);
+  $('#shEvents').checked = shareCfg.events !== false;
   $('#shStatus').textContent = !shareCfg.on ? 'Tes proches voient où tu es et dans quel car jaune tu es monté.'
     : shareErr ? '⚠️ Partage actif, mais ' + shareErr + '.'
     : shareLast.t ? `✅ Partage actif · envoyé à ${fmtHM(shareLast.t)}${shareLast.bus ? ' · dans le car' : ''} · s’arrête si tu fermes l’appli`
@@ -3597,6 +3694,7 @@ $('#shNew').addEventListener('click', async () => {
   if (shareCfg.on) sendShare(true);
 });
 $('#shSend').addEventListener('click', sendShareLink);
+$('#shEvents').addEventListener('change', e => { shareCfg.events = e.target.checked; saveShare(); });
 
 /* ----- je suis mes proches ----- */
 const friends = (() => { try { return JSON.parse(localStorage.getItem('cj_friends') || '[]'); } catch(e){ return []; } })();
@@ -3625,7 +3723,12 @@ async function pollFriend(f){
     const msgs = txt.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch(e){ return null; } }).filter(m => m && m.event === 'message');
     for (const m of msgs){
       f.since = m.id;
-      try { const o = await unseal(key, m.message); if (!f.last || o.t >= f.last.t) f.last = o; f.bad = false; }
+      try {
+        const o = await unseal(key, m.message);
+        if (!f.last || o.t >= f.last.t) f.last = o;
+        f.bad = false;
+        if (o.ev) friendEvent(f, o.ev);
+      }
       catch(e){ if (!f.last) f.bad = true; }
     }
     f.checked = Date.now(); f.err = '';
@@ -3634,6 +3737,7 @@ async function pollFriend(f){
 async function pollFriends(){
   if (!friends.length || document.visibilityState !== 'visible') return;
   await Promise.all(friends.map(pollFriend));
+  inferArrivals();
   renderFriends(); renderFriendList();
 }
 function startFriendPoll(){
@@ -3643,17 +3747,57 @@ function startFriendPoll(){
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pollFriends(); });
 const agoTxt = ms => { const s = Math.round((Date.now() - ms) / 1000); return s < 60 ? 'à l’instant' : s < 3600 ? `il y a ${Math.round(s / 60)} min` : `il y a ${Math.floor(s / 3600)} h ${pad(Math.round(s / 60) % 60)}`; };
 /** Où afficher le proche : sur son car (qui avance en continu) s'il est dedans, sinon sa dernière position. */
+/** Il est dans un car : on suit ce car (position officielle en direct), même si son appli est fermée, jusqu'à son arrêt. */
+function riding(o){
+  if (!o || o.off || !o.ride || !o.ride.id) return null;
+  const v = vehicles.find(x => x.id === o.ride.id);
+  let until = o.ride.until;
+  if (until && v && v.delay != null && o.ride.dl != null) until += (v.delay - o.ride.dl) * 1000;   // retard mis à jour par le car
+  const now = Date.now();
+  if (until ? now > until + 3 * 60e3 : now - o.t > 40 * 60e3) return { done:true, until, to:o.ride.to };
+  return v ? { v, until, to:o.ride.to } : null;
+}
 function friendLatLng(o){
-  if (o.bus && markers.get(o.bus.id) && Date.now() - o.t < 5 * 60e3) return markers.get(o.bus.id).getLatLng();
+  const r = riding(o);
+  if (r && r.v){ const m = markers.get(r.v.id); return m ? m.getLatLng() : L.latLng(r.v.lat, r.v.lon); }
   return L.latLng(o.lat, o.lon);
+}
+/** Message reçu d'un proche → notification (sauf les anciens, juste gardés dans l'historique). */
+function friendEvent(f, ev){
+  f.seen = f.seen || {};
+  const k = ev.k + ev.at;
+  if (f.seen[k]) return;
+  f.seen[k] = 1;
+  if (!f.lastEv || ev.at >= f.lastEv.at) f.lastEv = ev;
+  const m = evText(f.name, ev), fresh = Date.now() - ev.at < 15 * 60e3;
+  if (fresh) notify(m.title, m.body, ev.k === 'wait' ? 'none' : undefined, { show:true });
+}
+/** Son appli est fermée pendant le trajet : on annonce l'arrivée nous-mêmes quand le car atteint son arrêt. */
+function inferArrivals(){
+  friends.forEach(f => {
+    const o = f.last, r = riding(o);
+    if (r && r.done && !o.ev && !(f.seen || {})['guess' + o.t]){
+      (f.seen = f.seen || {})['guess' + o.t] = 1;
+      if (Date.now() - (r.until || o.t) < 20 * 60e3)
+        friendEvent(f, { k:'arrive', stop: r.to, l: o.bus ? o.bus.l : '', at: r.until || Date.now(), guess:true });
+    }
+  });
 }
 function friendState(f){
   const o = f.last;
   if (!o) return { t: f.bad ? 'code incorrect ?' : f.err ? f.err : f.checked ? 'aucune position reçue · partage pas encore activé, ou prénom / code différent' : 'recherche…', old:true };
   if (o.off) return { t: `a arrêté le partage (${agoTxt(o.t)})`, old:true };
   const old = Date.now() - o.t > 15 * 60e3;
-  const b = o.bus;
-  const where = b ? `🚌 dans le ${b.l} → ${b.d}${b.s ? ' · prochain arrêt ' + b.s : ''}` : (o.sp > 8 ? `se déplace (${o.sp} km/h)` : 'à pied ou à l’arrêt');
+  const b = o.bus, r = riding(o);
+  if (r && r.done) return { t: `est arrivé${r.to ? ' à ' + r.to : ''} vers ${fmtHM(r.until || o.t)}`, old:true };
+  if (r && r.v){
+    const v = r.v;
+    return { t: `🚌 dans le ${b ? b.l : v.route.s} → ${b ? b.d : v.headsign}${v.stopName ? ' · prochain arrêt ' + v.stopName : ''}${r.until ? ` · arrive à ${r.to} ~${fmtHM(r.until)}` : ''}${
+      Date.now() - o.t > 2 * 60e3 ? ' · suivi par le car' : ''}`, old:false };
+  }
+  const w = f.lastEv && f.lastEv.k === 'wait' && Date.now() - f.lastEv.at < 45 * 60e3 ? f.lastEv : null;
+  const where = b ? `🚌 dans le ${b.l} → ${b.d}${b.s ? ' · prochain arrêt ' + b.s : ''}` : w && (o.sp || 0) < 8 ? `🚏 attend à ${w.stop} depuis ${fmtHM(w.since || w.at)}`
+              : (o.sp > 8 ? `se déplace (${o.sp} km/h)` : 'à pied ou à l’arrêt');
   return { t: `${where} · ${agoTxt(o.t)}${o.bg ? ' · appli en arrière-plan' : ''}`, old, where };
 }
 function friendPopup(f){
@@ -3664,13 +3808,14 @@ function friendPopup(f){
       ${b.arr ? `Arrivée à ${esc(b.as || 'terminus')} : <b>~${fmtHM(b.arr)}</b><br>` : ''}
       ${b.dl != null ? `<span class="delay ${fmtDelay(b.dl, b.de).c}">${esc(fmtDelay(b.dl, b.de).long)}</span><br>` : ''}`
     : `${esc(st.t.split(' · ')[0])}<br>`}
+    ${riding(o) && riding(o).v && Date.now() - o.t > 2 * 60e3 ? '<span class="muted">📡 Son appli est fermée : on suit la position en direct de son car.</span><br>' : ''}
     <span class="muted">Position ${o ? agoTxt(o.t) : '—'}${o && o.acc ? ` · ± ${fmtDist(o.acc)}` : ''}${o && o.bg ? '<br>⚠️ son appli est en arrière-plan : la position peut ne plus suivre' : ''}</span>`;
 }
 function renderFriends(){
   friends.forEach(f => {
     const k = f.name + f.code, o = f.last;
     if (!o || o.off || !isFinite(o.lat)){ if (friendMk[k]){ friendLayer.removeLayer(friendMk[k]); delete friendMk[k]; } return; }
-    const st = friendState(f), b = o.bus;
+    const st = friendState(f), rr = riding(o), b = o.bus || (rr && rr.v ? { l: rr.v.route.s, c: rr.v.route.c, tc: rr.v.route.t } : null);
     const html = `<div class="fr-mk${st.old ? ' old' : ''}"><span class="av">${esc(f.name[0].toUpperCase())}</span>${esc(f.name)}${
       b ? `<span class="ln" style="background:#${esc(b.c || 'F6BE00')};color:#${esc(b.tc || '222222')}">${esc(b.l)}</span>` : ''}</div>`;
     const icon = L.divIcon({ className:'', html: html + (b ? '' : '<div class="fr-dot"></div>'), iconSize:[0, 0] });
@@ -3683,7 +3828,7 @@ function renderFriends(){
   renderFriendChips();
 }
 // le proche suit son car qui avance en continu
-setInterval(() => friends.forEach(f => { const m = friendMk[f.name + f.code]; if (m && f.last && f.last.bus) m.setLatLng(friendLatLng(f.last)); }), 1000);
+setInterval(() => friends.forEach(f => { const m = friendMk[f.name + f.code]; if (m && f.last && (f.last.bus || f.last.ride)) m.setLatLng(friendLatLng(f.last)); }), 1000);
 const FriendCtl = L.Control.extend({ options:{ position:'bottomleft' }, onAdd(){ const d = L.DomUtil.create('div', 'fr-ctl'); d.id = 'frCtl'; L.DomEvent.disableClickPropagation(d); return d; } });
 new FriendCtl().addTo(map);
 function renderFriendChips(){
