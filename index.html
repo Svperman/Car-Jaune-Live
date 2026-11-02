@@ -336,6 +336,16 @@
   .walk{font-size:11.5px;color:var(--retard);font-weight:700}
   .walk.ok{color:var(--ok)}
 
+  /* ---------- notifications du téléphone ---------- */
+  .notif-box{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1.5px solid var(--ligne);border-radius:12px;padding:12px 14px;margin:12px 0}
+  .notif-box .st{flex:1;min-width:200px;font-size:13.5px;line-height:1.45}
+  .notif-box .st b{color:var(--titre)}
+  .notif-box.ok{border-color:#A7D8B9;background:#F0FAF4}
+  .notif-box.ko{border-color:#F5C2A8;background:#FFF6F1}
+  .notif-help{font-size:12.5px;color:var(--gris);margin:6px 0 0;line-height:1.5}
+  #bellBtn{border:none;background:var(--fond);border-radius:25px;padding:7px 11px;font-size:15px;cursor:pointer}
+  #bellBtn.on{background:#E6F5EC}
+
   /* ---------- fiches & infos trafic ---------- */
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
   .fcard{background:#fff;border-radius:10px;box-shadow:var(--ombre);padding:16px;display:flex;flex-direction:column;gap:10px}
@@ -392,7 +402,7 @@
       <button class="tab" data-view="fiches">📄 Fiches horaires</button>
       <button class="tab" data-view="trafic">⚠️ Infos trafic <span class="n" id="alertCount" hidden></span></button>
     </nav>
-    <div class="live"><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
+    <div class="live"><button id="bellBtn" title="Notifications du téléphone">🔕</button><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
   </div>
 </header>
 <div class="crumb">Accueil › <b id="crumbCur">Carte en direct</b></div>
@@ -466,7 +476,11 @@
           <label><input type="checkbox" id="alLate" checked> si son retard change</label>
           <label><input type="checkbox" id="alNoBus" checked> s’il n’y a aucun car dans l’heure</label>
         </div>
-        <details class="ntfy"><summary>📱 Recevoir aussi sur mon téléphone (gratuit, sans compte)</summary>
+        <div class="notif-box" id="notifBox">
+          <div class="st" id="notifState">Notifications du téléphone : …</div>
+          <button class="btn small" id="notifBtn">🔔 Activer les notifications</button>
+        </div>
+        <details class="ntfy"><summary>📱 Recevoir aussi quand l’appli est fermée (ntfy, gratuit, sans compte)</summary>
           <p>Installe l’appli gratuite <b>ntfy</b> (Android / iPhone), abonne-toi au nom ci-dessous, et les alertes arriveront en vraies notifications sur ton téléphone.</p>
           <div class="al-row"><input id="ntfyTopic" placeholder="nom secret, ex. carjaune-samuel-7f3k"> <button class="btn ghost small" id="ntfyTest">Tester</button></div>
         </details>
@@ -746,6 +760,7 @@ async function init(){
   renderFavs();
   loadFiches();                 // en parallèle, sans bloquer la carte
   loadAlertCfg();
+  renderNotif();
   restoreLastStop();
   updateAlertUI();
   if (view === 'trip') renderTrip();
@@ -1893,12 +1908,7 @@ function notify(title, body, kind){
   beep(kind);
   try { if (navigator.vibrate) navigator.vibrate(kind === 'warn' ? [200, 100, 200, 100, 200] : [250, 120, 250]); } catch(e){}
   // 2. notification du navigateur (si autorisée)
-  try {
-    if ('Notification' in window && Notification.permission === 'granted'){
-      const opt = { body, tag: title + body.slice(0, 20), icon: 'icons/icon-192.png', badge: 'icons/icon-192.png', vibrate: [250, 120, 250] };
-      if (swReg && swReg.showNotification) swReg.showNotification(title, opt); else new Notification(title, opt);
-    }
-  } catch(e){}
+  if ('Notification' in window && Notification.permission === 'granted') showPhoneNotif(title, body);
   // 3. téléphone via ntfy (si configuré)
   if (alertCfg.ntfy){
     fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({
@@ -1993,6 +2003,7 @@ async function toggleAlerts(){
   alertCfg.on = !alertCfg.on;
   if (alertCfg.on){
     try { if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission(); } catch(e){}
+    renderNotif();
     try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch(e){}
     try { if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}   // garde l'écran allumé
     noBusAt = 0;
@@ -2008,6 +2019,56 @@ async function toggleAlerts(){
   }
   saveAlertCfg(); updateAlertUI();
 }
+/* ---------- notifications du téléphone ---------- */
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = () => !!(navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+function notifStatus(){
+  if (IN_GAS) return { k:'gas', t:'Dans Apps Script, les notifications du téléphone ne sont pas possibles : utilise l’appli installée (svperman.github.io/Car-Jaune-Live).' };
+  if (!('Notification' in window)){
+    if (isIOS && !isStandalone()) return { k:'install', t:'Sur iPhone, les notifications marchent seulement depuis l’<b>appli installée</b> : Safari → Partager → <b>Sur l’écran d’accueil</b>, puis ouvre l’appli depuis son icône.' };
+    return { k:'none', t:'Ce navigateur ne gère pas les notifications : active l’option <b>ntfy</b> ci-dessous.' };
+  }
+  if (Notification.permission === 'granted') return { k:'ok', t:'Notifications du téléphone : <b>activées ✅</b>' };
+  if (Notification.permission === 'denied') return { k:'denied', t: isIOS
+    ? 'Notifications <b>refusées</b>. Réactive-les dans <b>Réglages → Notifications → Car Jaune</b>.'
+    : 'Notifications <b>refusées</b>. Réactive-les dans les réglages du site (🔒 à côté de l’adresse → Notifications → Autoriser).' };
+  return { k:'ask', t:'Notifications du téléphone : <b>pas encore activées</b>.' };
+}
+function renderNotif(){
+  const s = notifStatus(), box = $('#notifBox'), btn = $('#notifBtn'), bell = $('#bellBtn');
+  $('#notifState').innerHTML = s.t;
+  box.className = 'notif-box' + (s.k === 'ok' ? ' ok' : s.k === 'denied' || s.k === 'install' ? ' ko' : '');
+  btn.hidden = !(s.k === 'ask' || s.k === 'ok');
+  btn.textContent = s.k === 'ok' ? '🧪 Tester' : '🔔 Activer les notifications';
+  bell.textContent = s.k === 'ok' ? '🔔' : '🔕';
+  bell.classList.toggle('on', s.k === 'ok');
+}
+async function showPhoneNotif(title, body){
+  const opt = { body, icon:'icons/icon-192.png', badge:'icons/icon-192.png', vibrate:[250, 120, 250], tag:'cj-' + Date.now() };
+  try {
+    const reg = swReg || ('serviceWorker' in navigator ? await Promise.race([navigator.serviceWorker.ready, new Promise(r => setTimeout(r, 1500))]) : null);
+    if (reg && reg.showNotification){ await reg.showNotification(title, opt); return true; }
+    new Notification(title, opt); return true;
+  } catch(e){ return false; }
+}
+async function enableNotifications(){
+  const s = notifStatus();
+  if (s.k === 'ok'){ await showPhoneNotif('🧪 Test Car Jaune Live', 'Les notifications fonctionnent : tu seras prévenu à l’approche de tes cars.'); return; }
+  if (s.k !== 'ask'){ renderNotif(); setView('board'); $('#notifBox').scrollIntoView({ behavior:'smooth', block:'center' }); return; }
+  let perm = 'default';
+  try { perm = await Notification.requestPermission(); } catch(e){}
+  renderNotif();
+  if (perm === 'granted'){
+    const ok = await showPhoneNotif('🔔 Notifications activées', 'Active une alerte (arrêt ou Mon trajet) et je te préviens avant chaque car.');
+    toast(ok ? 'Notifications activées ✅' : 'Autorisé, mais la notification de test n’a pas pu s’afficher.');
+  } else toast('Notifications non autorisées.');
+}
+$('#notifBtn').addEventListener('click', enableNotifications);
+$('#bellBtn').addEventListener('click', () => {
+  if (notifStatus().k === 'ask') enableNotifications();
+  else { setView('board'); setTimeout(() => $('#notifBox').scrollIntoView({ behavior:'smooth', block:'center' }), 80); }
+});
+
 function saveAlertCfg(){ try { localStorage.setItem('cj_alerts', JSON.stringify(alertCfg)); } catch(e){} }
 function loadAlertCfg(){
   try { Object.assign(alertCfg, JSON.parse(localStorage.getItem('cj_alerts') || '{}')); } catch(e){}

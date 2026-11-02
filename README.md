@@ -64,11 +64,14 @@ Au premier lancement, colle l'adresse `/exec` de l'étape 1 (bouton **⚙️ Ser
 
 ## Notifications
 
-- **Android (appli installée)** : notifications du téléphone + son + vibration, et la gare
-  la plus proche par GPS.
-- **iPhone** : les notifications web sont limitées ; utilise l'option **ntfy** dans l'appli
-  (appli gratuite ntfy, sans compte) pour recevoir les alertes en vraies notifications.
-- Les alertes fonctionnent tant que l'appli est ouverte (l'écran reste allumé pendant les alertes).
+1. **Installe l'appli** (iPhone : Safari → Partager → *Sur l'écran d'accueil* ; iOS 16.4 minimum).
+2. Ouvre-la **depuis son icône**, onglet *Horaires à l'arrêt* → **🔔 Activer les notifications** → *Autoriser*.
+   Une notification de test arrive tout de suite. La cloche 🔔 en haut indique l'état.
+3. Active une alerte (un arrêt ou *Mon trajet*) : tu es prévenu avant chaque car, selon ta position.
+
+- Les alertes tournent **tant que l'appli est ouverte** (même en arrière-plan quelques minutes ; l'écran reste allumé pendant les alertes).
+- Pour les recevoir appli fermée : option **ntfy** (appli gratuite, sans compte).
+- Si refusées : iPhone → Réglages → Notifications → Car Jaune ; Android → paramètres du site → Notifications.
 
 ## Mettre à jour l'appli
 
