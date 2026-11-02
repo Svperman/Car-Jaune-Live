@@ -32,7 +32,7 @@ jobs:
       - name: Installer le navigateur de test
         run: |
           npm init -y >/dev/null
-          npm install --no-save playwright@1.48.2
+          npm install --no-save playwright@1.48.2 html-minifier-terser@7.2.0
           npx playwright install --with-deps chromium
       - name: Tester l'appli (téléphone + ordinateur)
         run: |
@@ -42,7 +42,6 @@ jobs:
           node tests/scenarios.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
-          npm install --no-save html-minifier-terser@7.2.0
           mkdir -p _site
           cp -r manifest.webmanifest sw.js icons lib _site/
           npx html-minifier-terser --collapse-whitespace --conservative-collapse --remove-comments \
