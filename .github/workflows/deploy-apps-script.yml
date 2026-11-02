@@ -39,16 +39,20 @@ jobs:
           node-version: 20
 
       - name: Vérifier les réglages
+        id: check
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
           SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
         run: |
           if [ -z "$CLASPRC_JSON" ] || [ -z "$SCRIPT_ID" ]; then
-            echo "::error::Secrets manquants : ajoute CLASPRC_JSON et SCRIPT_ID (Settings → Secrets and variables → Actions). Voir apps-script/setup-auto-deploy.ps1"
-            exit 1
+            echo "::notice::Mise à jour automatique du serveur en pause : ajoute les secrets CLASPRC_JSON et SCRIPT_ID (voir apps-script/setup-auto-deploy.ps1). En attendant, colle apps-script/Code.gs à la main dans Apps Script."
+            echo "ok=false" >> $GITHUB_OUTPUT
+          else
+            echo "ok=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Connexion à Google (identifiants clasp)
+        if: steps.check.outputs.ok == 'true'
         env:
           CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
           SCRIPT_ID: ${{ secrets.SCRIPT_ID }}
@@ -61,10 +65,12 @@ jobs:
           printf '**/**\n!Code.gs\n!appsscript.json\n' > .claspignore
 
       - name: Envoyer Code.gs dans Apps Script
+        if: steps.check.outputs.ok == 'true'
         working-directory: apps-script
         run: npx -y $CLASP push --force
 
       - name: Mettre à jour le déploiement (même URL /exec)
+        if: steps.check.outputs.ok == 'true'
         working-directory: apps-script
         run: |
           DESC="Auto GitHub $(date -u +%Y-%m-%d\ %H:%M) ${GITHUB_SHA::7}"
@@ -72,6 +78,7 @@ jobs:
             || npx -y $CLASP update-deployment "$DEPLOYMENT_ID" --description "$DESC"
 
       - name: Vérifier que le serveur répond
+        if: steps.check.outputs.ok == 'true'
         run: |
           URL="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?action=getSchoolCalendar"
           for i in 1 2 3 4 5 6; do
