@@ -298,6 +298,20 @@
   .near-btn small{color:var(--gris);font-weight:600;margin-left:4px}
   .far-note{background:#FFF5D1;border-radius:10px;padding:8px 12px;margin-top:6px;color:#6B5200}
   .me-dot{width:16px;height:16px;border-radius:50%;background:#1D6FD8;border:3px solid #fff;box-shadow:0 0 0 2px rgba(29,111,216,.35),0 2px 6px rgba(0,0,0,.35)}
+  .me-wrap{position:relative;width:44px;height:44px}
+  .me-wrap .me-dot{position:absolute;left:14px;top:14px}
+  .me-wrap.live .me-dot{animation:mepulse 2s infinite}
+  @keyframes mepulse{0%{box-shadow:0 0 0 0 rgba(29,111,216,.55)}70%{box-shadow:0 0 0 14px rgba(29,111,216,0)}100%{box-shadow:0 0 0 0 rgba(29,111,216,0)}}
+  .me-head{position:absolute;left:0;top:0;width:44px;height:44px;transition:transform .4s}
+  .me-head::before{content:'';position:absolute;left:15px;top:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:15px solid #1D6FD8}
+  .me-wrap.onbus .me-dot{background:var(--jaune);border-color:#222}
+  #rideBanner{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1000;background:#fff;border-radius:12px;
+              box-shadow:0 4px 18px rgba(0,0,0,.3);padding:10px 14px;font-size:13px;max-width:min(560px,calc(100% - 150px));line-height:1.45}
+  #rideBanner[hidden]{display:none}
+  #rideBanner b{color:var(--titre)}
+  #rideBanner .rb-h{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--titre)}
+  .bus-mk.mine .pill2{outline:3px solid #1D6FD8;outline-offset:2px}
+  @media (max-width:860px){ #rideBanner{top:auto;bottom:14px;max-width:calc(100% - 28px);width:calc(100% - 28px)} }
   .stop-dot{width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid #222;box-shadow:0 1px 4px rgba(0,0,0,.35)}
   .stop-dot.gare{width:16px;height:16px;background:var(--jaune)}
   table.board tr.toolate td{opacity:.45}
@@ -378,7 +392,7 @@
       <div id="countdown"></div>
       <div id="list"></div>
     </aside>
-    <div id="mapCard"><div id="map"></div></div>
+    <div id="mapCard"><div id="map"></div><div id="rideBanner" hidden></div></div>
   </section>
 
   <!-- ===== Horaires à l'arrêt ===== -->
@@ -1543,20 +1557,42 @@ function useMyPosition(pos, auto){
   }
 }
 
-/* ---------- ma position sur la carte ---------- */
-const meLayer = L.layerGroup().addTo(map);
+/* ---------- ma position sur la carte (suivi en direct) ---------- */
+const meLayer = L.layerGroup().addTo(map);      // moi + précision
+const nearLayer = L.layerGroup().addTo(map);    // arrêts autour de moi
+let meMarker = null, meCircle = null, meWatch = null, meFollow = false, userPanned = false;
+let lastFix = null, nearAt = 0, nearPos = null, onBus = null, busCand = null, busMiss = 0, meWake = null, gpsWeak = false;
+
+function meIcon(){
+  const h = myPos && myPos.heading, moving = myPos && (myPos.speed || 0) > 1;
+  const head = h != null && isFinite(h) && moving ? `<div class="me-head" style="transform:rotate(${Math.round(h)}deg)"></div>` : '';
+  return L.divIcon({ className:'', iconSize:[44, 44], iconAnchor:[22, 22],
+    html:`<div class="me-wrap${meWatch != null ? ' live' : ''}${onBus ? ' onbus' : ''}">${head}<div class="me-dot"></div></div>` });
+}
 function showMeOnMap(){
-  meLayer.clearLayers();
   if (!myPos) return;
-  if (myPos.acc && myPos.acc < 2000) L.circle([myPos.lat, myPos.lon], { radius: myPos.acc, color:'#1D6FD8', weight:1, fillOpacity:.08, interactive:false }).addTo(meLayer);
-  L.marker([myPos.lat, myPos.lon], { icon: L.divIcon({ className:'', html:'<div class="me-dot"></div>', iconSize:[16, 16], iconAnchor:[8, 8] }), zIndexOffset: 1000 })
-    .bindTooltip('Moi').addTo(meLayer);
-  nearbyStops(myPos.lat, myPos.lon, 6).forEach(x => {
-    const g = isGare(x.g);
-    L.marker([x.g.lat, x.g.lon], { icon: L.divIcon({ className:'', html:`<div class="stop-dot${g ? ' gare' : ''}"></div>`, iconSize: g ? [16, 16] : [12, 12] }) })
-      .bindPopup(`<b>${esc(x.g.name)}</b><br>${fmtDist(x.d)} · ${fmtWalk(x.d)}<br><button class="btn small" style="margin-top:6px" data-open-stop="${esc(x.g.name)}">🕒 Prochains départs</button>`)
-      .addTo(meLayer);
-  });
+  const ll = L.latLng(myPos.lat, myPos.lon);
+  if (!meMarker){
+    meMarker = L.marker(ll, { icon: meIcon(), zIndexOffset: 2000 }).bindTooltip('Moi').addTo(meLayer);
+  } else {
+    animateTo(meMarker, ll);
+    meMarker.setIcon(meIcon());
+  }
+  if (myPos.acc && myPos.acc < 2000){
+    if (!meCircle) meCircle = L.circle(ll, { radius: myPos.acc, color:'#1D6FD8', weight:1, fillOpacity:.08, interactive:false }).addTo(meLayer);
+    else { meCircle.setLatLng(ll); meCircle.setRadius(myPos.acc); }
+  }
+  // arrêts autour de moi : redessinés seulement tous les 300 m ou 60 s
+  if (!nearPos || distM(nearPos.lat, nearPos.lon, myPos.lat, myPos.lon) > 300 || Date.now() - nearAt > 60e3){
+    nearPos = { lat: myPos.lat, lon: myPos.lon }; nearAt = Date.now();
+    nearLayer.clearLayers();
+    nearbyStops(myPos.lat, myPos.lon, 6).forEach(x => {
+      const g = isGare(x.g);
+      L.marker([x.g.lat, x.g.lon], { icon: L.divIcon({ className:'', html:`<div class="stop-dot${g ? ' gare' : ''}"></div>`, iconSize: g ? [16, 16] : [12, 12] }) })
+        .bindPopup(`<b>${esc(x.g.name)}</b><br>${fmtDist(x.d)} · ${fmtWalk(x.d)}<br><button class="btn small" style="margin-top:6px" data-open-stop="${esc(x.g.name)}">🕒 Prochains départs</button>`)
+        .addTo(nearLayer);
+    });
+  }
 }
 map.on('popupopen', e => {
   const b = e.popup.getElement().querySelector('[data-open-stop]');
@@ -1565,17 +1601,126 @@ map.on('popupopen', e => {
     if (g){ $('#stopInput').value = g.name; selectStop(g); setView('board'); }
   };
 });
-function locateOnMap(){
-  if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return; }
-  navigator.geolocation.getCurrentPosition(p => {
-    myPos = { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy };
-    showMeOnMap();
-    const near = nearbyStops(myPos.lat, myPos.lon, 3);
-    const pts = [[myPos.lat, myPos.lon]].concat(near.map(x => [x.g.lat, x.g.lon]));
-    map.flyToBounds(pts, { padding:[60, 60], maxZoom: 16, duration:.8 });
-    if (near[0] && near[0].d > NEAR_M) toast(`Tu es à ${fmtDist(near[0].d)} de l’arrêt le plus proche (${near[0].g.name}).`);
-  }, () => toast('Position refusée ou indisponible.'), { enableHighAccuracy:true, timeout:15000, maximumAge:30000 });
+
+/** Nouvelle position GPS pendant le suivi. */
+function onLiveFix(p){
+  const now = Date.now(), c = p.coords;
+  // vitesse / cap du téléphone (absents, 0 ou -1 sur certains appareils) : sinon calculés entre deux positions
+  let speed = c.speed != null && isFinite(c.speed) && c.speed > 0 ? c.speed : null;
+  let heading = c.heading != null && isFinite(c.heading) && c.heading >= 0 ? c.heading : null;
+  if (lastFix){
+    const d = distM(lastFix.lat, lastFix.lon, c.latitude, c.longitude), dt = (now - lastFix.t) / 1000;
+    if (speed == null && dt >= 1) speed = d / dt;
+    if (heading == null && d > 8)
+      heading = (Math.atan2((c.longitude - lastFix.lon) * Math.cos(c.latitude * Math.PI / 180), c.latitude - lastFix.lat) * 180 / Math.PI + 360) % 360;
+  }
+  lastFix = { lat: c.latitude, lon: c.longitude, t: now };
+  gpsWeak = false;
+  myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed, heading };
+  showMeOnMap();
+  if (meFollow && !userPanned) map.panTo([myPos.lat, myPos.lon], { animate: true, duration: .8 });
+  detectMyBus();
+  if (view === 'trip') renderTrip();
 }
+
+/** Suis-je dans un car jaune ? Même position (à la précision du GPS) et je roule. */
+function detectMyBus(){
+  if (!myPos) return;
+  const sp = myPos.speed || 0;
+  let best = null;
+  if (sp > 3){                                    // > 11 km/h : je suis dans un véhicule
+    const tol = 150 + sp * 25 + Math.min(myPos.acc || 0, 100);   // le car est repéré toutes les ~20 s
+    vehicles.forEach(v => {
+      if (v.age != null && v.age > 3 * 60e3) return;
+      const d = distM(myPos.lat, myPos.lon, v.lat, v.lon);
+      if (d < tol && (!best || d < best.d)) best = { v, d };
+    });
+  }
+  if (best){
+    busMiss = 0;
+    if (onBus === best.v.id) return renderRide();
+    // confirmation sur 2 positions successives avant d'annoncer
+    if (busCand && busCand.id === best.v.id && ++busCand.n >= 2){
+      onBus = best.v.id; busCand = null;
+      const v = best.v;
+      if (alertCfg.on) notify(`🚌 Tu es dans le ${v.route.s}`, `Direction ${v.headsign || '?'}${v.times ? ` · arrivée prévue ~${fmtHM(v.times.arr.real || v.times.arr.sched)}` : ''}.`, 'none');
+      render();
+    } else if (!busCand || busCand.id !== best.v.id) busCand = { id: best.v.id, n: 1 };
+  } else if (onBus && ++busMiss >= 4){               // descendu (ou car perdu) depuis plusieurs positions
+    onBus = null; busCand = null; render();
+  }
+  renderRide();
+}
+function renderRide(){
+  const box = $('#rideBanner');
+  const v = onBus && vehicles.find(x => x.id === onBus);
+  if (!v){
+    if (meWatch != null && myPos){
+      const kmh = Math.round((myPos.speed || 0) * 3.6);
+      box.hidden = false;
+      box.innerHTML = `<div class="rb-h">🧭 Suivi de ta position</div>${gpsWeak ? '📡 Signal GPS faible, j’attends ta position… · ' : ''}${kmh > 3 ? `${kmh} km/h · ` : ''}précision ± ${fmtDist(myPos.acc || 0)}${
+        kmh > 11 ? '<br><span class="muted">Je cherche le car jaune où tu te trouves…</span>' : ''}`;
+    } else box.hidden = true;
+    return;
+  }
+  const t = v.times, kmh = Math.round((myPos && myPos.speed || 0) * 3.6);
+  box.hidden = false;
+  box.innerHTML = `<div class="rb-h">${badge(v.route)} Tu es dans ce car → ${esc(v.headsign || '')}</div>
+    ${v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b>${t && t.next.eta ? ` à <b>${fmtHM(t.next.eta)}</b> (${fmtIn(t.next.eta)})` : ''}<br>` : ''}
+    ${t ? `Arrivée à ${esc(t.arr.stop || 'terminus')} : <b>${t.arr.estimated ? '~' : ''}${fmtHM(t.arr.real || t.arr.sched)}</b> (${fmtIn(t.arr.real || t.arr.sched)})` : ''}
+    ${kmh ? ` · ${kmh} km/h` : ''}`;
+}
+
+/** Bouton « Ma position » : suivi en direct (la carte te suit), recentrer, ou arrêter. */
+async function toggleLiveTracking(){
+  if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return; }
+  if (meWatch != null && userPanned){            // carte déplacée à la main : on recentre
+    userPanned = false; updateMeBtn();
+    if (myPos) map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 15), { duration:.6 });
+    return;
+  }
+  if (meWatch != null){ stopLiveTracking(); return; }
+  meFollow = true; userPanned = false;
+  let first = true;
+  meWatch = navigator.geolocation.watchPosition(p => {
+    onLiveFix(p);
+    if (first){
+      first = false;
+      map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 15), { duration:.8 });
+      const near = nearbyStops(myPos.lat, myPos.lon, 1)[0];
+      if (near && near.d > NEAR_M) toast(`Tu es à ${fmtDist(near.d)} de l’arrêt le plus proche (${near.g.name}).`);
+    }
+  }, e => {
+    // refus : on arrête ; perte de signal passagère (tunnel, ravine…) : on continue d'attendre la position
+    if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour cette appli.'); stopLiveTracking(); return; }
+    gpsWeak = true; renderRide();
+  }, { enableHighAccuracy: true, maximumAge: 3000, timeout: 20000 });
+  try { if (navigator.wakeLock) meWake = await navigator.wakeLock.request('screen'); } catch(e){}   // écran allumé pendant le trajet
+  updateMeBtn(); renderRide();
+  if (mode === 'sleep') toast('Réseau fermé : ta position s’affiche, les cars reviendront au premier départ.');
+}
+function stopLiveTracking(){
+  if (meWatch != null) navigator.geolocation.clearWatch(meWatch);
+  meWatch = null; meFollow = false; userPanned = false; onBus = null; busCand = null;
+  try { if (meWake) meWake.release(); } catch(e){}
+  meWake = null;
+  if (meMarker) meMarker.setIcon(meIcon());
+  updateMeBtn(); renderRide(); render();
+}
+function updateMeBtn(){
+  const b = $('#btnMe'); if (!b) return;
+  b.classList.toggle('on', meWatch != null);
+  b.textContent = meWatch == null ? '📍 Ma position' : userPanned ? '🎯 Recentrer' : '🧭 Suivi actif';
+  b.title = meWatch == null ? 'Afficher et suivre ma position' : userPanned ? 'Revenir sur ma position' : 'Arrêter le suivi';
+}
+map.on('dragstart', () => { if (meWatch != null && meFollow){ userPanned = true; updateMeBtn(); } });
+function locateOnMap(){ toggleLiveTracking(); }
+document.addEventListener('visibilitychange', async () => {
+  if (!document.hidden && meWatch != null && navigator.wakeLock && (!meWake || meWake.released)){
+    try { meWake = await navigator.wakeLock.request('screen'); } catch(e){}
+  }
+});
+
 function geoError(e){
   const msg = e && e.code === 1 ? 'Localisation refusée : autorise-la dans ton navigateur, ou choisis la gare à la main.'
             : 'Position indisponible pour le moment.';
@@ -1883,6 +2028,7 @@ async function refresh(){
     render();
     if (view === 'trip') renderTrip();
     checkAlerts();
+    if (meWatch != null){ detectMyBus(); renderRide(); }
   } catch(e){
     toast('Erreur temps réel : ' + errMsg(e));
     setStatus('Flux temps réel injoignable');
@@ -2066,7 +2212,7 @@ function iconFor(v){
   const stale = v.age != null && v.age > STALE_MS;
   const arrow = v.bearing != null && v.bearing !== 0
     ? `<div class="arrow" style="transform:rotate(${Math.round(v.bearing)}deg)"></div>` : '';
-  const html = `<div class="bus-mk${stale ? ' stale' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div></div>`;
+  const html = `<div class="bus-mk${stale ? ' stale' : ''}${typeof onBus !== 'undefined' && onBus === v.id ? ' mine' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div></div>`;
   return { key: html, icon: L.divIcon({ className:'', html, iconSize:[0,0] }) };
 }
 
