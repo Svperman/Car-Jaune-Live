@@ -714,6 +714,7 @@ async function init(){
   if (st.status === 'fulfilled') S = JSON.parse(st.value);
   else toast('Horaires théoriques indisponibles : ' + errMsg(st.reason));
   if (cal.status === 'fulfilled') CAL = JSON.parse(cal.value);
+  Object.keys(shapeCache).forEach(k => delete shapeCache[k]);   // tracés rechargés
   classifyServices();
   renderPeriod();
   buildChips();
@@ -2179,6 +2180,12 @@ function parseFeed(feed){
   let added = false;
   vehicles.forEach(v => { if (v.routeId && !S.routes[v.routeId]) { S.routes[v.routeId] = v.route; added = true; } });
   if (added) buildChips();
+  // nouvelle position reçue : on recalcule le mouvement de chaque car (seulement si elle a changé)
+  vehicles.forEach(v => {
+    const st = motion[v.id];
+    if (!st || st.t0 !== (v.ts || st.t0) || st.lat !== v.lat || st.lon !== v.lon) updateMotion(v);
+  });
+  Object.keys(motion).forEach(id => { if (!vehicles.some(v => v.id === id)) delete motion[id]; });
 }
 
 /* ====================== Affichage carte + liste ====================== */
@@ -2226,6 +2233,110 @@ function popupFor(v){
     ${ficheLinks(v.route.s) ? `<div style="margin-top:8px">${ficheLinks(v.route.s)}</div>` : ''}`;
 }
 
+/* ====================== Mouvement continu des cars ======================
+   Entre deux positions officielles (~20 s), chaque car avance le long du tracé de sa ligne,
+   à sa vitesse mesurée ; à chaque nouvelle position, il se recale en douceur (1,5 s). */
+const shapeCache = {}, motion = {};
+function routeLines(rid){
+  if (shapeCache[rid]) return shapeCache[rid];
+  const lines = ((S.shapes || {})[rid] || []).filter(p => p.length > 1).map(pts => {
+    const cum = [0];
+    for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + distM(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]));
+    return { pts, cum, len: cum[cum.length - 1] };
+  });
+  return (shapeCache[rid] = lines);
+}
+/** Position d'un point le long d'un tracé : distance depuis le début (s) et écart au tracé (d), en mètres. */
+function projectOn(line, lat, lon){
+  const kx = Math.cos(lat * Math.PI / 180) * 111320, ky = 110540;
+  let best = { d: Infinity, s: 0 };
+  for (let i = 1; i < line.pts.length; i++){
+    const x1 = (line.pts[i - 1][1] - lon) * kx, y1 = (line.pts[i - 1][0] - lat) * ky;
+    const x2 = (line.pts[i][1] - lon) * kx, y2 = (line.pts[i][0] - lat) * ky;
+    const dx = x2 - x1, dy = y2 - y1, l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1, -(x1 * dx + y1 * dy) / l2)) : 0;
+    const d = Math.hypot(x1 + t * dx, y1 + t * dy);
+    if (d < best.d) best = { d, s: line.cum[i - 1] + t * (line.cum[i] - line.cum[i - 1]) };
+  }
+  return best;
+}
+/** Point (lat, lon, cap) situé à la distance s le long du tracé. */
+function pointAt(line, s){
+  s = Math.max(0, Math.min(line.len, s));
+  let lo = 1, hi = line.cum.length - 1;
+  while (lo < hi){ const mid = (lo + hi) >> 1; if (line.cum[mid] < s) lo = mid + 1; else hi = mid; }
+  const i = lo, seg = (line.cum[i] - line.cum[i - 1]) || 1, t = (s - line.cum[i - 1]) / seg;
+  const [a1, o1] = line.pts[i - 1], [a2, o2] = line.pts[i];
+  const cap = (Math.atan2((o2 - o1) * Math.cos(a1 * Math.PI / 180), a2 - a1) * 180 / Math.PI + 360) % 360;
+  return [a1 + (a2 - a1) * t, o1 + (o2 - o1) * t, cap];
+}
+const angleGap = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+
+function updateMotion(v){
+  const now = Date.now(), prev = motion[v.id];
+  const st = { t0: v.ts || now, lat: v.lat, lon: v.lon, line: null, s0: 0, dir: 1, speed: 0, bearing: v.bearing, disp: prev && prev.disp };
+  // tracé de la ligne le plus proche (moins de 150 m)
+  let best = null;
+  routeLines(v.routeId).forEach(line => {
+    const p = projectOn(line, v.lat, v.lon);
+    if (p.d < 150 && (!best || p.d < best.p.d)) best = { line, p };
+  });
+  if (best){
+    st.line = best.line; st.s0 = best.p.s;
+    // sens de circulation sur ce tracé : cap annoncé par le car, sinon son déplacement depuis la dernière position
+    const cap = pointAt(st.line, st.s0)[2];
+    if (v.bearing != null && v.bearing !== 0) st.dir = angleGap(v.bearing, cap) > 90 ? -1 : 1;
+    else if (prev && prev.line === st.line && Math.abs(st.s0 - prev.s0) > 20) st.dir = st.s0 > prev.s0 ? 1 : -1;
+    else if (prev && prev.line === st.line) st.dir = prev.dir;
+  }
+  // vitesse : celle du flux, sinon mesurée entre les deux dernières positions
+  let sp = v.speed != null && v.speed > 0.5 ? v.speed : null;
+  if (sp == null && prev && st.t0 > prev.t0){
+    const dt = (st.t0 - prev.t0) / 1000;
+    if (dt > 3) sp = st.line && prev.line === st.line ? Math.abs(st.s0 - prev.s0) / dt : distM(prev.lat, prev.lon, v.lat, v.lon) / dt;
+  }
+  if (sp == null && prev) sp = prev.speed;
+  st.speed = Math.max(0, Math.min(sp || 0, 25));                    // 90 km/h maxi
+  if (v.age != null && v.age > STALE_MS) st.speed = 0;               // position trop ancienne : on ne devine pas
+  st.corrFrom = st.disp ? st.disp.slice() : null;                    // recalage en douceur depuis la position affichée
+  st.corrAt = now;
+  motion[v.id] = st;
+}
+/** Où devrait être le car maintenant (extrapolation limitée à 2 min). */
+function predictedPos(st, now){
+  const el = Math.min(Math.max(0, (now - st.t0) / 1000), 120);
+  if (st.line && st.speed > 0){
+    const p = pointAt(st.line, st.s0 + st.dir * st.speed * el);
+    return [p[0], p[1], st.dir > 0 ? p[2] : (p[2] + 180) % 360];
+  }
+  if (st.speed > 0 && st.bearing != null){                           // hors tracé : tout droit, 40 s maxi
+    const d = st.speed * Math.min(el, 40), b = st.bearing * Math.PI / 180;
+    return [st.lat + d * Math.cos(b) / 110540, st.lon + d * Math.sin(b) / (111320 * Math.cos(st.lat * Math.PI / 180)), st.bearing];
+  }
+  return [st.lat, st.lon, st.bearing];
+}
+let lastMove = 0;
+function moveLoop(t){
+  requestAnimationFrame(moveLoop);
+  if (document.hidden || t - lastMove < 120) return;                // ~8 images/s : fluide et économe
+  lastMove = t;
+  const now = Date.now();
+  markers.forEach((m, id) => {
+    const st = motion[id];
+    if (!st) return;
+    let [la, lo] = predictedPos(st, now);
+    if (st.corrFrom){
+      const k = Math.min(1, (now - st.corrAt) / 1500), e = k * k * (3 - 2 * k);
+      la = st.corrFrom[0] + (la - st.corrFrom[0]) * e;
+      lo = st.corrFrom[1] + (lo - st.corrFrom[1]) * e;
+      if (k >= 1) st.corrFrom = null;
+    }
+    st.disp = [la, lo];
+    m.setLatLng([la, lo]);
+  });
+}
+requestAnimationFrame(moveLoop);
+
 function animateTo(m, to){
   const from = m.getLatLng();
   const dist = from.distanceTo(to);
@@ -2258,7 +2369,7 @@ function render(){
       m._key = key;
       markers.set(v.id, m);
     } else {
-      animateTo(m, L.latLng(v.lat, v.lon));
+      if (!motion[v.id]) updateMotion(v);         // la boucle d'animation se charge du déplacement
       if (m._key !== key){ m.setIcon(icon); m._key = key; }
     }
     m.setZIndexOffset(v.age != null && v.age > STALE_MS ? 0 : 500);
