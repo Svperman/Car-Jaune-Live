@@ -1,0 +1,12 @@
+import { createRequire } from 'node:module';
+import { readFileSync, writeFileSync } from 'node:fs';
+const { chromium } = createRequire(import.meta.url)('playwright');
+const b = await chromium.launch(); const pg = await b.newPage({ viewport:{width:390,height:844} });
+const errs=[]; pg.on('pageerror', e=>errs.push(e.message));
+await pg.goto('http://localhost:8765/_test.html'); await pg.waitForTimeout(3000);
+await pg.evaluate("look.theme='light'; saveLook(); selectStop(stopGroups.find(g => g.ids.includes('A'))); 1"); await pg.waitForTimeout(600);
+await pg.click('#gearBtn'); await pg.click('#pushOn + span'); await pg.waitForTimeout(1500);
+console.log('statut :', await pg.innerText('#pushStatus'), '| créneaux restants :', await pg.evaluate("document.querySelectorAll('.pw').length"));
+await pg.evaluate("document.getElementById('pushSec').scrollIntoView(); 1"); await pg.waitForTimeout(300);
+await pg.screenshot({ path:'/tmp/claude-0/-home-claude/81d0d9f3-571d-5c3b-87e7-a662441dffcb/scratchpad/push2.png' });
+console.log('errors', errs); await b.close();

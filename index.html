@@ -785,11 +785,7 @@
     <div class="set-row"><div class="set-l"><b>Son</b><small>petit bip à chaque alerte</small></div><label class="switch"><input type="checkbox" id="alSound" checked><span></span></label></div>
     <div class="set-row"><div class="set-l"><b>Vibration</b><small>Android uniquement (l’iPhone ne le permet pas aux sites)</small></div><label class="switch"><input type="checkbox" id="alVibe" checked><span></span></label></div>
     <h4 class="set-sub" id="pushSec">Même appli fermée</h4>
-    <div class="set-row"><div class="set-l"><b>Alertes appli fermée</b><small id="pushStatus">Ton serveur surveille ton car pendant tes créneaux et t’envoie la notification par l’appli ntfy, téléphone verrouillé.</small></div><label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
-    <div class="set-row col"><div class="set-l"><b id="pushW0Lbl">Créneau aller</b><small id="pushW0Txt"></small></div>
-      <div class="pw" data-w="0"><div class="days"></div><span>de <input type="time" class="set-in t" data-k="from"> à <input type="time" class="set-in t" data-k="to"></span></div></div>
-    <div class="set-row col"><div class="set-l"><b id="pushW1Lbl">Créneau retour</b><small id="pushW1Txt"></small></div>
-      <div class="pw" data-w="1"><div class="days"></div><span>de <input type="time" class="set-in t" data-k="from"> à <input type="time" class="set-in t" data-k="to"></span></div></div>
+    <div class="set-row"><div class="set-l"><b>Alertes appli fermée</b><small id="pushStatus">Ton serveur surveille ton car toute la journée et t’envoie la notification par l’appli ntfy, téléphone verrouillé.</small></div><label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
     <div class="set-row col"><div class="set-l"><b>Canal ntfy</b><small>installe l’appli gratuite <b>ntfy</b> et abonne-toi à ce nom</small></div>
       <div class="set-ctl"><code id="pushTopic" class="sh-code sm"></code><button class="btn ghost small" id="pushCopy">Copier</button><button class="btn ghost small" id="pushTest">🧪 Tester</button></div></div>
   </section>
@@ -2721,6 +2717,8 @@ function pushWatch(){
   if (board.group) { const g = { fromIds: board.group.ids, toIds: [], fromName: board.group.name, toName: '' }; return [g, g]; }
   return null;
 }
+// plus de créneaux à régler : toute la journée de service, l'aller le matin et le retour l'après-midi (comme Mon trajet)
+const AUTO_WINDOWS = [{ days:[1,2,3,4,5,6,7], from:'04:30', to:'12:59' }, { days:[1,2,3,4,5,6,7], from:'13:00', to:'22:30' }];
 function syncPush(){ clearTimeout(pushSyncT); pushSyncT = setTimeout(doSyncPush, 800); }
 async function doSyncPush(){
   if (IN_GAS && !pushCfg.on) return;
@@ -2733,7 +2731,7 @@ async function doSyncPush(){
       if (!wt){ pushState = { ok:false, msg:'Remplis Mon trajet (ou choisis un arrêt) pour que le serveur sache quoi surveiller.' }; renderPushUI(); return; }
       const cfg = { topic: pushCfg.topic, lead: alertCfg.lead, lines: alertCfg.line ? [alertCfg.line] : [], quai: alertCfg.quai,
         muteUntil: isMuted() ? alertCfg.muteUntil : 0,
-        windows: pushCfg.w.map((w, i) => Object.assign({ days: w.days, from: w.from, to: w.to }, wt[i])) };
+        windows: AUTO_WINDOWS.map((w, i) => Object.assign({}, w, wt[i])) };
       const r = JSON.parse(await call('setPushAlert', JSON.stringify(cfg)));
       pushState = { ok:true, trigger: r.trigger !== false, msg:'' };
       if (!pushCfg.registered){ pushCfg.registered = true; savePush(); }
@@ -2746,32 +2744,15 @@ function renderPushUI(){
   $('#pushOn').checked = pushCfg.on;
   $('#pushTopic').textContent = pushCfg.topic;
   const wt = pushWatch();
-  ['0', '1'].forEach(i => {
-    const w = pushCfg.w[i], box = document.querySelector(`.pw[data-w="${i}"]`);
-    box.querySelector('.days').innerHTML = ['L','M','M','J','V','S','D'].map((d, k) => `<button data-day="${k + 1}" class="${w.days.includes(k + 1) ? 'on' : ''}" aria-label="jour ${k + 1}">${d}</button>`).join('');
-    box.querySelector('[data-k=from]').value = w.from; box.querySelector('[data-k=to]').value = w.to;
-    $('#pushW' + i + 'Txt').textContent = !wt ? '' : wt[i].toName ? `${wt[i].fromName} → ${wt[i].toName}` : `départs de ${wt[i].fromName}`;
-  });
-  $('#pushW0Lbl').textContent = wt && wt[0].toName ? 'Créneau aller' : 'Créneau 1';
-  $('#pushW1Lbl').textContent = wt && wt[0].toName ? 'Créneau retour' : 'Créneau 2';
-  $('#pushStatus').textContent = !pushCfg.on ? 'Ton serveur surveille ton car pendant tes créneaux et t’envoie la notification par l’appli ntfy, téléphone verrouillé.'
-    : pushState.ok === true ? (pushState.trigger ? '✅ Enregistré sur ton serveur : alertes même appli fermée pendant tes créneaux.'
+  const what = !wt ? '' : wt[0].toName ? ` (${wt[0].fromName} → ${wt[0].toName} le matin, retour l’après-midi)` : ` (départs de ${wt[0].fromName})`;
+  $('#pushStatus').textContent = !pushCfg.on ? 'Ton serveur surveille ton car et t’envoie la notification par l’appli ntfy, téléphone verrouillé.'
+    : pushState.ok === true ? (pushState.trigger ? '✅ Actif toute la journée de service' + what + '.'
                                                  : '⚠️ Enregistré, mais le serveur doit être autorisé une fois : dans Apps Script, exécute « installPushTrigger ».')
     : pushState.ok === false ? '⚠️ ' + pushState.msg
     : !alertCfg.on ? '🔕 Notifications coupées : le serveur ne t’enverra rien.' : 'Enregistrement…';
 }
 $('#pushOn').addEventListener('change', e => { pushCfg.on = e.target.checked; savePush(); pushState.ok = null; alertCfg.ntfy = pushCfg.on ? pushCfg.topic : ''; saveAlertCfg(); renderPushUI(); syncPush();
   if (pushCfg.on) toast('Installe l’appli ntfy et abonne-toi au nom affiché pour recevoir les alertes appli fermée.'); });
-$('#pushSec').addEventListener('click', e => {
-  const d = e.target.closest('[data-day]'); if (!d) return;
-  const w = pushCfg.w[+d.closest('.pw').dataset.w], n = +d.dataset.day;
-  w.days = w.days.includes(n) ? w.days.filter(x => x !== n) : w.days.concat(n).sort();
-  savePush(); renderPushUI(); syncPush();
-});
-$('#pushSec').addEventListener('change', e => {
-  const t = e.target.closest('.t'); if (!t) return;
-  pushCfg.w[+t.closest('.pw').dataset.w][t.dataset.k] = t.value; savePush(); syncPush();
-});
 $('#pushCopy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(pushCfg.topic); toast('Nom copié : colle-le dans ntfy → « S’abonner ».'); } catch(e){ prompt('Nom du canal ntfy :', pushCfg.topic); } });
 $('#pushTest').addEventListener('click', async () => {
   try { const r = JSON.parse(await call('testPush', pushCfg.topic)); toast(r.trigger === false ? 'Test envoyé · ⚠️ exécute « installPushTrigger » une fois dans Apps Script.' : '🧪 Test envoyé par ton serveur : regarde l’appli ntfy.'); }

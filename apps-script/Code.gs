@@ -755,44 +755,55 @@ function pushTick() {
   });
   if (!work.length) return;
 
-  const S = JSON.parse(getStatic());
-  const active = activeServices_(S.service, ymd, wd);
-  let rt = {};
-  try { rt = decodeTripUpdates_(Utilities.base64Decode(getRealtime().b64)); } catch (e) { console.warn('RT : ' + e.message); }
-
-  work.forEach(function (job) {
+  // Liste des départs du jour, calculée une seule fois par jour et par créneau (gardée en cache) :
+  // chaque minute, on ne fait que la parcourir — le flux temps réel n'est lu que si un car approche.
+  let S = null, active, rt = null;
+  const nowMs = now.getTime();
+  work.forEach(function (job, wi) {
     const c = job.c, w = job.w;
-    const boards = JSON.parse(getStopBoard(w.fromIds.concat(w.toIds).slice(0, 60)));
-    const toSec = {};
-    w.toIds.forEach(function (id) { (boards[id] || []).forEach(function (r) { toSec[r[0]] = Math.max(toSec[r[0]] || 0, r[1]); }); });
-    w.fromIds.forEach(function (sid) {
-      (boards[sid] || []).forEach(function (r) {
-        const tid = r[0], sec = r[1], t = S.trips[tid];
-        if (!t || (active && !active[t[7]])) return;
-        if (t[6] === sid) return;                                   // terminus : pas un départ
-        if (w.toIds.length && !(toSec[tid] > sec)) return;          // ne va pas vers ma destination
-        const route = S.routes[t[0]] || { s: '?' };
-        if (c.lines.length && c.lines.indexOf(route.s) < 0) return;
-        const sched = midnight + sec * 1000;
-        const tu = rt[tid];
-        const delay = tu ? stopDelay_(tu, sid) : null;
-        const eff = sched + (delay || 0) * 1000;
-        const mins = (eff - now.getTime()) / 60000;
-        const hm = Utilities.formatDate(new Date(eff), 'Indian/Reunion', 'HH:mm');
-        const lateTxt = delay == null ? 'horaire prévu' : Math.abs(delay) < 60 ? 'à l’heure' : (delay > 0 ? 'retard ' : 'avance ') + Math.round(Math.abs(delay) / 60) + ' min';
-        const dest = w.toName || t[1] || '';
-        const send = function (kind, title, body, prio) {
-          const key = 'psent_' + pushId_(c.topic) + '_' + kind + '_' + tid + '_' + ymd;
-          if (cache.get(key)) return;
-          cache.put(key, '1', 6 * 3600);
-          ntfySend_(c.topic, title, body, prio);
-        };
-        if (mins <= c.lead + 0.75 && mins > c.lead - 1.5)
-          send('lead', '🚌 ' + route.s + ' → ' + dest + ' dans ' + Math.max(1, Math.round(mins)) + ' min',
-               'Départ de ' + (w.fromName || 'ton arrêt') + ' à ' + hm + ' (' + lateTxt + ').', 4);
-        if (c.quai && tu && mins <= 1 && mins > -1.5)
-          send('quai', '🚏 ' + route.s + ' arrive à quai', (w.fromName || 'Ton arrêt') + ' · ' + hm + ' (' + lateTxt + ').', 5);
+    const dkey = 'pday_' + pushId_(c.topic) + '_' + ymd + '_' + c.windows.indexOf(w) + '_' + hash_(JSON.stringify(w)).slice(0, 8);
+    let list = null;
+    try { list = JSON.parse(cache.get(dkey) || 'null'); } catch (e) {}
+    if (!list) {
+      if (!S) { S = JSON.parse(getStatic()); active = activeServices_(S.service, ymd, wd); }
+      const boards = JSON.parse(getStopBoard(w.fromIds.concat(w.toIds).slice(0, 60)));
+      const toSec = {};
+      w.toIds.forEach(function (id) { (boards[id] || []).forEach(function (r) { toSec[r[0]] = Math.max(toSec[r[0]] || 0, r[1]); }); });
+      list = [];
+      w.fromIds.forEach(function (sid) {
+        (boards[sid] || []).forEach(function (r) {
+          const tid = r[0], sec = r[1], t = S.trips[tid];
+          if (!t || (active && !active[t[7]])) return;
+          if (t[6] === sid) return;                                   // terminus : pas un départ
+          if (w.toIds.length && !(toSec[tid] > sec)) return;          // ne va pas vers ma destination
+          const route = S.routes[t[0]] || { s: '?' };
+          if (c.lines.length && c.lines.indexOf(route.s) < 0) return;
+          list.push([tid, sid, sec, route.s, w.toName || t[1] || '']);
+        });
       });
+      try { cache.put(dkey, JSON.stringify(list), 6 * 3600); } catch (e) {}
+    }
+    list.forEach(function (d) {
+      const tid = d[0], sid = d[1], sched = midnight + d[2] * 1000;
+      if (sched < nowMs - 20 * 60e3 || sched > nowMs + (c.lead + 25) * 60e3) return;   // loin : rien à faire
+      if (rt === null) { rt = {}; try { rt = decodeTripUpdates_(Utilities.base64Decode(getRealtime().b64)); } catch (e) { console.warn('RT : ' + e.message); } }
+      const tu = rt[tid];
+      const delay = tu ? stopDelay_(tu, sid) : null;
+      const eff = sched + (delay || 0) * 1000;
+      const mins = (eff - nowMs) / 60000;
+      const hm = Utilities.formatDate(new Date(eff), 'Indian/Reunion', 'HH:mm');
+      const lateTxt = delay == null ? 'horaire prévu' : Math.abs(delay) < 60 ? 'à l’heure' : (delay > 0 ? 'retard ' : 'avance ') + Math.round(Math.abs(delay) / 60) + ' min';
+      const send = function (kind, title, body, prio) {
+        const key = 'psent_' + pushId_(c.topic) + '_' + kind + '_' + tid + '_' + ymd;
+        if (cache.get(key)) return;
+        cache.put(key, '1', 6 * 3600);
+        ntfySend_(c.topic, title, body, prio);
+      };
+      if (mins <= c.lead + 0.75 && mins > c.lead - 1.5)
+        send('lead', '🚌 ' + d[3] + ' → ' + d[4] + ' dans ' + Math.max(1, Math.round(mins)) + ' min',
+             'Départ de ' + (w.fromName || 'ton arrêt') + ' à ' + hm + ' (' + lateTxt + ').', 4);
+      if (c.quai && tu && mins <= 1 && mins > -1.5)
+        send('quai', '🚏 ' + d[3] + ' arrive à quai', (w.fromName || 'Ton arrêt') + ' · ' + hm + ' (' + lateTxt + ').', 5);
     });
   });
 }
