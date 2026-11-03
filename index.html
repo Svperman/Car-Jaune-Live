@@ -594,6 +594,8 @@
   .city-lb.big{font-size:13px;font-weight:800;color:#1A1D22;text-transform:uppercase;letter-spacing:.05em;opacity:var(--city-big,1)}
   html.dark .city-lb{color:#E6E9EE;text-shadow:0 0 3px #000,0 0 3px #000,0 0 2px #000}
   html.dark .city-lb.big{color:#fff}
+  .sat .city-lb, html.dark .sat .city-lb{color:#fff;text-shadow:0 0 3px #000,0 0 4px #000,0 1px 2px #000}
+  .sat .city-lb.big{color:#FFE27A}
   .punct{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--ligne);font-size:12.5px}
   .punct .dchip{cursor:pointer;border:1.5px solid transparent} .punct .dchip.sel{border-color:currentColor}
 
@@ -1082,6 +1084,10 @@ function cityFade(z){
 map.on('zoomanim', e => cityFade(e.zoom));
 map.on('zoomend', () => cityFade(map.getZoom()));
 cityFade(map.getZoom());
+// sur la vue satellite : texte blanc bordé de noir, lisible sur la photo
+const citySat = name => map.getContainer().classList.toggle('sat', name === 'Satellite');
+citySat(baseName);
+map.on('baselayerchange', e => citySat(e.name));
 
 // La carte est créée dans un onglet parfois caché (taille 0) : on la recalcule dès que sa taille change,
 // et on recadre sur l'île la première fois qu'elle devient visible
