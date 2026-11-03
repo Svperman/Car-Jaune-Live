@@ -13,8 +13,10 @@ const errs = []; page.on('pageerror', e => errs.push(e.message));
 await page.route(/ntfy\.sh/, r => r.fulfill({ status: 200, body: '{}' }));
 await page.goto(BASE + '/_off.html');
 await page.waitForTimeout(2500);
+const shown = () => page.evaluate("getComputedStyle(document.querySelector('#offBar')).display !== 'none'");
 const t = async (label, fn) => { try { const r = await fn(); if (r !== true) fails.push(label + ' : ' + r); else console.log('✓ ' + label); } catch(e){ fails.push(label + ' : ' + e.message.split('\n')[0]); } };
 
+await t('avec réseau : pas de bandeau « Hors ligne » à l’écran', async () => (await shown()) === false || 'bandeau visible');
 await t('pack : horaires de tous les arrêts gardés', async () => {
   await page.evaluate('offlinePack(true)');
   const r = await page.evaluate("[+localStorage.getItem('cj_pack_n'), Object.keys(S.stops).length, document.querySelector('#packTxt').textContent]");
@@ -45,7 +47,7 @@ await t('retour du réseau : bandeau caché, signalement envoyé', async () => {
   await ctx.setOffline(false);
   await page.waitForTimeout(1500);
   const r = await page.evaluate("[document.querySelector('#offBar').hidden, outbox.reps.length, (window.__reps || []).length]");
-  return (r[0] && r[1] === 0 && r[2] === 1) || JSON.stringify(r);
+  return (r[0] && !(await shown()) && r[1] === 0 && r[2] === 1) || JSON.stringify(r);
 });
 await page.screenshot({ path: 'test-horsligne.png' });
 errs.forEach(e => fails.push('erreur JS : ' + e));

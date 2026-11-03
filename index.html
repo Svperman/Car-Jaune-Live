@@ -592,7 +592,35 @@
     display:flex;flex-direction:column;gap:1px;background:#2A2F36;color:#fff;border-radius:12px;padding:6px 12px;font-size:12.5px;line-height:1.25;
     box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
   #offBar span{opacity:.85;font-size:11.5px}
+  #offBar[hidden]{display:none}
   #livePill.off .dot{background:#9AA0A6;animation:none}
+  /* barres de réseau (comme le Wi-Fi du téléphone) */
+  .sig{position:relative;display:flex;align-items:flex-end;gap:2.5px;height:34px;padding:0 6px 10px;background:none;border:0;cursor:pointer;flex:none}
+  .sig i{display:block;width:4px;border-radius:2px;background:currentColor;opacity:.22;color:var(--titre,#1A1D22);transition:opacity .4s,background-color .4s,height .3s}
+  .sig i:nth-child(1){height:5px} .sig i:nth-child(2){height:8.5px} .sig i:nth-child(3){height:12px} .sig i:nth-child(4){height:15.5px}
+  .sig.l1 i:nth-child(-n+1), .sig.l2 i:nth-child(-n+2), .sig.l3 i:nth-child(-n+3), .sig.l4 i:nth-child(-n+4){opacity:1}
+  .sig.l4 i, .sig.l3 i{background:var(--ok)} .sig.l2 i{background:#E0A100} .sig.l1 i{background:var(--retard)}
+  .sig .x{position:absolute;right:1px;bottom:5px;font:900 10px/1 sans-serif;color:var(--retard);display:none}
+  .sig.l0 .x{display:block}
+  .sig.busy i{animation:sigscan 1.2s infinite}
+  .sig.busy i:nth-child(2){animation-delay:.15s} .sig.busy i:nth-child(3){animation-delay:.3s} .sig.busy i:nth-child(4){animation-delay:.45s}
+  @keyframes sigscan{0%,100%{transform:scaleY(1)}40%{transform:scaleY(.55)}}
+  .sig i{transform-origin:bottom}
+  html.dark .sig i{color:#E6E9EE}
+  /* ondes « temps réel » à côté des horaires */
+  .lv{position:relative;display:inline-block;width:12px;height:13px;margin-left:2px;vertical-align:top;margin-top:1px;flex:none}
+  table.board td:first-child, .sp-row .lv{white-space:nowrap}
+  @media (max-width:860px){ table.board td, table.board th{padding-left:7px;padding-right:7px} }
+  .lv i{position:absolute;left:0;bottom:0;border:2px solid #B8BDC4;border-left-color:transparent;border-bottom-color:transparent;border-radius:0 100% 0 0}
+  .lv i:nth-child(1){width:3px;height:3px;border:0;background:#B8BDC4;border-radius:50%}
+  .lv i:nth-child(2){width:5px;height:5px} .lv i:nth-child(3){width:9.5px;height:9.5px}
+  .lv.on i{border-top-color:var(--ok);border-right-color:var(--ok)} .lv.on i:nth-child(1){background:var(--ok)}
+  .lv.on i:nth-child(2){animation:lvw 1.6s infinite .2s} .lv.on i:nth-child(3){animation:lvw 1.6s infinite .5s}
+  @keyframes lvw{0%,100%{opacity:1}50%{opacity:.15}}
+  html.dark .lv i{border-top-color:#5A6068;border-right-color:#5A6068} html.dark .lv i:nth-child(1){background:#5A6068}
+  html.dark .lv.on i{border-top-color:var(--ok);border-right-color:var(--ok)} html.dark .lv.on i:nth-child(1){background:var(--ok)}
+  @media (prefers-reduced-motion:reduce){ .lv.on i{animation:none!important} }
+  @media (max-width:380px){ .sig{padding:0 2px 10px;gap:2px} .sig i{width:3.5px} .brand b{font-size:16.5px} .brand>div{min-width:0} .live{gap:4px} .hd-btn{min-width:36px;min-height:36px;padding:0 8px} .mark{width:30px;height:30px} .top-in{gap:6px} }
   .city-lb{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:700 11.5px/1 'Nunito Sans',sans-serif;color:#3B3F46;
     letter-spacing:.02em;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;opacity:var(--city-small,1);transition:opacity .35s}
   .city-lb.l{transform:translate(-14px,-50%)} .city-lb.r{transform:translate(calc(-100% + 14px),-50%)}
@@ -699,7 +727,7 @@
       <button class="tab" data-view="fiches"><span class="ti">📄</span><span class="tl">Fiches<span class="lg"> horaires</span></span></button>
       <button class="tab" data-view="trafic"><span class="ti">⚠️</span><span class="tl"><span class="lg">Infos </span>trafic</span><span class="n" id="alertCount" hidden></span></button>
     </nav>
-    <div class="live"><button id="bellBtn" class="hd-btn" title="Notifications" aria-label="Notifications" aria-haspopup="true"><span id="bellIco">🔕</span><span class="cnt" id="bellCnt" hidden></span></button><button id="gearBtn" class="hd-btn" title="Paramètres" aria-label="Paramètres">⚙️<span class="gdot" id="gearDot"></span></button><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
+    <div class="live"><button id="bellBtn" class="hd-btn" title="Notifications" aria-label="Notifications" aria-haspopup="true"><span id="bellIco">🔕</span><span class="cnt" id="bellCnt" hidden></span></button><button id="gearBtn" class="hd-btn" title="Paramètres" aria-label="Paramètres">⚙️<span class="gdot" id="gearDot"></span></button><button id="netSig" class="sig" aria-label="Qualité du réseau" title="Qualité du réseau"><i></i><i></i><i></i><i></i><b class="x">✕</b></button><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
   </div>
 </header>
 <div class="crumb">Accueil › <b id="crumbCur">Carte en direct</b></div>
@@ -2197,7 +2225,7 @@ function renderTrip(){
       const day = midnightMs(r.eff);
       if (day !== lastDay){ t += `<tr class="sep"><td colspan="6">${dayLabel(r.eff).replace(/^./, c => c.toUpperCase())}</td></tr>`; lastDay = day; }
       const mins = Math.round((r.eff - now) / 60000);
-      const when = mins <= 0 ? `<span class="when soon">À quai</span>` : mins < 60 ? `<span class="when${mins <= 2 ? ' soon' : ''}">${mins}<small>min</small></span>` : `<span class="when">${fmtHM(r.eff)}</span>`;
+      const when = mins <= 0 ? `<span class="when soon">À quai</span>` : mins < 60 ? `<span class="when${mins <= 2 ? ' soon' : ''}">${mins}<small>min</small></span>` : `<span class="when">${fmtHM(r.eff)}</span>` + liveIco(r);
       const arrEff = r.rarr != null ? r.rarr : r.arr;
       const late = walk != null && walk > 1 && mins < walk;
       const leave = walk != null && walk > 1 && !late && mins - walk <= 30
@@ -3252,7 +3280,9 @@ async function refresh(){
   busy = true;
   $('#refresh').classList.add('spin');
   try {
+    const t0 = performance.now(); sigBusy(true);
     const r = await call('getRealtime');
+    sigMeasure(performance.now() - t0, (r.b64 || '').length * .75);
     netFails = 0; if (netDown) setNetDown(false);
     const msg = FeedMessage.decode(b64ToBytes(r.b64));
     const feed = FeedMessage.toObject(msg, { longs:Number, defaults:false });
@@ -3266,6 +3296,7 @@ async function refresh(){
     if (meWatch != null){ detectMyBus(); renderRide(); try { autoCheck(); } catch(e){} }
   } catch(e){
     diag('erreur-temps-reel', { msg: errMsg(e).slice(0, 120), enLigne: navigator.onLine });
+    sigMeasure(null);
     const netErr = navigator.onLine === false || /injoignable|Load failed|Failed to fetch|NetworkError|network/i.test(errMsg(e));
     if (netErr) netFails++;
     if (navigator.onLine === false || netFails >= 2){
@@ -3349,6 +3380,12 @@ function tripTimes(v, tu, ti, trip){
 }
 
 // "14:05" (+ horaire prévu barré et écart si le réel diffère)
+/** Pictogramme « temps réel » (comme Car Jaune) : ondes animées si le car est suivi en direct, grises sinon. */
+function liveIco(r){
+  const on = r && r.real != null && !r.ghost;
+  const t = on ? (r.approx ? 'Suivi en direct (heure estimée d’après la position du car)' : 'Temps réel : heure donnée par le car') : 'Horaire prévu (pas de suivi en direct)';
+  return `<span class="lv${on ? ' on' : ''}" title="${t}" aria-label="${t}"><i></i><i></i><i></i></span>`;
+}
 function fmtTime(real, sched, approx){
   if (real == null) return `<b>${fmtHM(sched)}</b> <small class="muted">prévu</small>`;
   const diff = Math.round((real - sched) / 60000);
@@ -3582,7 +3619,7 @@ async function openStopPopup(g, ll){
   const next = rows.filter(r => r.eff > now - 60e3).slice(0, 4);
   pop.setContent(`<div class="pop-h"><b>🚏 ${esc(g.name)}</b>${stopPmr(g)}</div>
     ${next.length ? '<div class="sp-list">' + next.map(r => { const m = Math.round((r.eff - now) / 60000);
-      return `<div class="sp-row">${badge(r.route)}<span class="sp-d">${esc(r.dest)}</span><b class="sp-t${m <= 2 ? ' soon' : ''}">${m <= 0 ? 'À quai' : m < 60 ? m + ' min' : fmtHM(r.eff)}</b>${
+      return `<div class="sp-row">${badge(r.route)}<span class="sp-d">${esc(r.dest)}</span><b class="sp-t${m <= 2 ? ' soon' : ''}">${m <= 0 ? 'À quai' : m < 60 ? m + ' min' : fmtHM(r.eff)}</b>${liveIco(r)}${
         r.real != null ? `<span class="delay ${fmtDelay((r.real - r.sched) / 1000, r.approx).c}">${fmtDelay((r.real - r.sched) / 1000, r.approx).t}</span>` : ''}</div>`; }).join('') + '</div>'
       : '<div class="muted">Aucun départ dans les prochaines heures.</div>'}
     ${reliabilityHtml(next.map(r => r.route.s)).replace('<div class="rel">', '<div class="rel sm">')}
@@ -4351,11 +4388,12 @@ function renderBoard(){
       const when = mins <= 0 ? `<span class="when soon">À quai</span>`
                  : mins < 60 ? `<span class="when${mins <= 2 ? ' soon' : ''}">${mins}<small>min</small></span>`
                  : `<span class="when">${fmtHM(r.eff)}</span>`;
+      const whenL = when + liveIco(r);
       const status = r.ghost ? `<span class="dchip ghost">🚫 Pas vu en circulation</span><br><small class="muted">peut-être supprimé</small>`
         : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>`;
       const sensTag = boardGroupBy === 'heure' && r.sens ? `<span class="tag ${r.sens === 'aller' ? 'tag-s' : 'tag-v'}">${r.sens}</span>` : '';
       html += `<tr class="${r.ghost ? 'ghost' : ''}">
-        <td>${when}</td>
+        <td>${whenL}</td>
         <td>${badge(r.route)}${r.pmr === '1' ? '<span class="pmr-i" title="Car accessible en fauteuil roulant">♿</span>' : ''}</td>
         <td class="b-dest">${esc(r.dest)}${sensTag}${r.tag}${r.last ? LAST_TAG : ''}${reportChips(r)}<small>${r.veh && r.veh.stopName ? 'vers ' + esc(r.veh.stopName) : ''}</small>
           ${r.veh ? `<button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}
@@ -4491,10 +4529,52 @@ function setNetDown(down){
   }
   renderOffBar();
 }
+/* ---------- barres de réseau : bougent selon la vitesse réelle des échanges avec le serveur ---------- */
+const sig = { ms: [], level: -1, kbps: null };
+function sigBusy(on){ const el = $('#netSig'); if (el) el.classList.toggle('busy', on); }
+function sigMeasure(ms, bytes){
+  sigBusy(false);
+  if (ms == null){ sig.ms.push(99999); }
+  else { sig.ms.push(ms); if (bytes && ms > 0) sig.kbps = Math.round(bytes * 8 / ms); }
+  if (sig.ms.length > 3) sig.ms.shift();
+  sigRender();
+}
+function sigRender(){
+  const el = $('#netSig'); if (!el) return;
+  let lvl;
+  if (navigator.onLine === false || netDown) lvl = 0;
+  else if (!sig.ms.length) lvl = 3;
+  else {
+    const avg = sig.ms.reduce((a, b) => a + b, 0) / sig.ms.length;          // moyenne des 3 derniers échanges
+    lvl = avg <= 1800 ? 4 : avg <= 3500 ? 3 : avg <= 7000 ? 2 : avg < 99999 ? 1 : 0;
+  }
+  const c = navigator.connection;                                          // Android/Chrome : type de réseau en plus
+  if (c && c.effectiveType && lvl > 0){
+    if (/slow-2g|^2g/.test(c.effectiveType)) lvl = Math.min(lvl, 1);
+    else if (c.effectiveType === '3g') lvl = Math.min(lvl, 3);
+  }
+  sig.level = lvl;
+  el.className = 'sig l' + lvl + (el.classList.contains('busy') ? ' busy' : '');
+  const lbl = ['Pas de réseau', 'Réseau très lent', 'Réseau lent', 'Bon réseau', 'Très bon réseau'][lvl];
+  el.title = lbl; el.setAttribute('aria-label', lbl);
+}
+$('#netSig').addEventListener('click', () => {
+  const last = sig.ms.length ? sig.ms[sig.ms.length - 1] : null, c = navigator.connection;
+  const lbl = ['📴 Pas de réseau', '📶 Réseau très lent', '📶 Réseau lent', '📶 Bon réseau', '📶 Très bon réseau'][Math.max(0, sig.level)];
+  const det = [last != null && last < 99999 ? `réponse du serveur en ${(last / 1000).toFixed(1).replace('.', ',')} s` : '',
+    sig.kbps && sig.level > 0 ? `≈ ${sig.kbps >= 1000 ? (sig.kbps / 1000).toFixed(1).replace('.', ',') + ' Mbit/s' : sig.kbps + ' kbit/s'}` : '',
+    c && c.effectiveType ? c.effectiveType.toUpperCase().replace('SLOW-', 'très lent ') : ''].filter(Boolean).join(' · ');
+  toast(lbl + (det ? ' · ' + det : '') + (sig.level === 0 ? ' · l’appli continue avec les horaires gardés' : ''));
+});
+if (navigator.connection && navigator.connection.addEventListener) navigator.connection.addEventListener('change', sigRender);
+addEventListener('online', sigRender); addEventListener('offline', sigRender);
+sigRender();
+
 function renderOffBar(){
   const bar = $('#offBar'); if (!bar) return;
   bar.hidden = !netDown;
   $('#livePill').classList.toggle('off', netDown);
+  sigRender();
   if (!netDown) return;
   const age = feedTime ? Math.round((Date.now() - feedTime) / 60000) : null;
   const parts = [];
