@@ -588,6 +588,11 @@
   .dchip small{font-weight:600;opacity:.8}
   .bus-mk .dly{position:absolute;left:50%;top:13px;transform:translateX(-50%);font:800 10.5px/1 'Nunito Sans',sans-serif;color:#fff;border-radius:6px;padding:2px 4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.3)}
   .bus-mk .dly.late{background:var(--retard)} .bus-mk .dly.early{background:var(--avance)}
+  #offBar{position:fixed;left:56px;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:1200;max-width:calc(100% - 182px);
+    display:flex;flex-direction:column;gap:1px;background:#2A2F36;color:#fff;border-radius:12px;padding:6px 12px;font-size:12.5px;line-height:1.25;
+    box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
+  #offBar span{opacity:.85;font-size:11.5px}
+  #livePill.off .dot{background:#9AA0A6;animation:none}
   .city-lb{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:700 11.5px/1 'Nunito Sans',sans-serif;color:#3B3F46;
     letter-spacing:.02em;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 2px #fff;opacity:var(--city-small,1);transition:opacity .35s}
   .city-lb.l{transform:translate(-14px,-50%)} .city-lb.r{transform:translate(calc(-100% + 14px),-50%)}
@@ -908,6 +913,7 @@
       <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt"></small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
       <div class="set-row"><div class="set-l"><b>Taille du texte</b></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
       <div class="set-row"><div class="set-l"><b>Économie de batterie</b><small id="ecoTxt"></small></div><label class="switch"><input type="checkbox" id="ecoOn" checked><span></span></label></div>
+      <div class="set-row" id="packRow"><div class="set-l"><b>Horaires sans réseau</b><small id="packTxt">les horaires de tous les arrêts sont gardés sur ton téléphone</small></div><button class="btn small ghost" id="packBtn">↻ Mettre à jour</button></div>
       <div class="set-row" id="offRow"><div class="set-l"><b>Carte hors ligne</b><small id="offTxt">les zones que tu as déjà regardées restent visibles sans réseau</small></div><button class="btn small ghost" id="offClear">Vider</button></div>
       <div class="set-row"><div class="set-l"><b>Garder l’écran allumé</b><small>pendant les alertes</small></div><label class="switch"><input type="checkbox" id="alWake"><span></span></label></div>
     </div>
@@ -940,6 +946,7 @@
   <div class="bm-f"><button class="al-link" id="bmClear">Tout effacer</button><button class="al-link" data-open-settings>⚙️ Réglages</button></div>
 </div>
 <div id="toast" hidden></div>
+<div id="offBar" hidden role="status"><b>📴 Hors ligne</b><span id="offBarTx"></span></div>
 
 <script src="lib/leaflet.js"></script>
 <script src="lib/leaflet-rotate.js"></script>
@@ -1000,6 +1007,10 @@ message TranslatedString {
 let FeedMessage = null;
 let S = { routes:{}, trips:{}, stops:{}, shapes:{} };
 let vehicles = [], alerts = [], feedTime = null, lastTus = {};
+// sans réseau (voir « Sans réseau » plus bas)
+let netDown = false, netFails = 0;
+let outbox = { reps: [], share: [], last: null, ntfy: [] };
+try { outbox = Object.assign(outbox, JSON.parse(localStorage.getItem('cj_outbox') || '{}')); } catch(e){}
 let selected = new Set(), query = '';
 let busy = false, nextAt = 0;
 let mode = 'init', sched = null, schedAt = 0, forceUntil = 0;
@@ -1180,7 +1191,8 @@ const idb = (() => {
   }));
   return {
     get: k => tx('readonly', s => s.get(k)).catch(() => null),
-    set: (k, v) => tx('readwrite', s => s.put(v, k)).catch(() => null)
+    set: (k, v) => tx('readwrite', s => s.put(v, k)).catch(() => null),
+    setMany: o => tx('readwrite', s => { Object.keys(o).forEach(k => s.put(o[k], k)); }).catch(() => null)
   };
 })();
 // données fixes : gardées sur le téléphone, réutilisées hors ligne
@@ -1193,12 +1205,21 @@ async function call(fn, ...args){
     const v = await rawCall(fn, ...args);
     offline = false;
     idb.set(key, { v, t: Date.now() });
+    if (fn === 'getStopBoard') keepBoards(v);
     return v;
   } catch(e){
     const c = await idb.get(key);
     if (c){ offline = true; return c.v; }                 // pas de réseau : la dernière version gardée
+    if (fn === 'getStopBoard' && Array.isArray(args[0])){  // sinon : reconstitué arrêt par arrêt (pack hors ligne)
+      const got = await Promise.all(args[0].map(id => idb.get('sb|' + id)));
+      if (got.some(x => x)){ offline = true; const o = {}; args[0].forEach((id, i) => o[id] = got[i] || []); return JSON.stringify(o); }
+    }
     throw e;
   }
+}
+/** Garde les passages de chaque arrêt séparément : n'importe quelle recherche marche ensuite sans réseau. */
+function keepBoards(v){
+  try { const o = JSON.parse(v), m = {}; Object.keys(o).forEach(id => m['sb|' + id] = o[id]); idb.setMany(m); } catch(e){}
 }
 /** Version gardée sur le téléphone (ou null), sans attendre le réseau. */
 async function cachedValue(fn, ...args){ const c = await idb.get(fn + '|' + JSON.stringify(args)); return c ? c.v : null; }
@@ -3224,13 +3245,15 @@ function updateSleepCountdown(){
 }
 
 /* ====================== Temps réel ====================== */
-addEventListener('online', () => { toast('📶 Réseau retrouvé : temps réel en cours…'); nextAt = 0; });
+addEventListener('online', () => setNetDown(false));
+addEventListener('offline', () => setNetDown(true));
 async function refresh(){
   if (busy) return;
   busy = true;
   $('#refresh').classList.add('spin');
   try {
     const r = await call('getRealtime');
+    netFails = 0; if (netDown) setNetDown(false);
     const msg = FeedMessage.decode(b64ToBytes(r.b64));
     const feed = FeedMessage.toObject(msg, { longs:Number, defaults:false });
     parseFeed(feed);
@@ -3243,9 +3266,11 @@ async function refresh(){
     if (meWatch != null){ detectMyBus(); renderRide(); try { autoCheck(); } catch(e){} }
   } catch(e){
     diag('erreur-temps-reel', { msg: errMsg(e).slice(0, 120), enLigne: navigator.onLine });
-    if (navigator.onLine === false){
-      setStatus('Hors ligne · horaires théoriques');
-      toast('📴 Pas de réseau : horaires des fiches gardées sur ton téléphone. Le temps réel reviendra tout seul.');
+    const netErr = navigator.onLine === false || /injoignable|Load failed|Failed to fetch|NetworkError|network/i.test(errMsg(e));
+    if (netErr) netFails++;
+    if (navigator.onLine === false || netFails >= 2){
+      setNetDown(true);
+      setStatus('Hors ligne · horaires gardés');
     } else
     toast(/injoignable|Load failed|Failed to fetch|NetworkError/i.test(errMsg(e))
       ? '📡 Temps réel indisponible pour le moment · réessai automatique (touche pour vérifier le serveur)'
@@ -3253,7 +3278,7 @@ async function refresh(){
     if (navigator.onLine !== false) setStatus('Flux temps réel injoignable');
   } finally {
     busy = false;
-    nextAt = Date.now() + (document.hidden ? 60000 : lowBattery && look.eco ? 40000 : REFRESH_MS);   // économie : moins souvent quand c'est inutile
+    nextAt = Date.now() + (document.hidden || netDown ? 60000 : lowBattery && look.eco ? 40000 : REFRESH_MS);   // sans réseau : on réessaie chaque minute   // économie : moins souvent quand c'est inutile
     $('#refresh').classList.remove('spin');
   }
 }
@@ -4153,7 +4178,12 @@ $('#repSheet').addEventListener('click', async e => {
   box.hidden = true;
   if (alertSent[key]){ toast('Déjà signalé, merci !'); return; }
   try { await rawCall('report', JSON.stringify(rep)); alertSent[key] = { at: Date.now() }; saveSent(); toast('📣 Merci ! Les autres voyageurs le verront pendant 2 h.'); loadReports(true); }
-  catch(e){ toast(/Action inconnue/.test(errMsg(e)) ? 'Signalements disponibles après la mise à jour du serveur.' : 'Signalement impossible : ' + errMsg(e).slice(0, 60)); }
+  catch(e){
+    if (netDown || navigator.onLine === false || /injoignable|Failed to fetch|Load failed/i.test(errMsg(e))){
+      outbox.reps.push(rep); saveOutbox(); alertSent[key] = { at: Date.now() }; saveSent();
+      toast('📴 Pas de réseau : ton signalement partira tout seul dès que le réseau revient.'); return;
+    }
+    toast(/Action inconnue/.test(errMsg(e)) ? 'Signalements disponibles après la mise à jour du serveur.' : 'Signalement impossible : ' + errMsg(e).slice(0, 60)); }
 });
 document.addEventListener('click', e => {
   const r = e.target.closest('[data-report]'); if (!r) return;
@@ -4442,6 +4472,99 @@ function setStatus(t){ $('#status').textContent = t; }
 const TF = { on:false, key:'', incidents:[], at:0, err:'', jams:{}, slow:{} };
 TF.on = true;                                                     // affiché d'office sur la carte (bouton 🚦 pour masquer)
 try { TF.key = localStorage.getItem('cj_tomtom') || ''; TF.on = localStorage.getItem('cj_traffic') !== '0'; } catch(e){}
+
+/* ====================== Sans réseau ======================
+   - bandeau discret « 📴 Hors ligne » (au lieu de messages répétés), temps réel réessayé chaque minute
+   - horaires de TOUS les arrêts gardés sur le téléphone (mis à jour une fois par jour quand il y a du réseau)
+   - signalements et messages aux proches mis de côté, envoyés tout seuls au retour du réseau */
+function saveOutbox(){ try { localStorage.setItem('cj_outbox', JSON.stringify(outbox)); } catch(e){} renderOffBar(); }
+const outboxCount = () => outbox.reps.length + outbox.share.length + outbox.ntfy.length + (outbox.last ? 1 : 0);
+function setNetDown(down){
+  if (down === netDown) return;
+  netDown = down;
+  if (down){
+    toast('📴 Pas de réseau : l’appli continue avec les horaires gardés sur ton téléphone.');
+  } else {
+    netFails = 0; nextAt = 0;
+    toast('📶 Réseau retrouvé : temps réel en cours…');
+    flushOutbox();
+  }
+  renderOffBar();
+}
+function renderOffBar(){
+  const bar = $('#offBar'); if (!bar) return;
+  bar.hidden = !netDown;
+  $('#livePill').classList.toggle('off', netDown);
+  if (!netDown) return;
+  const age = feedTime ? Math.round((Date.now() - feedTime) / 60000) : null;
+  const parts = [];
+  const n = outboxCount(); if (n) parts.push(`${n} envoi${n > 1 ? 's' : ''} en attente`);
+  if (age != null && vehicles.length) parts.push(`cars d’il y a ${age < 1 ? '1' : age} min`);
+  if (!parts.length) parts.push('horaires gardés');
+  $('#offBarTx').textContent = parts.join(' · ');
+}
+setInterval(renderOffBar, 30000);
+async function flushOutbox(){
+  if (!outboxCount() || navigator.onLine === false) return;
+  const late = t => Date.now() - t > 120e3 ? ` (envoyé en retard : c’était à ${fmtHM(t)})` : '';
+  for (const rep of outbox.reps.splice(0)){
+    if (Date.now() - (rep.sched || 0) > 2 * 3600e3) continue;          // trop vieux pour servir aux autres
+    try { await rawCall('report', JSON.stringify(rep)); } catch(e){ outbox.reps.push(rep); break; }
+  }
+  for (const m of outbox.ntfy.splice(0)){
+    if (Date.now() - m.at > 6 * 3600e3) continue;
+    const at = m.at; delete m.at; m.message += late(at);
+    try { const r = await fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify(m) }); if (!r.ok) throw 0; }
+    catch(e){ m.at = at; outbox.ntfy.push(m); break; }
+  }
+  if (sharing()){
+    for (const p of outbox.share.splice(0)){
+      if (Date.now() - p.t > 6 * 3600e3) continue;
+      p._late = true;
+      if (!(await pushShare(p))){ delete p._late; outbox.share.push(p); break; }
+    }
+    if (outbox.last){ const p = outbox.last; outbox.last = null; p._late = true; if (!(await pushShare(p))){ delete p._late; outbox.last = p; } }
+    if (!outbox.last && myPos) sendShare(true);                         // et ma position actuelle
+  } else { outbox.share = []; outbox.last = null; }
+  saveOutbox();
+  renderShareUI && renderShareUI();
+}
+setTimeout(flushOutbox, 8000);
+
+/** Pack hors ligne : passages de tous les arrêts, gardés arrêt par arrêt. */
+let packBusy = false;
+async function offlinePack(force){
+  if (packBusy || !S || !S.stops || navigator.onLine === false) return;
+  let last = 0; try { last = +localStorage.getItem('cj_pack') || 0; } catch(e){}
+  if (!force && (Date.now() - last < 20 * 3600e3 || (lowBattery && look.eco !== false))) return;
+  const ids = Object.keys(S.stops);
+  if (!ids.length) return;
+  packBusy = true; renderPack('Téléchargement des horaires…');
+  let ok = 0;
+  try {
+    const parts = [];
+    for (let i = 0; i < ids.length; i += 60) parts.push(ids.slice(i, i + 60));
+    for (let i = 0; i < parts.length; i += 3){
+      const res = await Promise.all(parts.slice(i, i + 3).map(p => rawCall('getStopBoard', p).then(v => { keepBoards(v); return p.length; }).catch(() => 0)));
+      ok += res.reduce((a, b) => a + b, 0);
+      renderPack(`Téléchargement des horaires… ${Math.round(Math.min(1, (i + 3) / parts.length) * 100)} %`);
+    }
+    await Promise.allSettled([call('getTimetables'), call('getSchoolCalendar')]);
+    if (ok >= ids.length * 0.9){ try { localStorage.setItem('cj_pack', String(Date.now())); localStorage.setItem('cj_pack_n', String(ok)); } catch(e){} }
+  } finally { packBusy = false; renderPack(); }
+  if (force) toast(ok ? `✅ Horaires de ${ok} arrêts gardés : l’appli marche sans réseau.` : '📡 Pas de réseau : réessaie plus tard.');
+}
+function renderPack(msg){
+  const el = $('#packTxt'); if (!el) return;
+  if (msg){ el.textContent = msg; return; }
+  let last = 0, n = 0; try { last = +localStorage.getItem('cj_pack') || 0; n = +localStorage.getItem('cj_pack_n') || 0; } catch(e){}
+  el.textContent = last ? `✅ ${n} arrêts gardés · mis à jour ${dayLabel(last)} à ${fmtHM(last)} · se met à jour tout seul chaque jour`
+                        : 'les horaires de tous les arrêts seront gardés sur ton téléphone dès qu’il y a du réseau';
+}
+$('#packBtn').addEventListener('click', () => offlinePack(true));
+renderPack();
+setTimeout(function packWait(){ if (S && S.stops && Object.keys(S.stops).length) offlinePack(); else setTimeout(packWait, 10000); }, 25000);
+
 const tfPane = map.createPane('traffic'); tfPane.style.zIndex = 350; tfPane.style.pointerEvents = 'none';
 let tfFlow = null, tfInc = null;
 const jamLayer = L.layerGroup().addTo(map), incLayer = L.layerGroup().addTo(map);
@@ -4886,7 +5009,15 @@ async function pushShare(payload){
     const r = await fetch('https://ntfy.sh/', { method:'POST', keepalive:true, body: JSON.stringify({ topic, message: await seal(key, payload) }) });
     shareErr = r.ok ? '' : (r.status === 429 ? 'limite d’envois atteinte, réessai plus tard' : 'erreur ' + r.status);
     return r.ok;
-  } catch(e){ shareErr = 'pas de réseau'; return false; }
+  } catch(e){
+    shareErr = 'pas de réseau · envoi dès son retour';
+    if (!payload._late){                                     // gardé : la dernière position, et chaque message (arrivée, départ…)
+      if (payload.ev) outbox.share.push(payload); else outbox.last = payload;
+      if (outbox.share.length > 20) outbox.share.shift();
+      saveOutbox();
+    }
+    return false;
+  }
 }
 /* ----- partage automatique : dès que je monte dans un car jaune, mes proches me voient ----- */
 let autoActive = false, autoOffT = null;
@@ -4974,7 +5105,9 @@ function shareEvent(ev){
   // copie lisible pour ceux qui ont l'appli ntfy (prévenus même appli Car Jaune fermée)
   shareKeys(shareCfg.name, shareCfg.code).then(({ ntopic }) => {
     const m = evText(shareCfg.name.trim(), ev);
-    fetch('https://ntfy.sh/', { method:'POST', keepalive:true, body: JSON.stringify({ topic: ntopic, title: m.title, message: m.body, tags:['bus'], priority: ev.k === 'soon' ? 4 : 3 }) }).catch(() => {});
+    const msg = { topic: ntopic, title: m.title, message: m.body, tags:['bus'], priority: ev.k === 'soon' ? 4 : 3 };
+    fetch('https://ntfy.sh/', { method:'POST', keepalive:true, body: JSON.stringify(msg) })
+      .catch(() => { msg.at = Date.now(); outbox.ntfy.push(msg); if (outbox.ntfy.length > 20) outbox.ntfy.shift(); saveOutbox(); });
   });
 }
 /** Texte d'un événement (le même chez moi et chez mes proches). */

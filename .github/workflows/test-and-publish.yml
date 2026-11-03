@@ -40,6 +40,7 @@ jobs:
           sleep 2
           node tests/smoke.mjs
           node tests/scenarios.mjs
+          node tests/horsligne.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site
