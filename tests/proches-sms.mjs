@@ -31,12 +31,18 @@ await pg.click('#setClose');
 await t('montée dans le car → SMS tout prêt', async () => {
   await pg.evaluate("onBus = vehicles[0].id; myPos = { lat: vehicles[0].lat, lon: vehicles[0].lon, acc:8, speed:12 }; autoCheck(); rideTick(); 1");
   await pg.waitForTimeout(500);
-  const r = await pg.evaluate("[getComputedStyle(document.querySelector('#smsSheet')).display, document.querySelector('#smsPrev').innerText, document.querySelector('#smsGo').getAttribute('href')]");
+  const r = await pg.evaluate("[getComputedStyle(document.querySelector('#smsSheet')).display, document.querySelector('#smsPrev').innerText, document.querySelector('[data-sms]').getAttribute('href'), document.querySelectorAll('[data-sms]').length]");
   console.log('    ', r[1].replace(/\n/g, ' ⏎ '));
   console.log('    ', decodeURIComponent(r[2]).slice(0, 70) + '…');
-  return (r[0] !== 'none' && /Je suis dans le car E1/.test(r[1]) && /#proche=Samuel/.test(r[1]) && r[2].startsWith('sms:/open?addresses=0692123456,+262693654321&body=')) || JSON.stringify(r);
+  return (r[0] !== 'none' && /Je suis dans le car E1/.test(r[1]) && /#proche=Samuel/.test(r[1]) && r[2].startsWith('sms:0692123456&body=') && r[3] === 2) || JSON.stringify(r);
 });
 await pg.screenshot({ path: 'test-sms.png' });
+await t('un SMS séparé par proche : le 1er coché, puis le 2e', async () => {
+  await pg.evaluate("document.querySelector('[data-sms]').addEventListener('click', e => e.preventDefault(), { once:true }); document.querySelector('[data-sms]').click(); 1");
+  await pg.waitForTimeout(900);
+  const r = await pg.evaluate("[...document.querySelectorAll('[data-sms]')].map(a => a.innerText)");
+  return (/✓ Envoyé à 0692 12 34 56/.test(r[0]) && /^Envoyer à \+262693654321/.test(r[1])) || JSON.stringify(r);
+});
 await t('« Plus tard » ferme le message', async () => {
   await pg.click('#smsLater'); await pg.waitForTimeout(200);
   return (await pg.evaluate("getComputedStyle(document.querySelector('#smsSheet')).display")) === 'none' || 'toujours affiché';

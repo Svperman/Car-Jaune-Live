@@ -599,7 +599,9 @@
   .sms-h{display:flex;align-items:flex-start;gap:8px} .sms-h b{flex:1;font-size:14.5px;color:var(--titre)}
   .sms-h button{border:0;background:var(--fond);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;flex:none}
   .sms-prev{margin:8px 0 10px;padding:9px 11px;border-radius:12px 12px 12px 4px;background:var(--fond);font-size:13px;line-height:1.35;color:var(--texte,#333);white-space:pre-wrap;word-break:break-word;max-height:110px;overflow:auto}
-  .sms-go{display:block;text-align:center;text-decoration:none;font-size:15.5px;padding:12px}
+  .sms-list{display:flex;flex-direction:column;gap:7px}
+  .sms-go{display:block;text-align:center;text-decoration:none;font-size:15px;padding:11px}
+  .sms-go.done{background:var(--fond);color:var(--ok);pointer-events:none;font-weight:700}
   #livePill.off .dot{background:#9AA0A6;animation:none}
   /* barres de réseau (comme le Wi-Fi du téléphone) */
   .sig{position:relative;display:flex;align-items:flex-end;gap:2.5px;height:34px;padding:0 6px 10px;background:none;border:0;cursor:pointer;flex:none}
@@ -985,7 +987,7 @@
 </div>
 <div id="toast" hidden></div>
 <div id="smsSheet" hidden role="dialog" aria-labelledby="smsTitle"><div class="sms-h"><b id="smsTitle"></b><button id="smsLater" aria-label="Plus tard">✕</button></div>
-  <div class="sms-prev" id="smsPrev"></div><a class="btn sms-go" id="smsGo" href="#">Envoyer le SMS</a></div>
+  <div class="sms-prev" id="smsPrev"></div><div class="sms-list" id="smsList"></div></div>
 <div id="offBar" hidden role="status"><b>📴 Hors ligne</b><span id="offBarTx"></span></div>
 
 <script src="lib/leaflet.js"></script>
@@ -5280,7 +5282,7 @@ function smsText(ev){
 let smsPending = null;   // { ev, until }
 function offerSms(ev){
   if (!smsNums().length) return;
-  smsPending = { ev, until: Date.now() + 15 * 60e3 };
+  smsPending = { ev, until: Date.now() + 15 * 60e3, done: {} };
   renderSmsSheet();
   if (document.visibilityState !== 'visible' && (LNOTIF ? lnPerm === 'granted' : ('Notification' in window && Notification.permission === 'granted')))
     showPhoneNotif(ev.k === 'depart' ? '📱 Tu es dans le car' : '📱 Tu es descendu', 'Ouvre Car Jaune Live pour prévenir tes proches par SMS (1 touche).');
@@ -5293,8 +5295,12 @@ function renderSmsSheet(){
   const txt = smsText(smsPending.ev), n = smsNums().length;
   $('#smsTitle').textContent = smsPending.ev.k === 'depart' ? '📱 Prévenir tes proches que tu es dans le car' : '📱 Prévenir tes proches que tu es descendu';
   $('#smsPrev').textContent = txt;
-  $('#smsGo').href = smsHref(smsNums(), txt);
-  $('#smsGo').textContent = `Envoyer le SMS${n > 1 ? ' à ' + n + ' proches' : ''}`;
+  // un SMS séparé par proche (pas de conversation de groupe) : un bouton chacun
+  const nums = smsNums(), next = nums.find(x => !smsPending.done[x]);
+  $('#smsList').innerHTML = nums.map(x => {
+    const done = smsPending.done[x];
+    return `<a class="btn sms-go${done ? ' done' : x === next ? '' : ' ghost'}" data-sms="${esc(x)}" href="${esc(smsHref([x], txt))}">${done ? '✓ Envoyé à ' : 'Envoyer à '}${esc(fmtTel(x))}</a>`;
+  }).join('');
   el.hidden = false;
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') renderSmsSheet(); });
@@ -5303,7 +5309,17 @@ function closeSms(sent){
   if (sent){ shareCfg.smsLast = Date.now(); saveShare(); renderSms(); }
   smsPending = null; renderSmsSheet();
 }
-$('#smsGo').addEventListener('click', () => setTimeout(() => closeSms(true), 500));
+const fmtTel = x => /^0\d{9}$/.test(x) ? x.replace(/(\d{4})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4') : x;
+$('#smsList').addEventListener('click', e => {
+  const a = e.target.closest('[data-sms]'); if (!a || !smsPending) return;
+  const num = a.dataset.sms;
+  setTimeout(() => {                                   // au retour de Messages : coché, puis le suivant
+    if (!smsPending) return;
+    smsPending.done[num] = true;
+    shareCfg.smsLast = Date.now(); saveShare(); renderSms();
+    if (smsNums().every(x => smsPending.done[x])) closeSms(false); else renderSmsSheet();
+  }, 600);
+});
 $('#smsLater').addEventListener('click', () => closeSms(false));
 function saveSms(){
   const list = $('#smsTo').value.split(/[,;]+/).map(x => x.trim()).filter(Boolean);
@@ -5321,7 +5337,7 @@ function renderSms(){
   if (document.activeElement !== $('#smsTo')) $('#smsTo').value = shareCfg.smsTo || '';
   const n = smsNums().length;
   $('#smsTxt').textContent = n
-    ? `✅ ${n} numéro${n > 1 ? 's' : ''} : à chaque montée et descente, le SMS est prêt, tu appuies sur Envoyer${shareCfg.smsLast ? ' · dernier envoi ' + dayLabel(shareCfg.smsLast) + ' à ' + fmtHM(shareCfg.smsLast) : ''}`
+    ? `✅ ${n} numéro${n > 1 ? 's' : ''} : à chaque montée et descente, un SMS séparé est prêt pour chacun, tu appuies sur Envoyer${shareCfg.smsLast ? ' · dernier envoi ' + dayLabel(shareCfg.smsLast) + ' à ' + fmtHM(shareCfg.smsLast) : ''}`
     : 'quand tu montes dans un car et quand tu descends, un message tout prêt : tu n’as qu’à appuyer sur Envoyer';
 }
 $('#smsSave').addEventListener('click', saveSms);
