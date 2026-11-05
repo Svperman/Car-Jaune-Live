@@ -1159,7 +1159,7 @@ const MapButtons = L.Control.extend({
   options:{ position:'topright' },
   onAdd(){
     const box = L.DomUtil.create('div', 'map-ctl');
-    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnTraffic" aria-pressed="false">🚦 Trafic</button><button id="btnFs">⛶ Plein écran</button><button id="btnFit">🏝️ Toute l'île</button>`;
+    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnTraffic" aria-pressed="false">🚦 Trafic</button><button id="btnFs">⛶ Plein écran</button><button id="btnMe" aria-pressed="false">📍 Ma position</button><button id="btnFit">🏝️ Toute l'île</button>`;
     L.DomEvent.disableClickPropagation(box);
     return box;
   }
@@ -2399,6 +2399,41 @@ function meIcon(){
   return L.divIcon({ className:'', iconSize:[44, 44], iconAnchor:[22, 22],
     html:`<div class="me-wrap${meWatch != null ? ' live' : ''}${onBus ? ' onbus' : ''}">${head}<div class="me-dot"></div></div>` });
 }
+/* ---------- bouton « 📍 Ma position » : point bleu pour me repérer (à la demande, coupé quand l'appli est cachée) ---------- */
+let meShown = false, meViewWatch = null;
+try { meShown = localStorage.getItem('cj_me') === '1'; } catch(e){}
+function meViewStart(){
+  if (meViewWatch != null || !navigator.geolocation) return;
+  meViewWatch = navigator.geolocation.watchPosition(p => {
+    const c = p.coords;
+    if (meWatch == null) myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed: c.speed > 0 ? c.speed : 0, heading: c.heading };
+    const first = !meMarker;
+    showMeOnMap();
+    if (first && meShown) map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 16), { duration:.8 });
+  }, err => {
+    if (err.code === 1){ toast('📍 Autorise la localisation pour Car Jaune Live (Réglages → Confidentialité → Service de localisation).'); setMeShown(false); }
+  }, { enableHighAccuracy:true, maximumAge:10000, timeout:30000 });
+}
+function meViewStop(){ if (meViewWatch != null){ navigator.geolocation.clearWatch(meViewWatch); meViewWatch = null; } }
+function setMeShown(on){
+  meShown = on;
+  try { localStorage.setItem('cj_me', on ? '1' : '0'); } catch(e){}
+  const b = $('#btnMe'); if (b){ b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); }
+  if (on){
+    meLayer.addTo(map);
+    if (myPos){ showMeOnMap(); map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 16), { duration:.8 }); }
+    meViewStart();
+  } else { map.removeLayer(meLayer); meViewStop(); }
+}
+$('#btnMe').addEventListener('click', () => {
+  // 1re touche : je m'affiche · ensuite : recentrer si la carte a bougé, sinon me cacher
+  if (!meShown) return setMeShown(true);
+  if (myPos && map.getCenter().distanceTo([myPos.lat, myPos.lon]) > 80) map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 16), { duration:.6 });
+  else setMeShown(false);
+});
+document.addEventListener('visibilitychange', () => { if (!meShown) return; if (document.hidden) meViewStop(); else meViewStart(); });
+setTimeout(() => { if (meShown) setMeShown(true); }, 1500);
+
 function showMeOnMap(){
   if (!myPos) return;
   const ll = L.latLng(myPos.lat, myPos.lon);
