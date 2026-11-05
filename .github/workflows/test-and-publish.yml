@@ -42,10 +42,12 @@ jobs:
           node tests/scenarios.mjs
           node tests/horsligne.mjs
           node tests/proches-sms.mjs
+          node tests/utilisateur.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site
           cp -r manifest.webmanifest sw.js icons lib _site/
+          sed -i "s/'__BUILD__'/'${GITHUB_SHA::7}'/" index.html     # numéro de version : les téléphones voient qu'il y a du nouveau
           npx html-minifier-terser --collapse-whitespace --conservative-collapse --remove-comments \
             --minify-css true --minify-js true index.html -o _site/index.html
           echo "index.html : $(wc -c < index.html) → $(wc -c < _site/index.html) octets"

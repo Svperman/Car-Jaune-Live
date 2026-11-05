@@ -1,4 +1,6 @@
 /* Faux serveur Apps Script pour les tests automatiques (remplace google.script.run) */
+/* tests en mode créateur (tous les réglages), sauf ?user=1 (vue simplifiée des utilisateurs) */
+try { if (!/user=1/.test(location.search)) localStorage.setItem('cj_creator', '1'); else localStorage.removeItem('cj_creator'); } catch(e){}
 (function(){
   const OFF=4*3600e3, now=Date.now();
   const d=new Date(now+OFF), mid=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate())-OFF;
