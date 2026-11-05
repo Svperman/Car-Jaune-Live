@@ -22,12 +22,12 @@ async function pinch(d0, d1, tilt = 0){
 }
 await t('pincer pour zoomer (doigts à l’horizontale) : zoom +, carte qui ne tourne pas', async () => {
   const z0 = await p.evaluate('map.getZoom()'); await pinch(80, 240, 3);
-  const r = await p.evaluate('[map.getZoom(), map.getBearing()]');
+  const r = await p.evaluate('[map.getZoom(), mapBearing()]');
   return (r[0] > z0 + 1 && Math.abs(r[1]) < 0.01) || `zoom ${z0} → ${r[0]}, rotation ${r[1].toFixed(1)}°`;
 });
 await t('pincer pour dézoomer : zoom −, carte qui ne tourne pas', async () => {
   const z0 = await p.evaluate('map.getZoom()'); await pinch(240, 80, -3);
-  const r = await p.evaluate('[map.getZoom(), map.getBearing()]');
+  const r = await p.evaluate('[map.getZoom(), mapBearing()]');
   return (r[0] < z0 - 1 && Math.abs(r[1]) < 0.01) || `zoom ${z0} → ${r[0]}, rotation ${r[1].toFixed(1)}°`;
 });
 await t('boutons + et −', async () => {

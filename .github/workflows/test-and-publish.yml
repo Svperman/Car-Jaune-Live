@@ -47,6 +47,7 @@ jobs:
           node tests/retour.mjs
           node tests/detection.mjs
           node tests/zoom.mjs
+          node tests/deplacement.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site

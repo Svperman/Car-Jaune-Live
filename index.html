@@ -1107,7 +1107,7 @@ const alertSent = (() => { try { const o = JSON.parse(localStorage.getItem('cj_s
   Object.keys(o).forEach(k => { if (+k.split('|').pop() < lim) delete o[k]; }); return o; } catch(e){ return {}; } })();
 let sentSaveT = null;
 function saveSent(){ clearTimeout(sentSaveT); sentSaveT = setTimeout(() => { try { localStorage.setItem('cj_sent', JSON.stringify(alertSent)); } catch(e){} }, 500); }
-let geoWatch = null, myPos = null, noBusAt = 0, wakeLock = null;
+let myFixAt = 0, geoWatch = null, myPos = null, noBusAt = 0, wakeLock = null;
 let trip = { a:'', b:'', mode:'auto' }, tripBoard = { key:'', data:null, loading:false }, lastSens = '', tripEditAt = 0, sensNotifAt = 0;
 let boardGroupBy = 'sens';
 let FICHE_DATA = {}, ficheJob = { total:0, done:0, running:false, error:'' }, selLine = '';
@@ -1124,20 +1124,23 @@ const REUNION = [[-21.39, 55.21], [-20.86, 55.84]];
 // sur elle-même au lieu de zoomer). Dézoom limité à l'île et ses environs.
 const map = L.map('map', { zoomControl:false, zoomSnap:0.25, zoomDelta:1, wheelPxPerZoomLevel:90,
   minZoom:8, maxZoom:19, maxBounds:[[-22.4, 54.2], [-19.85, 56.85]], maxBoundsViscosity:0.85, bounceAtZoomLimits:false,
-  rotate:true, bearing:0, touchRotate:false, compassBearing:false, rotateControl:false });
-const mapBearing = () => (map.getBearing ? map.getBearing() : 0);
+  rotate:false, touchRotate:false, compassBearing:false, rotateControl:false });   // sans rotation : plus de morceaux de carte vides pendant qu'on la déplace
+const mapBearing = () => (map._rotate && map.getBearing ? map.getBearing() || 0 : 0);
 // iPhone : un pincement commencé sur l'en-tête ou les boutons zoomait toute la page (et la carte restait coincée)
 ['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive:false }));
 map.fitBounds(REUNION);
 
 // Fonds de carte (gratuits, sans clé) : le choix est mémorisé
 const SRC = ' · Données Région Réunion (Licence Ouverte)';
+// sur téléphone, Leaflet n'affichait les nouveaux morceaux de carte qu'une fois le doigt levé (zones vides pendant
+// le déplacement) : on charge en continu et on garde plus de morceaux autour de l'écran
+const TILE_OPTS = { updateWhenIdle:false, updateInterval:150, keepBuffer:4 };
 const BASES = {
-  'Plan détaillé': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  'Plan détaillé': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { ...TILE_OPTS,
     maxZoom:19, attribution:'© OpenStreetMap' + SRC }),
-  'Plan clair': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  'Plan clair': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { ...TILE_OPTS,
     subdomains:'abcd', maxZoom:19, attribution:'© OpenStreetMap, © CARTO' + SRC }),
-  'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
     maxZoom:19, attribution:'Imagerie © Esri' + SRC })
 };
 let baseName = 'Plan détaillé';
@@ -2516,13 +2519,23 @@ function meViewStart(){
   if (meViewWatch != null || !navigator.geolocation) return;
   meViewWatch = navigator.geolocation.watchPosition(p => {
     const c = p.coords;
-    if (meWatch == null) myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed: c.speed > 0 ? c.speed : 0, heading: c.heading };
+    if (meWatch == null){ myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed: c.speed > 0 ? c.speed : 0, heading: c.heading }; myFixAt = Date.now(); }
     const first = !meMarker;
     showMeOnMap();
     if (first && meShown) map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 16), { duration:.8 });
   }, err => {
     if (err.code === 1){ setMeShown(false); geoDenied(); }
   }, { enableHighAccuracy:true, maximumAge:10000, timeout:30000 });
+}
+/** Je reste à l'écran quand je bouge (sauf si je viens moi-même de déplacer la carte : 30 s de répit). */
+let userMovedAt = 0;
+map.on('dragstart', () => { userMovedAt = Date.now(); });
+map.getContainer().addEventListener('touchstart', e => { if (e.touches && e.touches.length > 1) userMovedAt = Date.now(); }, { passive:true });
+map.getContainer().addEventListener('wheel', () => { userMovedAt = Date.now(); }, { passive:true });
+function meKeepInView(){
+  if (!meShown || !myPos || Date.now() - userMovedAt < 30e3 || map._animatingZoom) return;
+  const pt = map.latLngToContainerPoint([myPos.lat, myPos.lon]), sz = map.getSize();
+  if (pt.x < sz.x * .15 || pt.x > sz.x * .85 || pt.y < sz.y * .15 || pt.y > sz.y * .85) map.panTo([myPos.lat, myPos.lon], { animate:true, duration:.6 });
 }
 function meViewStop(){ if (meViewWatch != null){ navigator.geolocation.clearWatch(meViewWatch); meViewWatch = null; } }
 function setMeShown(on){
@@ -2553,6 +2566,7 @@ function showMeOnMap(){
     animateTo(meMarker, ll);
     meMarker.setIcon(meIcon());
   }
+  if (typeof meKeepInView === 'function') meKeepInView();
   if (myPos.acc && myPos.acc < 2000){
     if (!meCircle) meCircle = L.circle(ll, { radius: myPos.acc, color:'#1D6FD8', weight:1, fillOpacity:.08, interactive:false }).addTo(meLayer);
     else { meCircle.setLatLng(ll); meCircle.setRadius(myPos.acc); }
@@ -2593,7 +2607,7 @@ function onLiveFix(p){
   }
   lastFix = { lat: c.latitude, lon: c.longitude, t: now, acc: c.accuracy };
   gpsWeak = false;
-  myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed, heading };
+  myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed, heading }; myFixAt = Date.now();
   diag('gps', { lat: +c.latitude.toFixed(5), lon: +c.longitude.toFixed(5), acc: Math.round(c.accuracy), kmh: speed != null ? Math.round(speed * 3.6) : null });
   showMeOnMap();
   if (meFollow && !userPanned) map.panTo([myPos.lat, myPos.lon], { animate: true, duration: .8 });
@@ -4194,13 +4208,14 @@ function updateMotion(v){
 }
 /** Où devrait être le car maintenant (extrapolation limitée à 2 min). */
 function predictedPos(st, now){
-  const el = Math.min(Math.max(0, (now - st.t0) / 1000), 120);
+  const el0 = Math.max(0, (now - st.t0) / 1000);
+  const el = 35 * (1 - Math.exp(-el0 / 35));                         // avance de moins en moins vite, 35 s maxi
   if (st.line && st.speed > 0){
     const p = pointAt(st.line, st.s0 + st.dir * st.speed * el);
     return [p[0], p[1], st.dir > 0 ? p[2] : (p[2] + 180) % 360];
   }
-  if (st.speed > 0 && st.bearing != null){                           // hors tracé : tout droit, 40 s maxi
-    const d = st.speed * Math.min(el, 40), b = st.bearing * Math.PI / 180;
+  if (st.speed > 0 && st.bearing != null){                           // hors tracé : tout droit, peu de temps
+    const d = st.speed * Math.min(el, 20), b = st.bearing * Math.PI / 180;
     return [st.lat + d * Math.cos(b) / 110540, st.lon + d * Math.sin(b) / (111320 * Math.cos(st.lat * Math.PI / 180)), st.bearing];
   }
   return [st.lat, st.lon, st.bearing];
@@ -4215,6 +4230,10 @@ function moveLoop(t){
     const st = motion[id];
     if (!st) return;
     let [la, lo] = predictedPos(st, now);
+    if (id === onBus && myPos && myFixAt && now - myFixAt < 15e3 && (myPos.acc || 0) < 80){
+      if (!st.onMe){ st.onMe = true; st.corrFrom = st.disp ? st.disp.slice() : null; st.corrAt = now; }
+      la = myPos.lat; lo = myPos.lon;
+    } else if (st.onMe){ st.onMe = false; st.corrFrom = st.disp ? st.disp.slice() : null; st.corrAt = now; }
     if (st.corrFrom){
       const k = Math.min(1, (now - st.corrAt) / 1500), e = k * k * (3 - 2 * k);
       la = st.corrFrom[0] + (la - st.corrFrom[0]) * e;
@@ -4236,9 +4255,11 @@ requestAnimationFrame(moveLoop);
 function animateTo(m, to){
   const from = m.getLatLng();
   const dist = from.distanceTo(to);
+  const token = m._animTok = (m._animTok || 0) + 1;                  // une nouvelle position annule l'animation en cours
   if (dist < 1 || dist > 5000) { m.setLatLng(to); return; }
   const t0 = performance.now(), D = 900;
   function step(t){
+    if (m._animTok !== token) return;
     const k = Math.min(1, (t - t0) / D);
     const e = k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2) / 2;
     m.setLatLng([from.lat + (to.lat - from.lat) * e, from.lng + (to.lng - from.lng) * e]);
