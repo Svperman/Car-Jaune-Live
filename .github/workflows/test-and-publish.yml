@@ -48,6 +48,7 @@ jobs:
           node tests/detection.mjs
           node tests/zoom.mjs
           node tests/deplacement.mjs
+          node tests/ou-campus.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site

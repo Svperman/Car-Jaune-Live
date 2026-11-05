@@ -622,6 +622,8 @@
     box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
   #offBar span{opacity:.85;font-size:11.5px}
   #offBar[hidden]{display:none}
+  .where{font-size:12.5px;font-weight:700;color:var(--titre);margin:1px 0 2px}
+  .leaflet-popup .where{margin:-2px 0 6px}
   /* réglages simplifiés pour les utilisateurs ; tout reste visible en mode créateur */
   body:not(.creator) #settingsModal .adv{display:none!important}
   .creator-tag{display:inline-block;margin-left:6px;font-size:11px;font-weight:800;color:#7A5B00;background:#FFF2C2;border-radius:10px;padding:2px 8px;vertical-align:2px}
@@ -2461,8 +2463,12 @@ const walkMin = d => Math.max(1, Math.round(d * 1.3 / 80));   // à pied ~4,8 km
 const fmtWalk = d => d > 6000 ? 'trop loin à pied' : `~${walkMin(d)} min à pied`;
 
 /** Arrêts les plus proches (tous arrêts, gares comprises), triés par distance. */
+/* Arrêts que ce téléphone ne veut plus voir choisis tout seuls (ex. « Campus » chez Samuel) */
+var IGNORED = [];
+try { IGNORED = JSON.parse(localStorage.getItem('cj_ign') || '[]'); } catch(e){}
+const isIgnored = name => IGNORED.some(x => norm(name).includes(norm(x)));
 function nearbyStops(lat, lon, n){
-  return stopGroups.filter(g => isFinite(g.lat) && isFinite(g.lon))
+  return stopGroups.filter(g => isFinite(g.lat) && isFinite(g.lon) && !isIgnored(g.name))
     .map(g => ({ g, d: distM(lat, lon, g.lat, g.lon) })).sort((a, b) => a.d - b.d).slice(0, n || 6);
 }
 /** Arrêt à proposer : le plus proche, sauf si une gare est presque aussi près. */
@@ -4123,7 +4129,9 @@ function iconFor(v){
 function popupFor(v){
   const d = fmtDelay(v.delay, v.delayEst);
   const speed = v.speed != null ? `${Math.round(v.speed * 3.6)} km/h` : '';
+  const where = whereText(v, true);
   return `<div class="pop-h">${badge(v.route)}<b>${esc(v.headsign || 'Destination inconnue')}</b>${svcTag(v.svc)}</div>
+    ${where ? `<div class="where">📍 Sur ${/^(RN|RD)/.test(where) ? 'la ' : ''}${esc(where)}</div>` : ''}
     ${v.times ? timesTable(v.times, v) : (v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b><br>` : '')}
     <span class="delay ${d.c}">${esc(d.long)}</span>${speed ? ' · ' + speed : ''}<br>
     <span style="opacity:.7">Position ${fmtAge(v.age)}${v.label ? ' · véhicule ' + esc(v.label) : ''}</span>
@@ -4316,6 +4324,7 @@ function render(){
         ${badge(v.route)}
         <div class="info">
           <div class="dest">→ ${esc(v.headsign || 'Destination inconnue')}${svcTag(v.svc)}</div>
+          ${whereText(v) ? `<div class="where">📍 ${esc(whereText(v))}</div>` : ''}
           <div class="meta">${v.stopName ? esc(v.stopName) + ' · ' : ''}${fmtAge(v.age)}</div>
           ${timesShort(v.times)}
           ${ficheLinks(v.route.s)}
@@ -4815,6 +4824,19 @@ function loadPrefs(){
     if (typeof p.line === 'string') selLine = p.line;
     const tp = JSON.parse(localStorage.getItem('cj_trip') || '{}');
     if (tp.a) trip.a = tp.a; if (tp.b) trip.b = tp.b; if (tp.mode) trip.mode = tp.mode; if (tp.grp) boardGroupBy = tp.grp;
+    // retrait de l'arrêt « Campus » (demandé le 05/11) : il était repris tout seul comme départ / arrêt surveillé
+    if (localStorage.getItem('cj_mig_campus') !== '1'){
+      const camp = x => /campus/i.test(String(x || ''));
+      if (camp(trip.a)) trip.a = ''; if (camp(trip.b)) trip.b = '';
+      favs = favs.filter(f => !camp(f));
+      if (camp(localStorage.getItem('cj_stop'))) localStorage.removeItem('cj_stop');
+      try { const c = JSON.parse(localStorage.getItem('cj_cls') || '{}'); let ch = false;
+        Object.keys(c.d || {}).forEach(k => { const v = c.d[k]; if (v && typeof v === 'object') Object.keys(v).forEach(f => { if (camp(v[f])){ v[f] = ''; ch = true; } }); });
+        if (camp(c.stop)){ c.stop = ''; ch = true; } if (ch) localStorage.setItem('cj_cls', JSON.stringify(c)); } catch(e){}
+      if (!IGNORED.some(x => /campus/i.test(x))){ IGNORED.push('Campus'); localStorage.setItem('cj_ign', JSON.stringify(IGNORED)); }
+      localStorage.setItem('cj_trip', JSON.stringify({ a: trip.a, b: trip.b, mode: trip.mode, grp: boardGroupBy }));
+      localStorage.setItem('cj_mig_campus', '1');
+    }
   } catch(e){}
 }
 function setStatus(t){ $('#status').textContent = t; }
@@ -5158,6 +5180,98 @@ const cityCfg = Object.assign({ on:false, sector:'city', gareIn:true, gareOut:tr
 let city = { name:'', poly:null, at:0, loading:false }, cityWatch = null, cityState = {}, cityLayer = L.layerGroup().addTo(map);
 function saveCity(){ try { localStorage.setItem('cj_city', JSON.stringify(cityCfg)); } catch(e){} }
 /** Point dans un polygone GeoJSON (Polygon ou MultiPolygon), coordonnées [lon, lat]. */
+/* ====================== Où roule chaque car : route + ville ======================
+   Communes : contours officiels (geo.api.gouv.fr). Routes : nationales et départementales d'OpenStreetMap
+   (Overpass). Téléchargés une fois, gardés 30 jours sur le téléphone. Exemple : « RN2 (Boulevard Sud) · Sainte-Marie ». */
+var WHERE = { communes: null, roads: null, grid: null, loading: false, cache: {} };
+const WHERE_KEY = 'where_v1', WHERE_TTL = 30 * 864e5, GRID = 200;            // cases de 0,005° (~500 m)
+const roadRef = r => !r ? '' : r.split(';')[0].trim().replace(/^R?N\s*/i, 'RN').replace(/^R?D\s*/i, 'RD').replace(/\s+/g, '');
+async function whereLoad(){
+  if (WHERE.loading || WHERE.communes) return;
+  WHERE.loading = true;
+  try {
+    let c = await idb.get(WHERE_KEY);
+    if (!c || Date.now() - c.t > WHERE_TTL || !c.roads){
+      const fresh = { t: Date.now(), communes: c && c.communes, roads: c && c.roads };
+      try {
+        const r = await fetch('https://geo.api.gouv.fr/communes?codeDepartement=974&fields=nom,contour&format=json');
+        if (r.ok) fresh.communes = (await r.json()).filter(x => x.contour).map(x => {
+          const g = x.contour, rnd = ring => ring.map(([a, b]) => [Math.round(a * 1e4) / 1e4, Math.round(b * 1e4) / 1e4]);
+          const coords = g.type === 'MultiPolygon' ? g.coordinates.map(p => p.map(rnd)) : g.coordinates.map(rnd);
+          let s = 90, w = 180, n = -90, e = -180;
+          (g.type === 'MultiPolygon' ? coords.flat(1) : coords).forEach(ring => ring.forEach(([lo, la]) => { s = Math.min(s, la); n = Math.max(n, la); w = Math.min(w, lo); e = Math.max(e, lo); }));
+          return { nom: x.nom, g: { type: g.type, coordinates: coords }, bb: [s, w, n, e] };
+        });
+      } catch(e){}
+      try {
+        const q = '[out:json][timeout:90];way["highway"~"^(motorway|trunk|primary|secondary)(_link)?$"](-21.40,55.20,-20.85,55.85);out tags geom;';
+        let data = null;
+        for (const u of ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter']){
+          try { const r = await fetch(u, { method:'POST', body: 'data=' + encodeURIComponent(q), headers:{ 'Content-Type':'application/x-www-form-urlencoded' } }); if (r.ok){ data = await r.json(); break; } } catch(e){}
+        }
+        if (data) fresh.roads = data.elements.filter(w => w.geometry && w.tags).map(w => ({
+          ref: roadRef(w.tags.ref), name: w.tags.name || '', pts: w.geometry.map(g => [Math.round(g.lat * 1e5) / 1e5, Math.round(g.lon * 1e5) / 1e5])
+        })).filter(w => w.ref || w.name);
+      } catch(e){}
+      if (fresh.communes || fresh.roads){ c = fresh; idb.set(WHERE_KEY, c); }
+    }
+    if (c){
+      WHERE.communes = c.communes || null; WHERE.roads = c.roads || null;
+      if (WHERE.roads){                                       // index : chaque segment rangé dans les cases qu'il touche
+        const grid = new Map();
+        WHERE.roads.forEach((w, wi) => { for (let i = 1; i < w.pts.length; i++){
+          const [a1, o1] = w.pts[i - 1], [a2, o2] = w.pts[i];
+          for (let x = Math.floor(Math.min(a1, a2) * GRID); x <= Math.floor(Math.max(a1, a2) * GRID); x++)
+            for (let y = Math.floor(Math.min(o1, o2) * GRID); y <= Math.floor(Math.max(o1, o2) * GRID); y++){
+              const k = x + ',' + y; let l = grid.get(k); if (!l) grid.set(k, l = []); l.push(wi, i);
+            }
+        }});
+        WHERE.grid = grid;
+      }
+      WHERE.cache = {};
+      if (typeof render === 'function' && vehicles.length) render();
+    }
+  } finally { WHERE.loading = false; }
+}
+function segDist(lat, lon, a, b){
+  const kx = 111320 * Math.cos(lat * Math.PI / 180), ky = 110540;
+  const ax = (a[1] - lon) * kx, ay = (a[0] - lat) * ky, bx = (b[1] - lon) * kx, by = (b[0] - lat) * ky;
+  const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, -(ax * dx + ay * dy) / L));
+  return Math.hypot(ax + t * dx, ay + t * dy);
+}
+function roadAt(lat, lon){
+  if (!WHERE.grid) return null;
+  const gx = Math.floor(lat * GRID), gy = Math.floor(lon * GRID);
+  let best = null;
+  for (let x = gx - 1; x <= gx + 1; x++) for (let y = gy - 1; y <= gy + 1; y++){
+    const l = WHERE.grid.get(x + ',' + y); if (!l) continue;
+    for (let k = 0; k < l.length; k += 2){
+      const w = WHERE.roads[l[k]], i = l[k + 1], d = segDist(lat, lon, w.pts[i - 1], w.pts[i]);
+      if (d < 45 && (!best || d < best.d - (w.ref && !best.w.ref ? 8 : 0))) best = { w, d };   // à égalité, la route numérotée
+    }
+  }
+  return best ? best.w : null;
+}
+function communeAt(lat, lon){
+  if (!WHERE.communes) return '';
+  const c = WHERE.communes.find(c => lat >= c.bb[0] && lat <= c.bb[2] && lon >= c.bb[1] && lon <= c.bb[3] && inPoly(c.g, lat, lon));
+  return c ? c.nom : '';
+}
+/** « RN2 (Boulevard Sud) · Sainte-Marie », ou « près de l'arrêt Duparc · Sainte-Marie ». */
+function whereText(v, long){
+  if (v.lat == null) return '';
+  const key = v.id + '|' + v.lat.toFixed(4) + ',' + v.lon.toFixed(4) + '|' + (long ? 1 : 0);
+  if (WHERE.cache[key] != null) return WHERE.cache[key];
+  const w = roadAt(v.lat, v.lon), town = communeAt(v.lat, v.lon);
+  let road = '';
+  if (w) road = w.ref ? (w.name && long ? `${w.ref} (${w.name})` : w.ref) : w.name;
+  else if (long && v.stopName) road = 'près de ' + v.stopName;
+  const out = [road, town].filter(Boolean).join(' · ');
+  if (Object.keys(WHERE.cache).length > 2000) WHERE.cache = {};
+  return (WHERE.cache[key] = out);
+}
+setTimeout(whereLoad, 3000);
+
 function inPoly(geo, lat, lon){
   const polys = geo.type === 'MultiPolygon' ? geo.coordinates : [geo.coordinates];
   return polys.some(rings => {
