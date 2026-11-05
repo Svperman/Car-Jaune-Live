@@ -596,6 +596,11 @@
   #smsSheet{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:2450;width:min(440px, calc(100% - 20px));
     background:var(--carte,#fff);border-radius:18px;box-shadow:0 6px 24px rgba(0,0,0,.28);padding:12px 14px 14px;animation:popin .25s}
   #smsSheet[hidden]{display:none}
+  #geoSheet{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:2460;width:min(440px, calc(100% - 20px));
+    background:var(--carte,#fff);border-radius:18px;box-shadow:0 6px 24px rgba(0,0,0,.28);padding:12px 14px 14px;animation:popin .25s}
+  #geoSheet[hidden]{display:none}
+  #geoSheet .sms-prev{border-radius:12px;max-height:none}
+  #geoSheet ol{margin:4px 0 0;padding-left:20px} #geoSheet li{margin:3px 0}
   .sms-h{display:flex;align-items:flex-start;gap:8px} .sms-h b{flex:1;font-size:14.5px;color:var(--titre)}
   .sms-h button{border:0;background:var(--fond);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;flex:none}
   .sms-prev{margin:8px 0 10px;padding:9px 11px;border-radius:12px 12px 12px 4px;background:var(--fond);font-size:13px;line-height:1.35;color:var(--texte,#333);white-space:pre-wrap;word-break:break-word;max-height:110px;overflow:auto}
@@ -961,6 +966,7 @@
   <details class="set-sec" id="sec-appli" data-acc>
     <summary><span class="sa-i">📲</span><span class="sa-t"><b>Application</b><small id="sum-sec-appli"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
     <div class="sa-body">
+      <div class="set-row"><div class="set-l"><b>📍 Localisation</b><small id="geoTxt">pour te repérer sur la carte, trouver les arrêts proches et prévenir tes proches</small></div><button class="btn small" id="geoBtn">Autoriser</button></div>
       <div class="set-row" id="installRow" hidden><div class="set-l"><b>Installer l’appli</b><small>sur l’écran d’accueil</small></div><button id="installBtn" class="btn small">📲 Installer</button></div>
       <div class="set-row"><div class="set-l"><b>Raccourci « Mon prochain car »</b></div><button class="btn small ghost" id="nextShortcut">➕ Créer</button></div>
       <div class="set-row" id="apkRow" hidden><div class="set-l"><b>Appli Android</b><small>position partagée même appli fermée</small></div><a class="btn small ghost" href="https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk">📥 APK</a></div>
@@ -986,6 +992,8 @@
   <div class="bm-f"><button class="al-link" id="bmClear">Tout effacer</button><button class="al-link" data-open-settings>⚙️ Réglages</button></div>
 </div>
 <div id="toast" hidden></div>
+<div id="geoSheet" class="sheet" hidden role="dialog" aria-labelledby="geoTitle"><div class="sms-h"><b id="geoTitle">📍 Autoriser la localisation</b><button id="geoLater" aria-label="Plus tard">✕</button></div>
+  <div class="sms-prev" id="geoBody"></div><div class="sms-list" id="geoActs"></div></div>
 <div id="smsSheet" hidden role="dialog" aria-labelledby="smsTitle"><div class="sms-h"><b id="smsTitle"></b><button id="smsLater" aria-label="Plus tard">✕</button></div>
   <div class="sms-prev" id="smsPrev"></div><div class="sms-list" id="smsList"></div></div>
 <div id="offBar" hidden role="status"><b>📴 Hors ligne</b><span id="offBarTx"></span></div>
@@ -2411,7 +2419,7 @@ function meViewStart(){
     showMeOnMap();
     if (first && meShown) map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 16), { duration:.8 });
   }, err => {
-    if (err.code === 1){ toast('📍 Autorise la localisation pour Car Jaune Live (Réglages → Confidentialité → Service de localisation).'); setMeShown(false); }
+    if (err.code === 1){ setMeShown(false); geoDenied(); }
   }, { enableHighAccuracy:true, maximumAge:10000, timeout:30000 });
 }
 function meViewStop(){ if (meViewWatch != null){ navigator.geolocation.clearWatch(meViewWatch); meViewWatch = null; } }
@@ -2523,6 +2531,84 @@ function detectMyBus(){
 // (ancien mode navigation et bandeau « dans le car » retirés : ta position n'est plus affichée sur la carte)
 function renderRide(){}
 const navOn = false;
+
+/* ---------- localisation : demande claire au 1er lancement, aide pas à pas si elle a été refusée ---------- */
+let geoPerm = 'unknown';
+const ANDROID = /Android/i.test(navigator.userAgent);
+const STANDALONE = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+async function geoCheck(){
+  let st = 'unknown';
+  try { if (navigator.permissions && navigator.permissions.query){
+    const q = await navigator.permissions.query({ name:'geolocation' }); st = q.state;
+    q.onchange = () => { geoPerm = q.state; renderGeo(); if (q.state === 'granted') $('#geoSheet').hidden = true; };
+  } } catch(e){}
+  if (st === 'unknown'){ try { if (localStorage.getItem('cj_geo_ok') === '1') st = 'granted'; } catch(e){} }
+  geoPerm = st; renderGeo();
+  return st;
+}
+function renderGeo(){
+  const t = $('#geoTxt'), b = $('#geoBtn'); if (!t) return;
+  if (!navigator.geolocation){ t.textContent = 'ton téléphone ne donne pas sa position à l’appli'; b.hidden = true; return; }
+  t.textContent = geoPerm === 'granted' ? '✅ autorisée : carte, arrêts proches et proches fonctionnent'
+    : geoPerm === 'denied' ? '⚠️ refusée : l’appli ne peut pas te situer'
+    : 'pour te repérer sur la carte, trouver les arrêts proches et prévenir tes proches';
+  b.textContent = geoPerm === 'granted' ? 'Vérifier' : geoPerm === 'denied' ? 'Comment faire ?' : 'Autoriser';
+  b.classList.toggle('ghost', geoPerm === 'granted');
+  if (typeof renderSummaries === 'function') try { renderSummaries(); } catch(e){}
+}
+/** Doit être appelé par une touche : c'est ce qui fait apparaître la question du téléphone. */
+function geoAsk(){
+  if (!navigator.geolocation) return;
+  if (geoPerm === 'denied') return geoHelp();
+  $('#geoSheet').hidden = true;
+  navigator.geolocation.getCurrentPosition(p => {
+    geoPerm = 'granted'; try { localStorage.setItem('cj_geo_ok', '1'); } catch(e){}
+    myPos = myPos || { lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy, speed: 0, heading: null };
+    renderGeo(); toast('📍 Localisation autorisée, merci !');
+    if (!meShown) setMeShown(true);
+  }, e => { if (e.code === 1) geoDenied(); else toast('📍 Position introuvable pour le moment (sors un peu, ou active le GPS).'); },
+  { enableHighAccuracy:true, timeout:20000, maximumAge:60000 });
+}
+function geoDenied(){
+  geoPerm = 'denied'; try { localStorage.removeItem('cj_geo_ok'); } catch(e){}
+  renderGeo(); geoHelp();
+}
+/** Le téléphone ne repose plus la question une fois refusée : on explique où la réactiver. */
+function geoHelp(){
+  const steps = IOS
+    ? (STANDALONE
+      ? ['Ouvre <b>Réglages</b> sur l’iPhone', '<b>Confidentialité et sécurité</b> → <b>Service de localisation</b> (activé)', 'Descends sur <b>Sites web Safari</b>', 'Choisis <b>Lorsque l’app est active</b> et active <b>Position exacte</b>', 'Reviens dans Car Jaune Live et touche <b>Réessayer</b>']
+      : ['Dans Safari, touche <b>aA</b> (ou ⋯) à gauche de l’adresse', '<b>Réglages du site web</b> → <b>Position</b> → <b>Autoriser</b>', 'Si rien ne change : <b>Réglages</b> → <b>Confidentialité et sécurité</b> → <b>Service de localisation</b> → <b>Sites web Safari</b> → <b>Lorsque l’app est active</b>', 'Touche <b>Réessayer</b>'])
+    : ANDROID
+      ? (NATIVE
+        ? ['Ouvre <b>Paramètres</b> → <b>Applications</b> → <b>Car Jaune Live</b>', '<b>Autorisations</b> → <b>Position</b> → <b>Toujours autoriser</b> (ou « Seulement si l’appli est utilisée »)', 'Active <b>Utiliser la position exacte</b>', 'Touche <b>Réessayer</b>']
+        : ['Dans Chrome, touche le <b>cadenas</b> (ou ⋮ → ⓘ) à gauche de l’adresse', '<b>Autorisations</b> → <b>Position</b> → <b>Autoriser</b>', 'Vérifie que la <b>Position</b> du téléphone est activée (volet du haut)', 'Touche <b>Réessayer</b>'])
+      : ['Clique sur le <b>cadenas</b> à gauche de l’adresse', '<b>Position</b> → <b>Autoriser</b>', 'Clique sur <b>Réessayer</b>'];
+  $('#geoTitle').textContent = '📍 La localisation est refusée';
+  $('#geoBody').innerHTML = `Ton téléphone ne redemandera pas tout seul. Pour la réactiver :<ol>${steps.map(x => `<li>${x}</li>`).join('')}</ol>`;
+  $('#geoActs').innerHTML = `<button class="btn sms-go" id="geoRetry">↻ Réessayer</button>`;
+  $('#geoSheet').hidden = false;
+}
+function geoWelcome(){
+  $('#geoTitle').textContent = '📍 Autoriser la localisation';
+  $('#geoBody').innerHTML = 'Car Jaune Live utilise ta position <b>uniquement quand tu l’ouvres</b> pour :<ol><li>te montrer sur la carte</li><li>trouver les arrêts et les cars autour de toi</li><li>reconnaître le car où tu montes et prévenir tes proches</li></ol>Elle reste sur ton téléphone (rien n’est vendu ni gardé ailleurs).';
+  $('#geoActs').innerHTML = `<button class="btn sms-go" id="geoGo">Autoriser la localisation</button>`;
+  $('#geoSheet').hidden = false;
+}
+$('#geoSheet').addEventListener('click', e => {
+  if (e.target.closest('#geoGo')) geoAsk();
+  if (e.target.closest('#geoRetry')){ geoPerm = 'prompt'; geoAsk(); }
+});
+$('#geoLater').addEventListener('click', () => { $('#geoSheet').hidden = true; try { localStorage.setItem('cj_geo_later', String(Date.now())); } catch(e){} });
+$('#geoBtn').addEventListener('click', () => { closeSettings && closeSettings(); geoPerm === 'denied' ? geoHelp() : geoAsk(); });
+// au 1er lancement (et au plus une fois par semaine si « plus tard ») : demande claire, avec un bouton
+setTimeout(async () => {
+  const st = await geoCheck();
+  let later = 0; try { later = +localStorage.getItem('cj_geo_later') || 0; } catch(e){}
+  if (st === 'prompt' || (st === 'unknown' && !later && !(localStorage.getItem('cj_geo_ok')))){
+    if (Date.now() - later > 7 * 864e5) geoWelcome();
+  }
+}, 2500);
 
 function geoError(e){
   const msg = e && e.code === 1 ? 'Localisation refusée : autorise-la dans ton navigateur, ou choisis la gare à la main.'
@@ -3098,6 +3184,7 @@ function renderSummaries(){
   const todo = [];
   const ns = notifStatus();
   if (ns.k === 'ask') todo.push(`<div class="td-it">🔔 Autorise les notifications pour être prévenu <button class="btn small" data-todo="notif">Activer</button></div>`);
+  if (geoPerm === 'denied') todo.push(`<div class="td-it">📍 La localisation est refusée <button class="btn small ghost" data-todo="geo">Comment faire ?</button></div>`);
   if (srv.state === 'old') todo.push(`<div class="td-it">⚠️ Ton serveur doit être mis à jour <button class="btn small ghost" data-todo="srv">Voir</button></div>`);
   if (pushCfg.on && srv.state === 'ok' && !srv.trigger) todo.push(`<div class="td-it">⚠️ Alertes appli fermée : exécute « installPushTrigger » une fois dans Apps Script</div>`);
   $('#setTodo').innerHTML = todo.length ? `<b>À régler</b>${todo.join('')}` : '';
@@ -3106,6 +3193,7 @@ function renderSummaries(){
 $('#setTodo').addEventListener('click', e => {
   const t = e.target.closest('[data-todo]'); if (!t) return;
   if (t.dataset.todo === 'notif') enableNotifications();
+  if (t.dataset.todo === 'geo') geoHelp();
   if (t.dataset.todo === 'srv'){ const d = $('#sec-appli'); d.open = true; setTimeout(() => d.scrollIntoView({ behavior:'smooth', block:'start' }), 50); }
 });
 // à chaque changement dans les paramètres : résumés et options à jour
@@ -4948,7 +5036,7 @@ function onCityFix(p){
 function startCity(){
   if (!navigator.geolocation && !BGGEO){ toast('Localisation indisponible sur cet appareil.'); return false; }
   if (cityWatch == null) cityWatch = watchPos(onCityFix, e => {
-    if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour « Cars dans ma ville ».'); setCityOn(false); }
+    if (e && e.code === 1){ setCityOn(false); geoDenied(); }
   }, { enableHighAccuracy:false, maximumAge:60000, timeout:30000 }, 'Annonce des cars jaunes dans ta ville');
   return true;
 }
@@ -5097,7 +5185,7 @@ function wantedGps(){
 }
 function shareFix(p){ onLiveFix(p); autoCheck(); rideTick(); sendShare(); adaptGps(); }
 function shareGeoErr(e){
-  if (e && e.code === 1){ toast('Position refusée : autorise la localisation pour partager.'); if (shareCfg.on) setShareOn(false); else stopShare(); }
+  if (e && e.code === 1){ if (shareCfg.on) setShareOn(false); else stopShare(); geoDenied(); }
   else gpsWeak = true;
 }
 function adaptGps(force){
