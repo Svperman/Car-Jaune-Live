@@ -4676,7 +4676,8 @@ function applyTraffic(){
   [tfFlow, tfInc].forEach(l => { if (l) map.removeLayer(l); });
   tfFlow = tfInc = null;
   if (TF.on && TF.key){
-    tfFlow = L.tileLayer(tfUrl('flow'), { pane:'traffic', opacity:.85, maxZoom:19, attribution:'Trafic © TomTom' }).addTo(map);
+    // à l'échelle de l'île, TomTom trace un gros anneau autour de l'île (routes nationales) : couleurs seulement en zoomant
+    tfFlow = L.tileLayer(tfUrl('flow'), { pane:'traffic', opacity:.85, minZoom:11.5, maxZoom:19, attribution:'Trafic © TomTom' }).addTo(map);
     loadIncidents();
   }
   drawJams(); drawIncidents();
