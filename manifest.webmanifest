@@ -7,9 +7,9 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "any",
   "background_color": "#F2F4F7",
-  "theme_color": "#F6BE00",
+  "theme_color": "#FFFFFF",
   "categories": [
     "travel",
     "navigation",

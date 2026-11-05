@@ -7,7 +7,7 @@
 <title>Car Jaune Live</title>
 <!-- appli installable (PWA) : ignorés quand la page tourne dans Apps Script -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#F6BE00">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -19,6 +19,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,300;6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lib/leaflet.css">
 <style>
+  /* iPhone et Android : texte qui ne grossit pas tout seul à l'horizontale, pas de « rebond » ni de rafraîchissement
+     accidentel en tirant l'écran, pas de zoom en touchant deux fois un bouton, pas de menu « copier » sur la carte */
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  html, body{overscroll-behavior:none}
+  button, a, .tab, label, summary, select{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .leaflet-container, .map-ctl, .tabs, .bus-mk{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+  /* iPhone : un champ en dessous de 16 px fait zoomer tout l'écran quand on le touche */
+  @media (pointer:coarse){ input, select, textarea{font-size:16px !important} }
+  /* encoche / Dynamic Island à l'horizontale : rien sous la caméra */
+  @supports (padding:max(0px)){
+    body{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+  }
+  @media (max-width:860px), (max-height:500px) and (max-width:1000px){
+    .tabs{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+  }
   /* Charte inspirée de carjaune.re : Nunito Sans, jaune #F6BE00, cartes blanches arrondies */
   :root{
     --jaune:#F6BE00; --jaune-clair:#FFF5D1; --jaune-fonce:#C99A00;
@@ -1423,8 +1438,46 @@ async function init(){
 
 /* ====================== Navigation par onglets ====================== */
 const VIEW_NAMES = { map:'Carte en direct', trip:'Mon trajet', board:"Horaires à l'arrêt", fiches:'Fiches horaires', trafic:'Infos trafic' };
+/* ---------- bouton « retour » d'Android (et retour du navigateur) ----------
+   Ferme la fenêtre ouverte (réglages, signalement, prochain car, cloche…) ou revient à la carte,
+   au lieu de quitter l'appli. */
+const BACK_OV = ['settingsModal', 'ficheModal', 'repSheet', 'nextSheet', 'bellMenu', 'smsSheet', 'geoSheet'];
+let backSkip = 0;
+const BACK_ON = !IN_GAS || !!window.__testBack;    // (Apps Script : la page est dans un cadre, on ne touche pas à l'historique)
+const backOpen = () => BACK_OV.filter(id => { const e = document.getElementById(id); return e && !e.hidden; });
+function backPush(tag){ if (!BACK_ON) return; try { history.pushState({ cj: tag }, ''); } catch(e){} }
+function backDrop(tag){ if (!BACK_ON) return; try { if (history.state && history.state.cj === tag){ backSkip++; history.back(); } } catch(e){} }
+if (BACK_ON){
+  try { history.replaceState({ cj: 'base' }, ''); } catch(e){}
+  addEventListener('popstate', () => {
+    if (backSkip){ backSkip--; return; }
+    const open = backOpen();
+    if (open.length){
+      const id = open[open.length - 1];
+      if (id === 'settingsModal') closeSettings();
+      else if (id === 'nextSheet') closeNext();
+      else if (id === 'smsSheet') closeSms(false);
+      else if (id === 'geoSheet') $('#geoSheet').hidden = true;
+      else document.getElementById(id).hidden = true;
+      if (id === 'bellMenu' && typeof renderBell === 'function') try { renderBell(); } catch(e){}
+    } else if (map && map._popup && map.hasLayer(map._popup)) map.closePopup();
+    else if (view !== 'map') setView('map', true);
+  });
+  // chaque fenêtre qui s'ouvre ajoute une étape « retour » ; fermée autrement (✕), l'étape est retirée
+  const mo = new MutationObserver(list => list.forEach(m => {
+    const id = m.target.id, vis = !m.target.hidden;
+    if (vis && !(history.state && history.state.cj === id)) backPush(id);
+    else if (!vis) backDrop(id);
+  }));
+  setTimeout(() => BACK_OV.forEach(id => { const e = document.getElementById(id); if (e) mo.observe(e, { attributes:true, attributeFilter:['hidden'] }); }), 0);
+}
+
 function setView(v, silent){
   if (!VIEW_NAMES[v]) v = 'map';
+  if (v !== view && BACK_ON){                      // onglet autre que la carte : « retour » ramène à la carte
+    if (v !== 'map' && view === 'map') backPush('view');
+    else if (v === 'map' && history.state && history.state.cj === 'view') backDrop('view');
+  }
   view = v;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.view === v));
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + v));
@@ -3169,7 +3222,7 @@ function applyLook(){
   document.documentElement.classList.toggle('dark', d);
   document.documentElement.classList.toggle('big', look.text === 'big');
   document.documentElement.classList.toggle('huge', look.text === 'huge');
-  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = d ? '#1E2228' : '#F6BE00';
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = d ? '#1E2228' : '#FFFFFF';   // barre d'état Android assortie à l'en-tête
   if ($('#themeSel')){ $('#themeSel').value = look.theme; $('#textSel').value = look.text; }
 }
 function saveLook(){ try { localStorage.setItem('cj_look', JSON.stringify(look)); } catch(e){} applyLook(); }

@@ -44,6 +44,7 @@ jobs:
           node tests/proches-sms.mjs
           node tests/utilisateur.mjs
           node tests/ecrans.mjs
+          node tests/retour.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site
