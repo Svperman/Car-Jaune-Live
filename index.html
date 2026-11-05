@@ -1108,7 +1108,7 @@ const alertSent = (() => { try { const o = JSON.parse(localStorage.getItem('cj_s
 let sentSaveT = null;
 function saveSent(){ clearTimeout(sentSaveT); sentSaveT = setTimeout(() => { try { localStorage.setItem('cj_sent', JSON.stringify(alertSent)); } catch(e){} }, 500); }
 let geoWatch = null, myPos = null, noBusAt = 0, wakeLock = null;
-let trip = { a:'', b:'', mode:'auto' }, tripBoard = { key:'', data:null, loading:false }, lastSens = '';
+let trip = { a:'', b:'', mode:'auto' }, tripBoard = { key:'', data:null, loading:false }, lastSens = '', tripEditAt = 0, sensNotifAt = 0;
 let boardGroupBy = 'sens';
 let FICHE_DATA = {}, ficheJob = { total:0, done:0, running:false, error:'' }, selLine = '';
 const markers = new Map();
@@ -2318,7 +2318,7 @@ function renderTrip(){
   }
   const s = detectSens();
   const from = s.sens === 'aller' ? s.A : s.B, to = s.sens === 'aller' ? s.B : s.A;
-  if (lastSens && lastSens !== s.sens && alertCfg.on && alertCfg.journey)
+  if (lastSens && lastSens !== s.sens && alertCfg.on && alertCfg.journey && Date.now() - tripEditAt > 60e3 && Date.now() - sensNotifAt > 10 * 60e3 && (sensNotifAt = Date.now()))
     notify(`🧭 C’est maintenant ton ${s.sens}`, `${from.name} → ${to.name} : les alertes suivent ce sens.`, 'none');
   lastSens = s.sens;
   let html = `<div class="sens-banner ${s.sens}"><div class="big">${s.sens === 'aller' ? '➡️ ALLER' : '⬅️ RETOUR'}</div>
@@ -2384,16 +2384,17 @@ function renderTrip(){
   card.innerHTML = html;
 }
 
-$('#tripA').addEventListener('change', e => { trip.a = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; transfer = { key:'', loading:false, done:false, hubs:[] }; savePrefs(); renderTrip(); });
-$('#tripB').addEventListener('change', e => { trip.b = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; transfer = { key:'', loading:false, done:false, hubs:[] }; savePrefs(); renderTrip(); });
+$('#tripA').addEventListener('change', e => { tripEditAt = Date.now(); trip.a = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; transfer = { key:'', loading:false, done:false, hubs:[] }; savePrefs(); renderTrip(); });
+$('#tripB').addEventListener('change', e => { tripEditAt = Date.now(); trip.b = e.target.value.trim(); tripBoard = { key:'', data:null, loading:false }; transfer = { key:'', loading:false, done:false, hubs:[] }; savePrefs(); renderTrip(); });
 $('#tripSwap').addEventListener('click', () => {
+  tripEditAt = Date.now();
   [trip.a, trip.b] = [trip.b, trip.a];
   $('#tripA').value = trip.a; $('#tripB').value = trip.b;
   savePrefs(); renderTrip();
 });
 $('#tripMode').addEventListener('click', e => {
   const b = e.target.closest('[data-m]'); if (!b) return;
-  trip.mode = b.dataset.m; savePrefs(); renderTrip(); if (alertCfg.on) checkAlerts();
+  tripEditAt = Date.now(); trip.mode = b.dataset.m; savePrefs(); renderTrip(); if (alertCfg.on) checkAlerts();
 });
 $('#tripGeo').addEventListener('click', () => {
   if (!navigator.geolocation){ toast('Localisation indisponible sur cet appareil.'); return; }
@@ -2596,33 +2597,68 @@ function onLiveFix(p){
 }
 
 /** Suis-je dans un car jaune ? Même position (à la précision du GPS) et je roule. */
+/* Détection du car où je suis (corrigée d'après le journal du 05/11) :
+   - la position d'un car date souvent de 20-60 s : à 90 km/h il peut être 500 m derrière moi → tolérance selon l'âge
+   - un car qui roule dans l'autre sens (croisé sur la route du Littoral) n'est jamais retenu
+   - une fois dans un car, on y reste : changer de car demande 30 s de preuves, descendre demande 90 s sans lui
+   - les positions GPS imprécises (> 200 m) sont ignorées */
+let busLastOk = 0, myHead = null, headFrom = null;
+function busTol(v, sp){
+  const lag = Math.min(90, Math.max(15, (v.age != null ? v.age : 20e3) / 1000 + 10));   // secondes de retard de la position
+  return 120 + Math.max(sp, 8) * lag + Math.min(myPos.acc || 0, 100);
+}
+const angDiff = (a, b) => { const d = Math.abs(((a - b) % 360 + 540) % 360 - 180); return d; };
 function detectMyBus(){
-  if (!myPos) return;
-  const sp = myPos.speed || 0;
-  let best = null;
-  if (sp > 3){                                    // > 11 km/h : je suis dans un véhicule
-    const tol = 150 + sp * 25 + Math.min(myPos.acc || 0, 100);   // le car est repéré toutes les ~20 s
-    vehicles.forEach(v => {
-      if (v.age != null && v.age > 3 * 60e3) return;
-      const d = distM(myPos.lat, myPos.lon, v.lat, v.lon);
-      if (d < tol && (!best || d < best.d)) best = { v, d };
-    });
+  if (!myPos || (myPos.acc || 0) > 200) return;
+  const sp = myPos.speed || 0, now = Date.now();
+  // mon sens de déplacement (sur au moins 40 m)
+  if (!headFrom) headFrom = { lat: myPos.lat, lon: myPos.lon };
+  else if (distM(headFrom.lat, headFrom.lon, myPos.lat, myPos.lon) > 40){
+    const y = Math.sin((myPos.lon - headFrom.lon) * Math.PI / 180) * Math.cos(myPos.lat * Math.PI / 180);
+    const x = Math.cos(headFrom.lat * Math.PI / 180) * Math.sin(myPos.lat * Math.PI / 180) - Math.sin(headFrom.lat * Math.PI / 180) * Math.cos(myPos.lat * Math.PI / 180) * Math.cos((myPos.lon - headFrom.lon) * Math.PI / 180);
+    myHead = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; headFrom = { lat: myPos.lat, lon: myPos.lon, t: now };
   }
+  const sameWay = v => !(sp > 5 && myHead != null && v.bearing != null && v.bearing !== 0 && angDiff(myHead, v.bearing) > 75);
+  const match = v => {
+    if (!v || (v.age != null && v.age > 3 * 60e3)) return null;
+    const d = distM(myPos.lat, myPos.lon, v.lat, v.lon);
+    return d < busTol(v, sp) && sameWay(v) ? d : null;
+  };
+  let best = null;
+  if (sp > 3) vehicles.forEach(v => { const d = match(v); if (d != null && (!best || d < best.d)) best = { v, d }; });
+  const cur = onBus ? vehicles.find(v => v.id === onBus) : null;
   if (sp > 3 || onBus) diag('car', { vitesse: Math.round(sp * 3.6), proche: best ? best.v.route.s + ' ' + best.v.id + ' à ' + Math.round(best.d) + ' m' : 'aucun', dedans: onBus || '', candidat: busCand ? busCand.id + '×' + busCand.n : '' });
+
+  if (onBus){
+    const dCur = cur ? distM(myPos.lat, myPos.lon, cur.lat, cur.lon) : null;
+    const curOk = cur && (sp <= 3 ? dCur < busTol(cur, 3) + 150 : match(cur) != null);
+    if (curOk){ busLastOk = now; busCand = null; return renderRide(); }
+    // un autre car colle mieux : il faut 30 s de preuves (et le mien ne doit plus coller)
+    if (best && best.v.id !== onBus){
+      if (!busCand || busCand.id !== best.v.id) busCand = { id: best.v.id, n: 1, since: now };
+      else busCand.n++;
+      if (busCand.n >= 3 && now - busCand.since >= 30e3 && now - busLastOk >= 30e3){
+        onBus = best.v.id; busCand = null; busLastOk = now; announceBus(best.v); render();
+      }
+      return renderRide();
+    }
+    // descendu : 90 s sans mon car, et je marche (ou il est loin alors que sa position est fraîche)
+    const fresh = cur && (cur.age == null || cur.age < 60e3);
+    if (now - busLastOk > 90e3 && (sp < 2.5 || !cur || (fresh && dCur > 600))){ onBus = null; busCand = null; render(); }
+    return renderRide();
+  }
   if (best){
-    busMiss = 0;
-    if (onBus === best.v.id) return renderRide();
-    // confirmation sur 2 positions successives avant d'annoncer
     if (busCand && busCand.id === best.v.id && ++busCand.n >= 2){
-      onBus = best.v.id; busCand = null;
-      const v = best.v;
-      if (alertCfg.on) notify(`🚌 Tu es dans le ${v.route.s}`, `Direction ${v.headsign || '?'}${v.times ? ` · arrivée prévue ~${fmtHM(v.times.arr.real || v.times.arr.sched)}` : ''}.`, 'none');
-      render();
-    } else if (!busCand || busCand.id !== best.v.id) busCand = { id: best.v.id, n: 1 };
-  } else if (onBus && ++busMiss >= 4){               // descendu (ou car perdu) depuis plusieurs positions
-    onBus = null; busCand = null; render();
+      onBus = best.v.id; busCand = null; busLastOk = now; announceBus(best.v); render();
+    } else if (!busCand || busCand.id !== best.v.id) busCand = { id: best.v.id, n: 1, since: now };
   }
   renderRide();
+}
+/** Heure d'arrivée affichée seulement si elle est plausible (le flux rattache parfois un car à une course d'une autre heure). */
+function plausibleEta(ms){ const now = Date.now(); return ms && ms > now - 5 * 60e3 && ms < now + 3 * 3600e3 ? ms : null; }
+function announceBus(v){
+  const eta = v.times ? plausibleEta(v.times.arr.real || v.times.arr.sched) : null;
+  if (alertCfg.on) notify(`🚌 Tu es dans le ${v.route.s}`, `Direction ${v.headsign || '?'}${eta ? ` · arrivée prévue ~${fmtHM(eta)}` : ''}.`, 'none');
 }
 // (ancien mode navigation et bandeau « dans le car » retirés : ta position n'est plus affichée sur la carte)
 function renderRide(){}
@@ -5424,7 +5460,7 @@ function rideInfo(v){
       }
     }
   }
-  return { id: v.id, to, until, dl: v.delay };
+  return { id: v.id, to, until: plausibleEta(until), dl: v.delay };
 }
 function nearStop(maxM){
   if (!myPos) return null;
@@ -5462,11 +5498,12 @@ function evText(name, ev){
 }
 /** À chaque position : reconnaît l'attente en gare, la montée, l'approche et la descente. */
 function rideTick(){
-  if (!(shareCfg.on || shareCfg.auto) || !myPos) return;
+  if (!(shareCfg.on || shareCfg.auto) || !myPos || (myPos.acc || 0) > 200) return;   // position trop imprécise : on attend la suivante
   const now = Date.now(), v = onBus && vehicles.find(x => x.id === onBus), sp = myPos.speed || 0;
   if (v){
     if (ride.phase !== 'ride'){
-      const from = ride.phase === 'wait' ? ride.stop : (nearStop(400) || {}).name || '';
+      const waitOk = ride.phase === 'wait' && now - ride.since < 30 * 60e3 && ride.lat != null && distM(ride.lat, ride.lon, myPos.lat, myPos.lon) < 600;
+      const from = waitOk ? ride.stop : (nearStop(400) || {}).name || '';
       const info = rideInfo(v);
       ride = { phase:'ride', stop: from, since: now, sent:{}, veh: v.id, info };
       shareEvent({ k:'depart', stop: from, l: v.route.s, d: v.headsign, to: info.to, eta: info.until, dl: v.delay });
@@ -5482,13 +5519,13 @@ function rideTick(){
   }
   if (ride.phase === 'ride'){                                // descendu du car
     const g = nearStop(500), last = ride.info || {};
-    shareEvent({ k:'arrive', stop: g ? g.name : (last.to || ''), l: (vehicles.find(x => x.id === ride.veh) || { route:{} }).route.s || '', dl: last.dl });
+    shareEvent({ k:'arrive', stop: g ? g.name : '', l: (vehicles.find(x => x.id === ride.veh) || { route:{} }).route.s || '', dl: last.dl });
     ride = { phase:'idle', stop:'', since: now, sent:{}, veh:'', info:null };
     return;
   }
   const g = sp < 2 ? nearStop(150) : null;
   if (g){
-    if (ride.phase !== 'wait' || ride.stop !== g.name) ride = { phase:'wait', stop: g.name, since: now, sent:{}, veh:'', info:null };
+    if (ride.phase !== 'wait' || ride.stop !== g.name) ride = { phase:'wait', stop: g.name, since: now, sent:{}, veh:'', info:null, lat: myPos.lat, lon: myPos.lon };
     else if (!ride.sent.wait && now - ride.since > 2 * 60e3 && isGare(g)){   // 2 min immobile dans une gare
       ride.sent.wait = true;
       let next = '';
