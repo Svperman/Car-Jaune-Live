@@ -131,6 +131,20 @@
   .map-ctl button{border:none;background:var(--carte);color:var(--titre);font:700 13px "Nunito Sans",sans-serif;border-radius:25px;
                   padding:8px 13px;box-shadow:0 1px 5px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap;text-align:left}
   .map-ctl button:hover,.map-ctl button.on{background:var(--jaune)}
+  .map-ctl .mi{display:inline-block;min-width:1.2em;text-align:center;margin-right:4px}
+  /* petits écrans et téléphone à l'horizontale : boutons ronds (pictogramme seul) pour laisser voir la carte */
+  @media (max-width:480px), (max-height:520px){
+    .map-ctl{gap:7px}
+    .map-ctl button{width:42px;height:42px;padding:0;border-radius:50%;text-align:center;font-size:18px;line-height:42px;display:grid;place-items:center}
+    .map-ctl .ml{display:none} .map-ctl .mi{margin:0}
+  }
+  /* téléphone à l'horizontale : boutons en ligne, la carte garde sa hauteur */
+  @media (max-height:520px) and (orientation:landscape){ .map-ctl{flex-direction:row} }
+  /* ordinateur et tablette à l'horizontale : en-tête qui tient sur une ligne */
+  @media (min-width:861px) and (max-width:1600px) and (min-height:501px), (min-width:1001px) and (max-width:1600px){ .tab .lg{display:none} .brand small{display:none} }
+  @media (min-width:861px) and (max-width:1250px) and (min-height:501px), (min-width:1001px) and (max-width:1250px){ #periodPill{display:none} .top-in{gap:10px;padding:0 12px} .tab{padding:0 11px} }
+  /* très petit téléphone : logo seul */
+  @media (max-width:350px){ .brand>div{display:none} }
   .leaflet-control-layers{border-radius:10px !important;border:none !important;box-shadow:0 1px 5px rgba(0,0,0,.35) !important;font-family:"Nunito Sans",sans-serif}
   .leaflet-control-layers-expanded{padding:8px 12px}
   .crumb.hide{display:none}
@@ -367,7 +381,7 @@
   .sens-banner .why{font-size:12.5px;color:var(--gris)}
   .jt td .arr{font-weight:800;color:var(--titre)}
   .dur{font-size:12px;color:var(--gris);white-space:nowrap}
-  @media (max-width:860px){
+  @media (max-width:860px), (max-height:500px) and (max-width:1000px){
     .trip-form{grid-template-columns:1fr}
     .trip-form .round{justify-self:center;transform:rotate(90deg)}
     .jt th:nth-child(5),.jt td:nth-child(5){display:none}
@@ -627,7 +641,7 @@
   /* ondes « temps réel » à côté des horaires */
   .lv{position:relative;display:inline-block;width:12px;height:13px;margin-left:2px;vertical-align:top;margin-top:1px;flex:none}
   table.board td:first-child, .sp-row .lv{white-space:nowrap}
-  @media (max-width:860px){ table.board td, table.board th{padding-left:7px;padding-right:7px} }
+  @media (max-width:860px), (max-height:500px) and (max-width:1000px){ table.board td, table.board th{padding-left:7px;padding-right:7px} }
   .lv i{position:absolute;left:0;bottom:0;border:2px solid #B8BDC4;border-left-color:transparent;border-bottom-color:transparent;border-radius:0 100% 0 0}
   .lv i:nth-child(1){width:3px;height:3px;border:0;background:#B8BDC4;border-radius:50%}
   .lv i:nth-child(2){width:5px;height:5px} .lv i:nth-child(3){width:9.5px;height:9.5px}
@@ -677,7 +691,7 @@
   #toast[hidden]{display:none}
   #toast.act{background:#0B3B8C}
 
-  @media (max-width:860px){
+  @media (max-width:860px), (max-height:500px) and (max-width:1000px){
     /* en-tête compact sur une ligne (+ encoche de l'iPhone) */
     .top-in{flex-wrap:nowrap;align-items:center;padding:calc(6px + env(safe-area-inset-top)) 12px 6px;gap:8px;min-height:52px}
     .brand{order:1;min-width:0;flex:1}
@@ -728,7 +742,7 @@
     #periodPill .sub{display:none}
     .live .pill{padding:6px 10px}
   }
-  @media (max-width:860px){ html.dark .tab{color:#AEB4BC} html.dark .tab.on{color:var(--titre)} }
+  @media (max-width:860px), (max-height:500px) and (max-width:1000px){ html.dark .tab{color:#AEB4BC} html.dark .tab.on{color:var(--titre)} }
 </style>
 </head>
 <body>
@@ -1165,22 +1179,26 @@ if ('ResizeObserver' in window) new ResizeObserver(fixMapSize).observe($('#mapCa
 setTimeout(fixMapSize, 300);
 
 // Boutons : liste, plein écran, recentrer
-const isMobile = () => window.innerWidth <= 860;
+const isMobile = () => window.innerWidth <= 860 || (window.innerHeight <= 500 && window.innerWidth <= 1000);   // téléphone, même à l'horizontale
 const MapButtons = L.Control.extend({
   options:{ position:'topright' },
   onAdd(){
     const box = L.DomUtil.create('div', 'map-ctl');
-    box.innerHTML = `<button id="btnList">☰ Liste</button><button id="btnTraffic" aria-pressed="false">🚦 Trafic</button><button id="btnFs">⛶ Plein écran</button><button id="btnMe" aria-pressed="false">📍 Ma position</button><button id="btnFit">🏝️ Toute l'île</button>`;
+    const b = (id, i, l, x) => `<button id="${id}" title="${l}" aria-label="${l}"${x || ''}><span class="mi">${i}</span><span class="ml">${l}</span></button>`;
+    box.innerHTML = b('btnList', '☰', 'Liste') + b('btnTraffic', '🚦', 'Trafic', ' aria-pressed="false"') + b('btnFs', '⛶', 'Plein écran')
+      + b('btnMe', '📍', 'Ma position', ' aria-pressed="false"') + b('btnFit', '🏝️', 'Toute l’île');
     L.DomEvent.disableClickPropagation(box);
     return box;
   }
 });
 new MapButtons().addTo(map);
 
+/** Bouton de carte : pictogramme + texte (le texte se cache sur les petits écrans, gardé pour l'accessibilité). */
+function mbtn(sel, icon, label){ const el = $(sel); if (!el) return; el.innerHTML = `<span class="mi">${icon}</span><span class="ml">${esc(label)}</span>`; el.title = label; el.setAttribute('aria-label', label); }
 function setPanel(open){
   $('#view-map').classList.toggle('panel-off', !open);
   $('#btnList').classList.toggle('on', open);
-  $('#btnList').textContent = open ? (isMobile() ? '✕ Fermer la liste' : '◧ Masquer la liste') : `☰ Liste${vehicles.length ? ' (' + vehicles.length + ')' : ''}`;
+  open ? mbtn('#btnList', '✕', isMobile() ? 'Fermer la liste' : 'Masquer la liste') : mbtn('#btnList', '☰', `Liste${vehicles.length ? ' (' + vehicles.length + ')' : ''}`);
 }
 let panelOpen = !isMobile();
 setPanel(panelOpen);
@@ -1188,7 +1206,7 @@ $('#btnList').addEventListener('click', () => { panelOpen = !panelOpen; setPanel
 $('#btnFs').addEventListener('click', () => {
   const on = document.body.classList.toggle('fs');
   $('#btnFs').classList.toggle('on', on);
-  $('#btnFs').textContent = on ? '⤡ Quitter' : '⛶ Plein écran';
+  on ? mbtn('#btnFs', '⤡', 'Quitter le plein écran') : mbtn('#btnFs', '⛶', 'Plein écran');
 });
 $('#btnFit').addEventListener('click', () => map.flyToBounds(REUNION, { duration:.8 }));
 // ma position n'est plus affichée sur la carte (boutons « Ma position » et « Navigation » retirés)

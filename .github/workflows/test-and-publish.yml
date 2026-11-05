@@ -43,6 +43,7 @@ jobs:
           node tests/horsligne.mjs
           node tests/proches-sms.mjs
           node tests/utilisateur.mjs
+          node tests/ecrans.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site
