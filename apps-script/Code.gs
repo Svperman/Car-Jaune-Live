@@ -94,9 +94,7 @@ const API_ = {
   saveStats:         function (json) { return saveStats(json); },
   getStats:          function () { return getStats(); },
   report:            function (json) { return report(json); },
-  getReports:        function () { return getReports(); },
-  setFamily:         function (json) { return setFamily(String(json || '')); },
-  notifyFamily:      function (json) { return notifyFamily(String(json || '')); }
+  getReports:        function () { return getReports(); }
 };
 
 function api_(action, args) {
@@ -947,7 +945,7 @@ function weight_(row) { return (row || []).reduce(function (a, c) { return a + (
 /* ------------------------------------------------------------------ */
 /*  Version du serveur (l'appli affiche un voyant « à jour »)          */
 /* ------------------------------------------------------------------ */
-const SERVER_VERSION = '2026-11-05.1';
+const SERVER_VERSION = '2026-11-02.5';
 function getVersion() {
   let trigger = false;
   try { trigger = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'pushTick'; }); } catch (e) {}
@@ -1008,72 +1006,4 @@ function report(json) {
     cache.put('reports_v1', JSON.stringify(list.slice(-300)), 3 * 3600);
   } finally { lock.releaseLock(); }
   return '1';
-}
-
-
-/* ------------------------------------------------------------------ */
-/*  E-mail aux proches : « je suis dans le car », « je suis descendu » */
-/*  Arrive sur n'importe quel téléphone (iPhone, Android), sans appli.  */
-/*  Sécurité : les adresses sont gardées ici ; seul TON téléphone       */
-/*  (qui a reçu la clé secrète) peut les changer ou déclencher un      */
-/*  envoi, et le texte est écrit par le serveur (pas de texte libre).   */
-/* ------------------------------------------------------------------ */
-const FAMILY_PROP = 'family_v1';
-const FAMILY_MAX_DAY = 60;      // garde-fou : 60 e-mails par jour au maximum (Gmail gratuit : 100/jour)
-const EMAIL_RE = /^[^\s@,;<>]+@[^\s@,;<>]+\.[a-z]{2,}$/i;
-
-function familyGet_() {
-  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(FAMILY_PROP) || 'null'); } catch (e) { return null; }
-}
-/** Enregistre les adresses. 1re fois : renvoie une clé secrète que le téléphone garde. */
-function setFamily(json) {
-  const a = JSON.parse(json || '{}');
-  const cur = familyGet_();
-  if (cur && cur.key && a.key !== cur.key) throw new Error('Clé des proches incorrecte (exécute resetProches dans Apps Script pour repartir de zéro)');
-  const to = String(a.to || '').split(/[\s,;]+/).map(function (x) { return x.trim().toLowerCase(); })
-    .filter(function (x) { return EMAIL_RE.test(x); }).slice(0, 5);
-  const key = cur && cur.key ? cur.key : Utilities.getUuid().replace(/-/g, '');
-  PropertiesService.getScriptProperties().setProperty(FAMILY_PROP, JSON.stringify({ key: key, to: to }));
-  return JSON.stringify({ key: key, to: to });
-}
-/** Remise à zéro (nouveau téléphone, clé perdue) : à exécuter une fois depuis l'éditeur Apps Script. */
-function resetProches() { PropertiesService.getScriptProperties().deleteProperty(FAMILY_PROP); Logger.log('Proches effacés : enregistre-les à nouveau depuis l’appli.'); }
-
-function notifyFamily(json) {
-  const a = JSON.parse(json || '{}');
-  const fam = familyGet_();
-  if (!fam || !fam.key || a.key !== fam.key) throw new Error('Clé des proches incorrecte');
-  if (!fam.to || !fam.to.length) return 'aucune adresse';
-  // garde-fou par jour
-  const props = PropertiesService.getScriptProperties();
-  const day = Utilities.formatDate(new Date(), 'Indian/Reunion', 'yyyyMMdd');
-  const cnt = JSON.parse(props.getProperty('family_cnt') || '{}');
-  if (cnt.d !== day) { cnt.d = day; cnt.n = 0; }
-  if (cnt.n >= FAMILY_MAX_DAY) throw new Error('Limite d’e-mails du jour atteinte');
-
-  const clean = function (v, n) { return String(v == null ? '' : v).replace(/[\r\n<>]/g, ' ').trim().slice(0, n || 60); };
-  const name = clean(a.n, 20) || 'Ton proche';
-  const line = clean(a.l, 8), dest = clean(a.d), stop = clean(a.stop), to = clean(a.to);
-  const hm = function (ms) { return ms ? Utilities.formatDate(new Date(+ms), 'Indian/Reunion', 'HH:mm') : ''; };
-  const at = hm(a.at || Date.now()), eta = hm(a.eta);
-  const dl = +a.dl || 0, late = Math.abs(dl) >= 60 ? ' (' + (dl > 0 ? 'retard' : 'avance') + ' ' + Math.round(Math.abs(dl) / 60) + ' min)' : '';
-  let subject, text;
-  if (a.k === 'depart') {
-    subject = '🚌 ' + name + ' est dans le car' + (line ? ' ' + line : '') + (dest ? ' → ' + dest : '');
-    text = name + ' est monté' + (stop ? ' à ' + stop : '') + ' vers ' + at + '.' +
-      (to && eta ? '\nArrivée prévue à ' + to + ' vers ' + eta + late + '.' : late ? '\nLe car a' + late.replace(/[()]/g, '') + '.' : '');
-  } else if (a.k === 'arrive') {
-    subject = '🚶 ' + name + ' est descendu' + (line ? ' du ' + line : ' du car') + (stop ? ' à ' + stop : '');
-    text = name + ' est descendu' + (stop ? ' à ' + stop : '') + ' vers ' + at + '. Il n’est plus dans le car.';
-  } else throw new Error('Type de message inconnu');
-  const lk = /^[\w-]{0,64}$/.test(String(a.lk || '')) ? String(a.lk || '') : '';
-  const link = APP_URL + '#proche=' + encodeURIComponent(name) + (lk ? '&code=' + lk : '');
-  const html = '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5">' +
-    '<p style="font-size:17px;margin:0 0 8px"><b>' + subject.replace(/&/g, '&amp;') + '</b></p>' +
-    '<p style="margin:0 0 14px">' + text.replace(/&/g, '&amp;').replace(/\n/g, '<br>') + '</p>' +
-    '<p><a href="' + link + '" style="background:#F6BE00;color:#1A1A1A;padding:10px 16px;border-radius:20px;text-decoration:none;font-weight:bold">📍 Voir sa position en direct</a></p>' +
-    '<p style="color:#888;font-size:12px">Message automatique de Car Jaune Live, envoyé de la part de ' + name + '.</p></div>';
-  MailApp.sendEmail({ to: fam.to.join(','), subject: subject, body: text + '\n\nVoir sa position en direct : ' + link, htmlBody: html, name: 'Car Jaune Live · ' + name });
-  cnt.n += 1; props.setProperty('family_cnt', JSON.stringify(cnt));
-  return 'ok';
 }

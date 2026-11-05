@@ -593,6 +593,13 @@
     box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
   #offBar span{opacity:.85;font-size:11.5px}
   #offBar[hidden]{display:none}
+  #smsSheet{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:2450;width:min(440px, calc(100% - 20px));
+    background:var(--carte,#fff);border-radius:18px;box-shadow:0 6px 24px rgba(0,0,0,.28);padding:12px 14px 14px;animation:popin .25s}
+  #smsSheet[hidden]{display:none}
+  .sms-h{display:flex;align-items:flex-start;gap:8px} .sms-h b{flex:1;font-size:14.5px;color:var(--titre)}
+  .sms-h button{border:0;background:var(--fond);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;flex:none}
+  .sms-prev{margin:8px 0 10px;padding:9px 11px;border-radius:12px 12px 12px 4px;background:var(--fond);font-size:13px;line-height:1.35;color:var(--texte,#333);white-space:pre-wrap;word-break:break-word;max-height:110px;overflow:auto}
+  .sms-go{display:block;text-align:center;text-decoration:none;font-size:15.5px;padding:12px}
   #livePill.off .dot{background:#9AA0A6;animation:none}
   /* barres de réseau (comme le Wi-Fi du téléphone) */
   .sig{position:relative;display:flex;align-items:flex-end;gap:2.5px;height:34px;padding:0 6px 10px;background:none;border:0;cursor:pointer;flex:none}
@@ -686,6 +693,7 @@
     footer{display:none}
     #toast{bottom:calc(68px + env(safe-area-inset-bottom))}
     body.strip-on #toast{bottom:calc(120px + env(safe-area-inset-bottom))}
+    body.sms-on #toast{bottom:auto;top:calc(var(--hdrH, 64px) + 10px)}
     /* bandeau d'alerte : en bas, au-dessus des onglets, sans cacher les boutons de la carte */
     #alStrip{top:auto;bottom:calc(66px + env(safe-area-inset-bottom));left:12px;right:12px;width:auto;max-width:none;transform:none}
     #alStrip.hide{transform:translateY(160%)}
@@ -906,8 +914,8 @@
     <div class="sa-body"><div id="shareSec"></div>
       <div class="set-row col"><div class="set-l"><b>Mon prénom</b><small>tes proches te retrouvent avec lui</small></div><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel"></div>
       <div class="set-row dep-name"><div class="set-l"><b>Automatique dans les cars jaunes</b><small>dès que tu montes, jusqu’à 10 min après ta descente</small></div><label class="switch"><input type="checkbox" id="shAuto" checked><span></span></label></div>
-      <div class="set-row col dep-name"><div class="set-l"><b>📧 Prévenir mes proches par e-mail</b><small id="famTxt">« je suis dans le car » et « je suis descendu », sur iPhone comme sur Android, sans appli à installer</small></div>
-        <div class="tf-key"><input class="set-in" id="famTo" type="email" multiple inputmode="email" autocomplete="off" placeholder="maman@gmail.com, papa@gmail.com"><button class="btn small" id="famSave">OK</button></div></div>
+      <div class="set-row col dep-name"><div class="set-l"><b>📱 Prévenir mes proches par SMS</b><small id="smsTxt">quand tu montes dans un car et quand tu descends, un message tout prêt : tu n’as qu’à appuyer sur Envoyer</small></div>
+        <div class="tf-key"><input class="set-in" id="smsTo" type="tel" inputmode="tel" autocomplete="off" placeholder="0692 12 34 56, 0693 65 43 21"><button class="btn small" id="smsSave">OK</button></div></div>
       <div class="set-row dep-name"><button class="btn set-wide" id="shSend">📤 Envoyer le lien à mes proches</button></div>
       <details class="set-more dep-name"><summary>Plus d’options</summary>
       <div class="set-row"><div class="set-l"><b>Mon code secret</b><small>avec ton prénom, il protège ta position</small></div><div class="set-ctl col"><span class="sh-code" id="shCode">——</span><button class="al-link" id="shNew">↻ nouveau code</button></div></div>
@@ -976,6 +984,8 @@
   <div class="bm-f"><button class="al-link" id="bmClear">Tout effacer</button><button class="al-link" data-open-settings>⚙️ Réglages</button></div>
 </div>
 <div id="toast" hidden></div>
+<div id="smsSheet" hidden role="dialog" aria-labelledby="smsTitle"><div class="sms-h"><b id="smsTitle"></b><button id="smsLater" aria-label="Plus tard">✕</button></div>
+  <div class="sms-prev" id="smsPrev"></div><a class="btn sms-go" id="smsGo" href="#">Envoyer le SMS</a></div>
 <div id="offBar" hidden role="status"><b>📴 Hors ligne</b><span id="offBarTx"></span></div>
 
 <script src="lib/leaflet.js"></script>
@@ -2892,7 +2902,7 @@ setInterval(() => { if (pushCfg.on && alertCfg.on && document.visibilityState ==
 document.addEventListener('visibilitychange', () => { if (pushCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); });
 
 /* ---------- voyant du serveur : est-il à la dernière version ? ---------- */
-const SERVER_WANTED = '2026-11-05.1';                 // version de Code.gs attendue par cette version de l'appli
+const SERVER_WANTED = '2026-11-02.5';                 // version de Code.gs attendue par cette version de l'appli
 const srv = { state:'', version:'', trigger:false, at:0 };
 async function checkServer(){
   if (IN_GAS) return;
@@ -4518,7 +4528,7 @@ try { TF.key = localStorage.getItem('cj_tomtom') || ''; TF.on = localStorage.get
    - horaires de TOUS les arrêts gardés sur le téléphone (mis à jour une fois par jour quand il y a du réseau)
    - signalements et messages aux proches mis de côté, envoyés tout seuls au retour du réseau */
 function saveOutbox(){ try { localStorage.setItem('cj_outbox', JSON.stringify(outbox)); } catch(e){} renderOffBar(); }
-const outboxCount = () => (outbox.mails || []).length + outbox.reps.length + outbox.share.length + outbox.ntfy.length + (outbox.last ? 1 : 0);
+const outboxCount = () => outbox.reps.length + outbox.share.length + outbox.ntfy.length + (outbox.last ? 1 : 0);
 function setNetDown(down){
   if (down === netDown) return;
   netDown = down;
@@ -4592,10 +4602,6 @@ async function flushOutbox(){
   for (const rep of outbox.reps.splice(0)){
     if (Date.now() - (rep.sched || 0) > 2 * 3600e3) continue;          // trop vieux pour servir aux autres
     try { await rawCall('report', JSON.stringify(rep)); } catch(e){ outbox.reps.push(rep); break; }
-  }
-  for (const m of (outbox.mails || []).splice(0)){
-    if (Date.now() - m.at > 3 * 3600e3) continue;
-    try { await rawCall('notifyFamily', JSON.stringify(m)); } catch(e){ outbox.mails.push(m); break; }
   }
   for (const m of outbox.ntfy.splice(0)){
     if (Date.now() - m.at > 6 * 3600e3) continue;
@@ -5187,7 +5193,7 @@ function shareEvent(ev){
   diag('proches', { evenement: ev.k, arret: ev.stop || ev.to || '' });
   if (!sharing()) return;
   ev.at = Date.now();
-  if ((ev.k === 'depart' || ev.k === 'arrive') && !ev.guess) mailFamily(ev);   // e-mail : à chaque montée et descente, systématiquement
+  if ((ev.k === 'depart' || ev.k === 'arrive') && !ev.guess) offerSms(ev);      // SMS tout prêt : à chaque montée et descente
   if (!shareCfg.events) return;
   sendShare(true, { ev });
   // copie lisible pour ceux qui ont l'appli ntfy (prévenus même appli Car Jaune fermée)
@@ -5255,48 +5261,71 @@ function rideTick(){
   } else if (ride.phase === 'wait' && sp > 2 && !(nearStop(250))) ride = { phase:'idle', stop:'', since: now, sent:{}, veh:'', info:null };
 }
 
-/* ----- e-mail aux proches (envoyé par ton serveur Apps Script) ----- */
-const famCount = () => (shareCfg.famTo || '').split(/[\s,;]+/).filter(x => /@/.test(x)).length;
-function mailFamily(ev){
-  if (!shareCfg.famKey || !famCount()) return;
-  const v = onBus && vehicles.find(x => x.id === onBus);
-  const m = { key: shareCfg.famKey, k: ev.k, n: shareCfg.name.trim(), l: ev.l || (v ? v.route.s : ''), d: ev.d || (v ? v.headsign : ''),
-    stop: ev.stop || '', to: ev.to || '', eta: ev.eta || null, at: ev.at || Date.now(), dl: ev.dl, lk: codeKey(shareCfg.code) };
-  rawCall('notifyFamily', JSON.stringify(m)).then(() => { shareCfg.famLast = Date.now(); saveShare(); renderFamily(); })
-    .catch(e => {
-      if (/injoignable|Failed to fetch|Load failed|NetworkError/i.test(errMsg(e)) || navigator.onLine === false){
-        outbox.mails = outbox.mails || []; outbox.mails.push(m); if (outbox.mails.length > 10) outbox.mails.shift(); saveOutbox();
-      } else diag('email-proches', { erreur: errMsg(e).slice(0, 80) });
-    });
+/* ----- SMS aux proches : message tout prêt, une touche pour l'envoyer (Apple n'autorise pas l'envoi sans toucher) ----- */
+const smsNums = () => (shareCfg.smsTo || '').split(/[,;]+/).map(x => x.replace(/[^\d+]/g, '')).filter(x => x.length >= 6);
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function smsHref(nums, body){
+  const b = encodeURIComponent(body);
+  if (IOS) return nums.length > 1 ? `sms:/open?addresses=${nums.join(',')}&body=${b}` : `sms:${nums[0]}&body=${b}`;
+  return `sms:${nums.join(',')}?body=${b}`;
 }
-async function saveFamily(){
-  const raw = $('#famTo').value.trim();
-  const list = raw.split(/[\s,;]+/).filter(Boolean);
-  const bad = list.filter(x => !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(x));
-  if (bad.length){ toast('Adresse e-mail invalide : ' + bad[0]); return; }
-  if (list.length > 5){ toast('5 adresses au maximum.'); return; }
-  if (!shareCfg.name.trim()){ toast('Écris d’abord ton prénom.'); $('#shName').focus(); return; }
-  $('#famTxt').textContent = 'Enregistrement…';
-  try {
-    const r = JSON.parse(await rawCall('setFamily', JSON.stringify({ key: shareCfg.famKey || '', to: list.join(',') })));
-    shareCfg.famKey = r.key; shareCfg.famTo = r.to.join(', '); saveShare();
-    if (!shareCfg.auto){ shareCfg.auto = true; saveShare(); autoWatchStart(); }
-    toast(r.to.length ? `📧 ${r.to.length > 1 ? 'Tes proches seront prévenus' : 'Ton proche sera prévenu'} par e-mail à chaque montée et descente.` : '📧 E-mails aux proches désactivés.');
-  } catch(e){
-    toast(/Action inconnue/.test(errMsg(e)) ? '⚠️ Mets d’abord à jour le serveur (nouveau Code.gs).' : 'E-mails : ' + errMsg(e).slice(0, 90));
-  }
-  renderFamily();
+function smsText(ev){
+  const late = ev.dl != null && Math.abs(ev.dl) >= 60 ? ` (${ev.dl > 0 ? 'retard' : 'avance'} ${Math.round(Math.abs(ev.dl) / 60)} min)` : '';
+  const link = shareCfg.code ? `\nMa position en direct : ${shareLink()}` : '';
+  if (ev.k === 'depart')
+    return `🚌 Je suis dans le car${ev.l ? ' ' + ev.l : ''}${ev.d ? ' → ' + ev.d : ''}, monté${ev.stop ? ' à ' + ev.stop : ''} à ${fmtHM(ev.at)}.`
+      + (ev.to && ev.eta ? ` Arrivée prévue à ${ev.to} vers ${fmtHM(ev.eta)}${late}.` : late ? ` Le car a${late.replace(/[()]/g, '')}.` : '') + link;
+  return `🚶 Je suis descendu${ev.l ? ' du ' + ev.l : ' du car'}${ev.stop ? ' à ' + ev.stop : ''} à ${fmtHM(ev.at)}. Je ne suis plus dans le car.`;
 }
-function renderFamily(){
-  if (!$('#famTxt')) return;
-  if (document.activeElement !== $('#famTo')) $('#famTo').value = shareCfg.famTo || '';
-  const n = famCount();
-  $('#famTxt').textContent = n && shareCfg.famKey
-    ? `✅ ${n} adresse${n > 1 ? 's' : ''} : e-mail à chaque fois que tu montes dans un car et quand tu descends${shareCfg.famLast ? ' · dernier envoi ' + dayLabel(shareCfg.famLast) + ' à ' + fmtHM(shareCfg.famLast) : ''}`
-    : '« je suis dans le car » et « je suis descendu », sur iPhone comme sur Android, sans appli à installer';
+let smsPending = null;   // { ev, until }
+function offerSms(ev){
+  if (!smsNums().length) return;
+  smsPending = { ev, until: Date.now() + 15 * 60e3 };
+  renderSmsSheet();
+  if (document.visibilityState !== 'visible' && (LNOTIF ? lnPerm === 'granted' : ('Notification' in window && Notification.permission === 'granted')))
+    showPhoneNotif(ev.k === 'depart' ? '📱 Tu es dans le car' : '📱 Tu es descendu', 'Ouvre Car Jaune Live pour prévenir tes proches par SMS (1 touche).');
 }
-$('#famSave').addEventListener('click', saveFamily);
-$('#famTo').addEventListener('keydown', e => { if (e.key === 'Enter') saveFamily(); });
+function renderSmsSheet(){
+  const el = $('#smsSheet'); if (!el) return;
+  const on = !!(smsPending && Date.now() <= smsPending.until && smsNums().length);
+  document.body.classList.toggle('sms-on', on);
+  if (!on){ el.hidden = true; smsPending = smsPending && Date.now() <= smsPending.until ? smsPending : null; return; }
+  const txt = smsText(smsPending.ev), n = smsNums().length;
+  $('#smsTitle').textContent = smsPending.ev.k === 'depart' ? '📱 Prévenir tes proches que tu es dans le car' : '📱 Prévenir tes proches que tu es descendu';
+  $('#smsPrev').textContent = txt;
+  $('#smsGo').href = smsHref(smsNums(), txt);
+  $('#smsGo').textContent = `Envoyer le SMS${n > 1 ? ' à ' + n + ' proches' : ''}`;
+  el.hidden = false;
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') renderSmsSheet(); });
+setInterval(renderSmsSheet, 60e3);
+function closeSms(sent){
+  if (sent){ shareCfg.smsLast = Date.now(); saveShare(); renderSms(); }
+  smsPending = null; renderSmsSheet();
+}
+$('#smsGo').addEventListener('click', () => setTimeout(() => closeSms(true), 500));
+$('#smsLater').addEventListener('click', () => closeSms(false));
+function saveSms(){
+  const list = $('#smsTo').value.split(/[,;]+/).map(x => x.trim()).filter(Boolean);
+  const bad = list.filter(x => x.replace(/[^\d+]/g, '').length < 6);
+  if (bad.length){ toast('Numéro invalide : ' + bad[0]); return; }
+  if (list.length > 5){ toast('5 numéros au maximum.'); return; }
+  if (list.length && !shareCfg.name.trim()){ toast('Écris d’abord ton prénom.'); $('#shName').focus(); return; }
+  shareCfg.smsTo = list.join(', ');
+  if (list.length && !shareCfg.auto){ shareCfg.auto = true; autoWatchStart(); }
+  saveShare(); renderSms(); renderShareUI();
+  toast(list.length ? `📱 Dès que tu montes dans un car, le SMS sera prêt : une touche pour l’envoyer.` : '📱 SMS aux proches désactivés.');
+}
+function renderSms(){
+  if (!$('#smsTxt')) return;
+  if (document.activeElement !== $('#smsTo')) $('#smsTo').value = shareCfg.smsTo || '';
+  const n = smsNums().length;
+  $('#smsTxt').textContent = n
+    ? `✅ ${n} numéro${n > 1 ? 's' : ''} : à chaque montée et descente, le SMS est prêt, tu appuies sur Envoyer${shareCfg.smsLast ? ' · dernier envoi ' + dayLabel(shareCfg.smsLast) + ' à ' + fmtHM(shareCfg.smsLast) : ''}`
+    : 'quand tu montes dans un car et quand tu descends, un message tout prêt : tu n’as qu’à appuyer sur Envoyer';
+}
+$('#smsSave').addEventListener('click', saveSms);
+$('#smsTo').addEventListener('keydown', e => { if (e.key === 'Enter') saveSms(); });
 
 function shareLink(){ return SHARE_BASE + '#proche=' + encodeURIComponent(shareCfg.name.trim()) + '&code=' + codeKey(shareCfg.code); }
 async function sendShareLink(){
@@ -5318,7 +5347,7 @@ function renderShareUI(){
   $('#shCode').textContent = fmtCode(shareCfg.code);
   $('#shEvents').checked = shareCfg.events !== false;
   $('#shAuto').checked = shareCfg.auto !== false;
-  renderFamily();
+  renderSms();
   $('#shStatus').textContent = autoActive && !shareCfg.on ? `🚌 Partage automatique en cours (dans le car)${shareLast.t ? ' · envoyé à ' + fmtHM(shareLast.t) : ''}`
     : !shareCfg.on ? (shareCfg.auto && shareCfg.name.trim() ? '🟡 Partage auto en veille : il démarre tout seul quand tu montes dans un car jaune.' : 'même hors des cars, tant que l’appli est ouverte')
     : shareErr ? '⚠️ Partage actif, mais ' + shareErr + '.'
