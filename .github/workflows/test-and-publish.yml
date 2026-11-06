@@ -52,6 +52,7 @@ jobs:
           node tests/trafic-alertes.mjs
           node tests/voyageurs.mjs
           node tests/messages.mjs
+          node tests/lisible.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site

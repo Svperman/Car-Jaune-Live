@@ -627,6 +627,14 @@
     box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
   #offBar span{opacity:.85;font-size:11.5px}
   #offBar[hidden]{display:none}
+  #focusBar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 64px);z-index:1150;display:flex;align-items:center;gap:5px;
+    background:var(--carte,#fff);border-radius:20px;padding:5px 6px 5px 12px;box-shadow:0 2px 8px rgba(0,0,0,.22);font:700 12.5px 'Nunito Sans',sans-serif;color:var(--titre);max-width:calc(100% - 130px);white-space:nowrap;overflow:hidden}
+  #focusBar[hidden]{display:none}
+  #focusBar .badge{transform:scale(.9)}
+  #focusBar button{border:0;background:var(--fond);border-radius:14px;padding:5px 10px;font:700 12px 'Nunito Sans',sans-serif;cursor:pointer;color:var(--titre);flex:none}
+  body:has(#offBar:not([hidden])) #focusBar{top:calc(env(safe-area-inset-top,0px) + 112px)}
+  .bus-mk.dim{opacity:.38;transform:scale(.78);filter:saturate(.4)}
+  .bus-mk.dim .dly{display:none}
   .where{font-size:12.5px;font-weight:700;color:var(--titre);margin:1px 0 2px}
   .leaflet-popup .where{margin:-2px 0 6px}
   /* réglages simplifiés pour les utilisateurs ; tout reste visible en mode créateur */
@@ -1055,6 +1063,7 @@
   <small class="muted" id="msgNote"></small></div>
 <div id="smsSheet" hidden role="dialog" aria-labelledby="smsTitle"><div class="sms-h"><b id="smsTitle"></b><button id="smsLater" aria-label="Plus tard">✕</button></div>
   <div class="sms-prev" id="smsPrev"></div><div class="sms-list" id="smsList"></div></div>
+<div id="focusBar" hidden></div>
 <div id="offBar" hidden role="status"><b>📴 Hors ligne</b><span id="offBarTx"></span></div>
 
 <script src="lib/leaflet.js"></script>
@@ -1514,6 +1523,7 @@ function setView(v, silent){
     else if (v === 'map' && history.state && history.state.cj === 'view') backDrop('view');
   }
   view = v;
+  if (typeof renderFocusBar === 'function') try { renderFocusBar(); } catch(e){}
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.view === v));
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + v));
   $('#crumbCur').textContent = VIEW_NAMES[v];
@@ -4158,7 +4168,8 @@ function iconFor(v){
   const arrow = `<div class="arrow" style="transform:rotate(${Math.round((v.bearing || 0) + mapBearing())}deg);${has ? '' : 'display:none'}"></div>`;
   const pk = punctOf(v.delay), dm = Math.abs(Math.round((v.delay || 0) / 60));
   const dly = pk === 'late' ? `<div class="dly late">+${dm}′</div>` : pk === 'early' ? `<div class="dly early">−${dm}′</div>` : '';
-  const html = `<div class="bus-mk${stale ? ' stale' : ''}${typeof onBus !== 'undefined' && onBus === v.id ? ' mine' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div>${dly}</div>`;
+  const F = typeof focusSet === 'function' ? focusSet() : null;
+  const html = `<div class="bus-mk${stale ? ' stale' : ''}${typeof onBus !== 'undefined' && onBus === v.id ? ' mine' : ''}${F && !F.has(v.routeId) ? ' dim' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div>${dly}</div>`;
   // la clé ignore l'orientation de la flèche (mise à jour en continu par l'animation)
   return { key: html.replace(/rotate\([^)]*\)/, ''), icon: L.divIcon({ className:'', html, iconSize:[0,0] }) };
 }
@@ -4315,6 +4326,7 @@ function animateTo(m, to){
 
 function render(){
   if (mode === 'sleep'){ renderSleep(); return; }
+  try { drawShapes(); } catch(e){}                         // mes lignes ont pu changer (trajet, car, proche)
   const vis = vehicles.filter(isVisible);
   setPanel(panelOpen);
   $('#count').textContent = vehicles.length;
@@ -4328,6 +4340,7 @@ function render(){
     let m = markers.get(v.id);
     if (!m){
       m = L.marker([v.lat, v.lon], { icon }).addTo(map);
+      m._veh = v;
       m._key = key;
       markers.set(v.id, m);
     } else {
@@ -4398,18 +4411,67 @@ function buildChips(){
       <span class="dot" style="background:#${esc(S.routes[id].c)}"></span>${esc(S.routes[id].s)}</button>`).join('');
 }
 
-function drawShapes(){
+/* ---------- carte lisible : « Mes lignes » ----------
+   Mes lignes = celles de mon trajet + le car où je suis + les cars de mes proches + celles choisies dans la liste
+   + le car dont la bulle est ouverte. En mode « Mes lignes », elles sont en couleur et les autres en gris discret. */
+let focusMode = 'mine';
+try { focusMode = localStorage.getItem('cj_focus') || 'mine'; } catch(e){}
+let popupRid = '', shapesKey = '';
+function myRids(){
+  const ids = new Set();
+  selected.forEach(r => ids.add(r));
+  try { tripLinesFor().forEach(z => z.rid && ids.add(z.rid)); } catch(e){}
+  const add = id => { const v = id && vehicles.find(x => x.id === id); if (v && v.routeId) ids.add(v.routeId); };
+  add(typeof onBus !== 'undefined' ? onBus : null);
+  try { friends.forEach(f => { const r = riding(f.last); if (r && r.v) ids.add(r.v.routeId); }); } catch(e){}
+  if (popupRid) ids.add(popupRid);
+  return ids;
+}
+function focusSet(){ const ids = myRids(); return focusMode === 'mine' && ids.size ? ids : null; }
+function drawShapes(force){
+  const F = focusSet(), z = map.getZoom();
+  const key = [$('#showShapes').checked, F ? [...F].sort().join(',') : '*', z >= 13, [...selected].join(',')].join('|');
+  if (!force && key === shapesKey) return;
+  shapesKey = key;
   shapeLayer.clearLayers();
   if (!$('#showShapes').checked) return;
+  const others = [], mine = [];
   Object.keys(S.shapes || {}).forEach(rid => {
-    if (selected.size && !selected.has(rid)) return;
+    if (selected.size && !selected.has(rid) && !(F && F.has(rid))) return;
+    (F && !F.has(rid) ? others : mine).push(rid);
+  });
+  others.forEach(rid => S.shapes[rid].forEach(line =>
+    L.polyline(line, { color:'#8A94A0', weight: z >= 13 ? 2.5 : 1.5, opacity:.4, interactive:false }).addTo(shapeLayer)));
+  mine.forEach(rid => {
     const col = '#' + ((S.routes[rid] && S.routes[rid].c) || 'F6BE00');
     S.shapes[rid].forEach(line => {
-      L.polyline(line, { color:'#222', weight:8, opacity:.35, interactive:false }).addTo(shapeLayer);
-      L.polyline(line, { color:col, weight:5, opacity:.95, interactive:false }).addTo(shapeLayer);
+      if (F){                                                     // mes lignes : bien visibles
+        L.polyline(line, { color:'#222', weight:8, opacity:.35, interactive:false }).addTo(shapeLayer);
+        L.polyline(line, { color:col, weight:5, opacity:.95, interactive:false }).addTo(shapeLayer);
+      } else L.polyline(line, { color:col, weight: z >= 13 ? 4 : 2.5, opacity: z >= 13 ? .85 : .6, interactive:false }).addTo(shapeLayer);
     });
   });
+  renderFocusBar();
 }
+map.on('zoomend', () => drawShapes());
+/** Bouton en haut de la carte : « Mes lignes » / « Toutes les lignes ». */
+function renderFocusBar(){
+  const el = $('#focusBar'); if (!el) return;
+  const ids = myRids();
+  if (!ids.size || view !== 'map'){ el.hidden = true; return; }
+  const names = [...ids].map(r => S.routes[r]).filter(Boolean);
+  el.hidden = false;
+  el.innerHTML = focusMode === 'mine'
+    ? `<span>🎯 Mes lignes</span>${names.slice(0, 4).map(r => badge(r)).join('')}${names.length > 4 ? '…' : ''}<button data-focus="all">Tout voir</button>`
+    : `<span>🗺️ Toutes les lignes</span><button data-focus="mine">🎯 Mes lignes</button>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-focus]'); if (!b) return;
+  focusMode = b.dataset.focus; try { localStorage.setItem('cj_focus', focusMode); } catch(err){}
+  drawShapes(true); render();
+});
+map.on('popupopen', e => { const v = e.popup._source && e.popup._source._veh; if (v && v.routeId !== popupRid){ popupRid = v.routeId; drawShapes(); render(); } });
+map.on('popupclose', () => { if (popupRid){ popupRid = ''; drawShapes(); render(); } });
 
 function focusVehicle(id){
   const m = markers.get(id);
@@ -5128,7 +5190,7 @@ function tripLinesFor(){
   if (A && B && isFinite(A.lat) && isFinite(B.lat)) Object.keys(S.routes).forEach(rid => routeLines(rid).forEach(line => {
     const pa = projectOn(line, A.lat, A.lon), pb = projectOn(line, B.lat, B.lon);
     if (pa.d < 350 && pb.d < 350 && Math.abs(pa.s - pb.s) > 300)
-      out.push({ line, from: Math.min(pa.s, pb.s) - 200, to: Math.max(pa.s, pb.s) + 200, route: S.routes[rid], why: 'trip' });
+      out.push({ line, from: Math.min(pa.s, pb.s) - 200, to: Math.max(pa.s, pb.s) + 200, route: S.routes[rid], rid, why: 'trip' });
   }));
   return (tfTripCache = { key, lines: out }).lines;
 }
