@@ -20,18 +20,24 @@ const r = await pg.evaluate(`(() => {
   const n0 = notify; notify = (t, b, k, o) => { if (/Tu es dans le/.test(t)) notes.push(t); };
   const base = vehicles[0];
   const mk = (id, s, bearing) => Object.assign({}, base, { id, route: { s, c:'F6BE00', t:'222222', l:'' }, headsign: s === 'T' ? 'St-Pierre' : 'St-Denis', bearing, times: null, est: null });
-  // route du Littoral vers l'ouest : on avance de 25 m/s (90 km/h)
-  const lat0 = -20.8753, lon0 = 55.4354, mPerDegLon = 104000;
+  // départ de la Gare de St-Denis (arrêt du faux serveur), puis route vers l'ouest à 25 m/s (90 km/h)
+  const lat0 = -20.879, lon0 = 55.448, mPerDegLon = 104000;
   const at = sec => [lat0 - sec * 2 / 111000, lon0 - sec * 25 / mPerDegLon];
   const busT = mk('T1', 'T', 265), busO = mk('O2', 'O2', 85);
   onBus = null; busCand = null; ride = { phase:'idle', stop:'', since:0, sent:{}, veh:'', info:null };
   const log = [];
+  // 60 s d'attente à l'arrêt, le T arrive et s'arrête
+  for (let s = -60; s < 0; s++){
+    T += 1000; myPos = { lat: lat0, lon: lon0, acc: 8, speed: 0 }; myFixAt = T;
+    if (s % 20 === 0 || s === -60){ Object.assign(busT, { lat: lat0 + 0.0002, lon: lon0 + (s + 60 < 40 ? 0.004 : 0.0002), age: 10e3 }); vehicles = [busT, busO]; }
+    autoCheck(); detectMyBus(); rideTick();
+  }
   for (let s = 0; s <= 900; s++){
     T += 1000;
     // phase 1 (0-600 s) : dans le T, à 90 km/h ; phase 2 : descendu, je marche (1,2 m/s) pendant que le T repart
     const inBus = s < 600;
     const me = inBus ? at(s) : (() => { const p = at(600); return [p[0] + (s - 600) * 1.2 / 111000, p[1]]; })();
-    myPos = { lat: me[0], lon: me[1], acc: 8, speed: inBus ? 25 : 1.2 };
+    myPos = { lat: me[0], lon: me[1], acc: 8, speed: inBus ? 25 : 1.2 }; myFixAt = T;
     // le flux : position du T mise à jour toutes les 20 s (donc jusqu'à 20 s de retard = 500 m)
     if (s % 20 === 0){
       const ts = Math.floor(s / 20) * 20, p = at(ts + (s >= 600 ? (s - 600) * 0 + 0 : 0));
@@ -45,12 +51,27 @@ const r = await pg.evaluate(`(() => {
     autoCheck(); detectMyBus(); rideTick();
     log.push(onBus || '-');
   }
-  Date.now = realNow; notify = n0;
   const switches = log.filter((x, i) => i && x !== log[i - 1]).length;
-  return { evs, notes, switches, inT: log.slice(5, 600).filter(x => x === 'T1').length, after: log[log.length - 1], wrong: log.filter(x => x === 'O2').length };
+  const res = { evs, notes, switches, inT: log.slice(35, 600).filter(x => x === 'T1').length, after: log[log.length - 1], wrong: log.filter(x => x === 'O2').length, firstIn: log.indexOf('T1') };
+
+  // ----- 2e cas : la sœur en VOITURE derrière un S4 (jamais arrêtée à un arrêt) pendant 5 min -----
+  onBus = null; busCand = null; lastWait = null; ride = { phase:'idle', stop:'', since:0, sent:{}, veh:'', info:null };
+  const bus4 = mk('S4', 'S4', 265); bus4.route.s = 'S4'; let carIn = 0; const n2 = notes.length;
+  for (let s = 0; s <= 300; s++){
+    T += 1000;
+    const me = at(1000 + s); myPos = { lat: me[0], lon: me[1], acc: 8, speed: 24 }; myFixAt = T;
+    if (s % 20 === 0){ const bp = at(1000 + s + 3); Object.assign(bus4, { lat: bp[0], lon: bp[1], age: 15e3 }); vehicles = [bus4]; }
+    autoCheck(); detectMyBus(); rideTick();
+    if (onBus) carIn++;
+  }
+  res.carIn = carIn; res.carNotes = notes.length - n2;
+  Date.now = realNow; notify = n0;
+  return res;
 })()`);
 console.log('    ', JSON.stringify(r));
-await t('dans le T pendant tout le trajet (positions en retard de 20 s)', async () => r.inT >= 590 || `seulement ${r.inT}/595 s`);
+await t('attente à l’arrêt puis départ avec le T : reconnu en moins de 35 s', async () => (r.firstIn >= 0 && r.firstIn <= 35) || 'reconnu à ' + r.firstIn + ' s');
+await t('dans le T pendant tout le trajet (positions en retard de 20 s)', async () => r.inT >= 560 || `seulement ${r.inT}/565 s`);
+await t('en voiture derrière un S4 pendant 5 min : jamais « dans le S4 »', async () => (r.carIn === 0 && r.carNotes === 0) || `${r.carIn} s « dans le S4 », ${r.carNotes} annonce(s)`);
 await t('jamais « dans le O2 » qui roule en sens inverse', async () => r.wrong === 0 || `${r.wrong} s dans le O2`);
 await t('une seule annonce « Tu es dans le T »', async () => r.notes.length === 1 || JSON.stringify(r.notes));
 await t('un seul départ et une seule descente pour les proches (sans inventer l’arrêt)', async () => (!r.evs.includes('arrive@St-Pierre') && r.evs.filter(e => e.startsWith('depart')).length === 1 && r.evs.filter(e => e.startsWith('arrive')).length === 1) || JSON.stringify(r.evs));

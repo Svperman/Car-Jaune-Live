@@ -2652,7 +2652,7 @@ function onLiveFix(p){
    - un car qui roule dans l'autre sens (croisé sur la route du Littoral) n'est jamais retenu
    - une fois dans un car, on y reste : changer de car demande 30 s de preuves, descendre demande 90 s sans lui
    - les positions GPS imprécises (> 200 m) sont ignorées */
-let busLastOk = 0, myHead = null, headFrom = null;
+let busLastOk = 0, myHead = null, headFrom = null, lastWait = null;
 function busTol(v, sp){
   const lag = Math.min(90, Math.max(15, (v.age != null ? v.age : 20e3) / 1000 + 10));   // secondes de retard de la position
   return 120 + Math.max(sp, 8) * lag + Math.min(myPos.acc || 0, 100);
@@ -2697,11 +2697,20 @@ function detectMyBus(){
     if (now - busLastOk > 90e3 && (sp < 2.5 || !cur || (fresh && dCur > 600))){ onBus = null; busCand = null; render(); }
     return renderRide();
   }
+  // Montée : rouler à côté d'un car ne suffit pas (une voiture derrière un car sur la RN, c'est pareil).
+  // Il faut soit avoir ATTENDU à un arrêt juste avant et être reparti avec un car passé par là (25 s de preuves),
+  // soit rester collé au même car pendant 6 minutes.
+  if (sp < 1.5){ const g = nearbyStops(myPos.lat, myPos.lon, 1)[0]; if (g && g.d < 90) lastWait = { lat: myPos.lat, lon: myPos.lon, t: now, stop: g.g.name }; }
   if (best){
-    if (busCand && busCand.id === best.v.id && ++busCand.n >= 2){
+    if (!busCand || busCand.id !== best.v.id){
+      const w = lastWait && now - lastWait.t < 4 * 60e3 ? distM(lastWait.lat, lastWait.lon, best.v.lat, best.v.lon) : Infinity;
+      busCand = { id: best.v.id, n: 1, since: now, lastOk: now, fromWait: w < busTol(best.v, 8) + 150 };
+    } else { busCand.n++; busCand.lastOk = now; }
+    const dur = now - busCand.since;
+    if ((busCand.fromWait && busCand.n >= 3 && dur >= 25e3) || (busCand.n >= 8 && dur >= 6 * 60e3)){
       onBus = best.v.id; busCand = null; busLastOk = now; announceBus(best.v); render();
-    } else if (!busCand || busCand.id !== best.v.id) busCand = { id: best.v.id, n: 1, since: now };
-  }
+    }
+  } else if (busCand && now - busCand.lastOk > 25e3) busCand = null;            // plus de car à côté : on oublie
   renderRide();
 }
 /** Heure d'arrivée affichée seulement si elle est plausible (le flux rattache parfois un car à une course d'une autre heure). */
