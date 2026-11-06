@@ -32,6 +32,30 @@ await t('« Mes lignes » de nouveau, et retenu', async () => {
   await p.click('#focusBar [data-focus="mine"]'); await p.waitForTimeout(200);
   return (await p.evaluate("localStorage.getItem('cj_focus')")) === 'mine' || 'non retenu';
 });
+// aller / retour : les cars de ma ligne qui vont vers ma destination ressortent, les autres pâlissent
+await t('aller (vers St-Benoît) : le E1 qui y va porte « → St-Benoît », celui d’en face est pâle', async () => {
+  const r = await p.evaluate(`(() => {
+    const base = vehicles[0];
+    window.__k = vehicles;
+    vehicles = [Object.assign({}, base, { id:'go', lat:-20.889, lon:55.489, bearing:105, routeId:'2', route:S.routes['2'], delay:0 }),
+                Object.assign({}, base, { id:'back', lat:-20.891, lon:55.495, bearing:285, routeId:'2', route:S.routes['2'], delay:0 })];
+    trip.a = 'Gare de St-Denis'; trip.b = 'Gare de St-Benoît'; trip.mode = 'aller'; tfTripCache = { key:'', lines:[] };
+    map.setView([-20.89, 55.49], 13, { animate:false }); render();
+    const go = markers.get('go').getElement().querySelector('.bus-mk'), back = markers.get('back').getElement().querySelector('.bus-mk');
+    return [go.innerText.replace(/\s+/g, ' '), go.classList.contains('dim'), back.classList.contains('dim'), !!back.querySelector('.dst')];
+  })()`);
+  return (/→ St-Benoît/.test(r[0]) && !r[1] && r[2] && !r[3]) || JSON.stringify(r);
+});
+await t('retour (vers St-Denis) : ça s’inverse tout seul', async () => {
+  const r = await p.evaluate(`(() => {
+    trip.mode = 'retour'; render();
+    const go = markers.get('go').getElement().querySelector('.bus-mk'), back = markers.get('back').getElement().querySelector('.bus-mk');
+    const out = [go.classList.contains('dim'), back.classList.contains('dim'), (back.querySelector('.dst') || {}).innerText];
+    trip.mode = 'auto'; vehicles = window.__k; return out;
+  })()`);
+  return (r[0] && !r[1] && /→ St-Denis/.test(r[2])) || JSON.stringify(r);
+});
+
 // 60 cars sur l'île : aucune étiquette ne doit en chevaucher une autre
 await p.evaluate(`(() => {
   const base = vehicles[0], rts = [['E1','F6BE00','222222'],['O1','0072BC','FFFFFF'],['S4','7AB800','FFFFFF'],['ZO','9B59B6','FFFFFF'],['ZEN','E91E63','FFFFFF']];

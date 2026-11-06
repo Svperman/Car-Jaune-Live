@@ -635,6 +635,9 @@
   body:has(#offBar:not([hidden])) #focusBar{top:calc(env(safe-area-inset-top,0px) + 112px)}
   .bus-mk.dim{opacity:.38;transform:scale(.78);filter:saturate(.4)}
   .zlow .bus-mk .arrow{display:none}
+  .bus-mk .dst{position:absolute;left:50%;top:15px;transform:translateX(-50%);white-space:nowrap;font:800 10.5px/1 'Nunito Sans',sans-serif;
+    background:#1E2228;color:#fff;border-radius:6px;padding:2px 5px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .bus-mk .dst.low{top:29px}
   .bus-mk.dot .d{position:absolute;left:0;top:0;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;border:2px solid #222;box-shadow:0 1px 3px rgba(0,0,0,.35)}
   .bus-mk.dot .d.late{border-color:var(--retard);box-shadow:0 0 0 2px rgba(220,38,38,.35)}
   .bus-mk.dot.stale .d{opacity:.5}
@@ -4171,7 +4174,7 @@ function iconFor(v){
   if (busDots.has(v.id)){                                    // étiquette qui chevaucherait : simple point de la couleur de la ligne
     const pk0 = punctOf(v.delay), late = pk0 === 'late' && Math.abs(v.delay || 0) >= 300;
     const F0 = typeof focusSet === 'function' ? focusSet() : null;
-    const html = `<div class="bus-mk dot${stale ? ' stale' : ''}${F0 && !F0.has(v.routeId) ? ' dim' : ''}"><div class="d${late ? ' late' : ''}" style="background:#${esc(v.route.c)}"></div></div>`;
+    const html = `<div class="bus-mk dot${stale ? ' stale' : ''}${(F0 && !F0.has(v.routeId)) || SENS.get(v.id) === 'other' ? ' dim' : ''}"><div class="d${late ? ' late' : ''}" style="background:#${esc(v.route.c)}"></div></div>`;
     return { key: html, icon: L.divIcon({ className:'', html, iconSize:[0, 0] }) };
   }
   const has = v.bearing != null && v.bearing !== 0;
@@ -4181,7 +4184,8 @@ function iconFor(v){
   const showD = dm >= 5 || map.getZoom() >= 13;
   const dly = !showD ? '' : pk === 'late' ? `<div class="dly late">+${dm}′</div>` : pk === 'early' ? `<div class="dly early">−${dm}′</div>` : '';
   const F = typeof focusSet === 'function' ? focusSet() : null;
-  const html = `<div class="bus-mk${stale ? ' stale' : ''}${typeof onBus !== 'undefined' && onBus === v.id ? ' mine' : ''}${F && !F.has(v.routeId) ? ' dim' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div>${dly}</div>`;
+  const sv = SENS.get(v.id), tag = sv === 'mine' && map.getZoom() >= 11 && sensDest ? `<div class="dst${dly ? ' low' : ''}">→ ${esc(sensDest)}</div>` : '';
+  const html = `<div class="bus-mk${stale ? ' stale' : ''}${typeof onBus !== 'undefined' && onBus === v.id ? ' mine' : ''}${(F && !F.has(v.routeId)) || sv === 'other' ? ' dim' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div>${dly}${tag}</div>`;
   // la clé ignore l'orientation de la flèche (mise à jour en continu par l'animation)
   return { key: html.replace(/rotate\([^)]*\)/, ''), icon: L.divIcon({ className:'', html, iconSize:[0,0] }) };
 }
@@ -4340,16 +4344,46 @@ function animateTo(m, to){
    Les cars sont placés par ordre d'importance (le mien, mes lignes, les plus en retard, puis les autres).
    Une étiquette qui toucherait une étiquette déjà placée devient un simple point coloré : on lit tout,
    et en zoomant les points redeviennent des étiquettes. */
-var busDots = new Set();
+var busDots = new Set(), SENS = new Map(), sensDest = '';
+/** Pour chaque car de mes lignes de trajet : 'mine' s'il roule vers ma destination du moment, 'other' sinon. */
+function computeSens(vis){
+  const out = new Map(); sensDest = '';
+  if (!tripReady()) return out;
+  const zones = tripLinesFor(); if (!zones.length) return out;
+  const d = detectSens(), O = d.sens === 'aller' ? d.A : d.B, Dst = d.sens === 'aller' ? d.B : d.A;
+  if (!O || !Dst || !isFinite(O.lat) || !isFinite(Dst.lat)) return out;
+  sensDest = String(Dst.name).replace(/^Gare (routière )?de /i, '').replace(/^Saint-/, 'St-');
+  const rids = new Set(zones.map(z => z.rid));
+  vis.forEach(v => {
+    if (!rids.has(v.routeId)) return;
+    let best = null;
+    zones.forEach(Z => { if (Z.rid !== v.routeId) return; const pr = projectOn(Z.line, v.lat, v.lon); if (!best || pr.d < best.pr.d) best = { Z, pr }; });
+    if (!best || best.pr.d > 400) return;
+    const Z = best.Z;
+    Z.po = Z.po || {}; const k = O.name + '>' + Dst.name;
+    if (!Z.po[k]) Z.po[k] = [projectOn(Z.line, O.lat, O.lon).s, projectOn(Z.line, Dst.lat, Dst.lon).s];
+    const [so, sd] = Z.po[k], sign = sd >= so ? 1 : -1;
+    const lineCap = (pointAt(Z.line, best.pr.s)[2] + (sign < 0 ? 180 : 0)) % 360;   // sens « vers ma destination » à cet endroit
+    let cap = v.bearing != null && v.bearing !== 0 ? v.bearing : null;
+    const st = motion[v.id];
+    if (cap == null && st && st.line && st.speed > 0) cap = (pointAt(st.line, st.s0)[2] + (st.dir < 0 ? 180 : 0)) % 360;
+    if (cap == null) return;                                        // sens inconnu : on ne juge pas
+    const toward = angleGap(cap, lineCap) < 90;
+    const past = (best.pr.s - sd) * sign > 250;                    // déjà passé ma destination : il s'en éloigne
+    out.set(v.id, toward && !past ? 'mine' : 'other');
+  });
+  return out;
+}
 function declutter(vis){
   const dots = new Set(), boxes = [], F = typeof focusSet === 'function' ? focusSet() : null, z = map.getZoom();
-  const prio = v => (v.id === onBus ? 0 : F && F.has(v.routeId) ? 1 : 2);
+  const prio = v => (v.id === onBus ? 0 : SENS.get(v.id) === 'mine' ? 1 : SENS.get(v.id) === 'other' ? 3 : F && F.has(v.routeId) ? 1 : 2);
   vis.slice().sort((a, b) => prio(a) - prio(b) || Math.abs(b.delay || 0) - Math.abs(a.delay || 0) || String(a.id).localeCompare(String(b.id)))
     .forEach(v => {
       const m = markers.get(v.id), ll = m ? m.getLatLng() : L.latLng(v.lat, v.lon);
       const pt = map.latLngToContainerPoint(ll);
       const dm = Math.abs(Math.round((v.delay || 0) / 60)), withD = punctOf(v.delay) !== 'ok' && (dm >= 5 || z >= 13);
-      const w = 9 * String(v.route.s).length + 24, h = withD ? 40 : 28;
+      const tag = SENS.get(v.id) === 'mine' && z >= 11 && sensDest;
+      const w = Math.max(9 * String(v.route.s).length + 24, tag ? 7 * (sensDest.length + 2) + 12 : 0), h = 28 + (withD ? 12 : 0) + (tag ? 16 : 0);
       const box = [pt.x - w / 2 - 2, pt.y - 15, pt.x + w / 2 + 2, pt.y - 15 + h];
       if (prio(v) > 0 && boxes.some(b => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) dots.add(v.id);
       else boxes.push(box);
@@ -4362,6 +4396,7 @@ map.getContainer().classList.toggle('zlow', map.getZoom() < 12);
 function render(){
   if (mode === 'sleep'){ renderSleep(); return; }
   try { drawShapes(); } catch(e){}                         // mes lignes ont pu changer (trajet, car, proche)
+  try { SENS = computeSens(vehicles.filter(isVisible)); } catch(e){ SENS = new Map(); }
   try { busDots = declutter(vehicles.filter(isVisible)); } catch(e){ busDots = new Set(); }
   const vis = vehicles.filter(isVisible);
   setPanel(panelOpen);
