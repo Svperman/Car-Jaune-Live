@@ -21,8 +21,8 @@ await t('avec mon trajet : E1 en couleur, les autres lignes en gris, bandeau « 
   return (l.some(x => x.startsWith('#F6BE00/5')) && l.some(x => x.startsWith('#8A94A0')) && /Mes lignes/.test(bar) && /E1/.test(bar)) || JSON.stringify([l, bar]);
 });
 await t('car d’une autre ligne : affiché discret', async () => {
-  const r = await p.evaluate(`(() => { const v = Object.assign({}, vehicles[0], { id:'autre', routeId:'9', route: S.routes['9'] }); vehicles.push(v); render(); const d = document.querySelectorAll('.bus-mk.dim').length; vehicles.pop(); render(); return d; })()`);
-  return r === 1 || r + ' car(s) discret(s)';
+  const r = await p.evaluate(`(() => { const v = Object.assign({}, vehicles[0], { id:'autre', routeId:'9', route: S.routes['9'] }); vehicles.push(v); render(); const d = markers.get('autre').getElement().querySelector('.bus-mk').classList.contains('dim'); vehicles.pop(); render(); return d; })()`);
+  return r === true || 'le car de l’autre ligne n’est pas discret';
 });
 await t('« Tout voir » : toutes les lignes en couleur', async () => {
   await p.click('#focusBar [data-focus="all"]'); await p.waitForTimeout(200);
