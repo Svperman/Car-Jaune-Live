@@ -597,6 +597,11 @@
   .fr-mk .av{width:24px;height:24px;border-radius:50%;background:#7C3AED;color:#fff;display:grid;place-items:center;font-size:12.5px}
   .fr-mk .ln{border-radius:6px;padding:2px 5px;font-size:11px}
   .fr-mk.old{opacity:.6} .fr-mk.old .av{background:#9AA0A6}
+  .cw-mk{display:flex;align-items:center;gap:3px;transform:translate(-50%,-50%);width:max-content;pointer-events:auto}
+  .cw-mk .p{width:12px;height:12px;border-radius:50%;background:#0EA5E9;border:2.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);animation:cwp 2s infinite}
+  .cw-mk .ln{font:800 10px/1 'Nunito Sans',sans-serif;border-radius:6px;padding:2px 4px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .cw-mk.old .p{background:#9AA0A6;animation:none}
+  @keyframes cwp{0%{box-shadow:0 0 0 0 rgba(14,165,233,.5)}70%{box-shadow:0 0 0 9px rgba(14,165,233,0)}100%{box-shadow:0 0 0 0 rgba(14,165,233,0)}}
   .fr-dot{width:14px;height:14px;border-radius:50%;background:#7C3AED;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);transform:translate(-50%,-50%)}
   .fr-ctl{display:flex;flex-direction:column;gap:6px;max-width:min(320px, calc(100vw - 90px))}
   .fr-chip{display:flex;align-items:center;gap:8px;background:var(--carte);border:none;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.2);
@@ -955,6 +960,7 @@
     <summary><span class="sa-i">👥</span><span class="sa-t"><b>Mes proches</b><small id="sum-sec-proches"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
     <div class="sa-body"><div id="shareSec"></div>
       <div class="set-row col"><div class="set-l"><b>Mon prénom</b><small>tes proches te retrouvent avec lui</small></div><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel"></div>
+      <div class="set-row"><div class="set-l"><b>👥 Me montrer aux autres voyageurs</b><small>point anonyme (sans nom) sur leur carte, seulement quand tu es dans un car</small></div><label class="switch"><input type="checkbox" id="crowdOn"><span></span></label></div>
       <div class="set-row dep-name"><div class="set-l"><b>Automatique dans les cars jaunes</b><small>dès que tu montes, jusqu’à 10 min après ta descente</small></div><label class="switch"><input type="checkbox" id="shAuto" checked><span></span></label></div>
       <div class="set-row col dep-name"><div class="set-l"><b>📱 Prévenir mes proches par SMS</b><small id="smsTxt">quand tu montes dans un car et quand tu descends, un message tout prêt : tu n’as qu’à appuyer sur Envoyer</small></div>
         <div class="tf-key"><input class="set-in" id="smsTo" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="0692 12 34 56, 0693 65 43 21"><button class="btn small" id="smsSave">OK</button></div></div>
@@ -987,6 +993,7 @@
   <details class="set-sec" id="sec-carte" data-acc>
     <summary><span class="sa-i">🗺️</span><span class="sa-t"><b>Carte et affichage</b><small id="sum-sec-carte"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
     <div class="sa-body">
+      <div class="set-row"><div class="set-l"><b>👥 Voir les autres voyageurs</b><small>ceux qui ont accepté d’apparaître (anonymes) et tes proches</small></div><label class="switch"><input type="checkbox" id="crowdView" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Trafic sur la carte</b><small>routes colorées et bouchons repérés par les cars</small></div><label class="switch"><input type="checkbox" id="tfOn" checked><span></span></label></div>
       <div class="set-row col adv" id="tfKeyRow"><div class="set-l"><b>Clé TomTom</b><small id="tfKeyTxt"></small></div>
         <div class="tf-key" id="tfKeyEdit"><input class="set-in" id="tfKey" placeholder="colle ta clé gratuite (developer.tomtom.com)" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div></div>
@@ -6026,11 +6033,97 @@ function renderFriends(){
     if (!friendMk[k]) friendMk[k] = L.marker(friendLatLng(o), { icon, zIndexOffset: 3000 }).bindPopup('').addTo(friendLayer);
     const m = friendMk[k];
     if (m._html !== html){ m.setIcon(icon); m._html = html; }
-    m.setLatLng(friendLatLng(o));
+    animateTo(m, L.latLng(friendLatLng(o)));          // glisse jusqu'à sa nouvelle position
     m.setPopupContent(friendPopup(f));
   });
   renderFriendChips();
 }
+/* ====================== Voyageurs anonymes ======================
+   Avec son accord (« Me montrer aux autres voyageurs »), un utilisateur apparaît sur la carte des autres
+   comme un point bleu SANS NOM, seulement quand l'appli le sait dans un car jaune. Identifiant tiré au hasard
+   chaque jour, position arrondie (~10 m). Rien n'est envoyé hors d'un car. */
+const CROWD_TOPIC = 'carjaunelive_voyageurs_v1';
+const crowd = { last: 0, sentOff: true, at: 0, people: {}, mk: {} };
+const crowdLayer = L.layerGroup().addTo(map);
+function crowdId(){
+  const day = ymd(reuDate(Date.now()));
+  try {
+    const o = JSON.parse(localStorage.getItem('cj_crowd_id') || '{}');
+    if (o.d === day && o.id) return o.id;
+    const id = Array.from(crypto.getRandomValues(new Uint8Array(6)), b => b.toString(16).padStart(2, '0')).join('');
+    localStorage.setItem('cj_crowd_id', JSON.stringify({ d: day, id })); return id;
+  } catch(e){ return 'x' + Math.random().toString(16).slice(2, 10); }
+}
+function crowdSend(msg){
+  return fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic: CROWD_TOPIC, message: JSON.stringify(msg) }) }).catch(() => {});
+}
+/** Toutes les 30 s : ma position anonyme si je suis dans un car (et que j'ai dit oui). */
+function crowdTick(){
+  const now = Date.now();
+  const v = onBus && vehicles.find(x => x.id === onBus);
+  const ok = shareCfg.crowd && v && myPos && now - (myFixAt || 0) < 40e3 && (myPos.acc || 0) < 120;
+  if (ok){
+    if (now - crowd.last < 30e3) return;
+    crowd.last = now; crowd.sentOff = false;
+    crowdSend({ k:'cjv1', id: crowdId(), lat: Math.round(myPos.lat * 1e4) / 1e4, lon: Math.round(myPos.lon * 1e4) / 1e4,
+      l: v.route.s, c: v.route.c, tc: v.route.t, t: now });
+  } else if (!crowd.sentOff){                                   // descendu (ou réglage coupé) : je disparais tout de suite
+    crowd.sentOff = true; crowdSend({ k:'cjv1', id: crowdId(), off: true, t: now });
+  }
+}
+/** Les autres voyageurs : relevé toutes les 20 s quand la carte est à l'écran. */
+async function crowdPoll(){
+  if (shareCfg.crowdView === false || document.hidden || view !== 'map' || navigator.onLine === false) return;
+  if (Date.now() - crowd.at < 18e3) return;
+  crowd.at = Date.now();
+  try {
+    const txt = await fetch(`https://ntfy.sh/${CROWD_TOPIC}/json?poll=1&since=4m`).then(r => r.ok ? r.text() : '');
+    const me = crowdId(), now = Date.now();
+    txt.split('\n').forEach(l => {
+      let m; try { m = JSON.parse(l); } catch(e){ return; }
+      if (!m || m.event !== 'message') return;
+      let o; try { o = JSON.parse(m.message); } catch(e){ return; }
+      if (!o || o.k !== 'cjv1' || !/^[\w]{4,16}$/.test(String(o.id)) || o.id === me) return;
+      const t = Math.min(+o.t || m.time * 1000, m.time * 1000 + 5000);   // l'heure du serveur ntfy fait foi
+      const prev = crowd.people[o.id];
+      if (prev && prev.t > t) return;
+      if (o.off){ crowd.people[o.id] = { off: true, t }; return; }
+      if (!(o.lat > -21.45 && o.lat < -20.8 && o.lon > 55.15 && o.lon < 55.9)) return;   // hors de l'île : ignoré
+      crowd.people[o.id] = { lat: +o.lat, lon: +o.lon, l: String(o.l || '').slice(0, 6), c: /^[0-9A-F]{6}$/i.test(o.c) ? o.c : 'F6BE00', tc: /^[0-9A-F]{6}$/i.test(o.tc) ? o.tc : '222222', t };
+    });
+    Object.keys(crowd.people).forEach(id => { if (now - crowd.people[id].t > 4 * 60e3) delete crowd.people[id]; });
+    crowdDraw();
+  } catch(e){}
+}
+function crowdDraw(){
+  const now = Date.now(), seen = {};
+  if (shareCfg.crowdView !== false) Object.keys(crowd.people).forEach(id => {
+    const p = crowd.people[id]; if (p.off) return;
+    seen[id] = 1;
+    const old = now - p.t > 100e3;
+    const html = `<div class="cw-mk${old ? ' old' : ''}"><span class="p"></span>${p.l ? `<span class="ln" style="background:#${p.c};color:#${p.tc}">${esc(p.l)}</span>` : ''}</div>`;
+    let m = crowd.mk[id];
+    if (!m){
+      m = crowd.mk[id] = L.marker([p.lat, p.lon], { icon: L.divIcon({ className:'', html, iconSize:[0, 0] }), zIndexOffset: 2500, keyboard:false }).addTo(crowdLayer);
+      m._html = html;
+    } else {
+      if (m._html !== html){ m.setIcon(L.divIcon({ className:'', html, iconSize:[0, 0] })); m._html = html; }
+      animateTo(m, L.latLng(p.lat, p.lon));
+    }
+    m.bindPopup(`<div class="pop-h"><b>👤 Un voyageur${p.l ? ' dans le ' + esc(p.l) : ''}</b></div><span class="muted">Anonyme · position ${agoTxt(p.t)}</span>`);
+  });
+  Object.keys(crowd.mk).forEach(id => { if (!seen[id]){ crowdLayer.removeLayer(crowd.mk[id]); delete crowd.mk[id]; } });
+}
+setInterval(() => { try { crowdTick(); crowdPoll(); } catch(e){} }, 5000);
+$('#crowdOn').checked = !!shareCfg.crowd;
+$('#crowdView').checked = shareCfg.crowdView !== false;
+$('#crowdOn').addEventListener('change', e => {
+  shareCfg.crowd = e.target.checked; saveShare();
+  if (e.target.checked){ if (!shareCfg.auto){ shareCfg.auto = true; saveShare(); autoWatchStart(); } toast('👥 Tu apparaîtras aux autres comme un point anonyme, seulement quand tu es dans un car.'); }
+  else crowdTick();
+});
+$('#crowdView').addEventListener('change', e => { shareCfg.crowdView = e.target.checked; saveShare(); crowd.at = 0; crowdDraw(); crowdPoll(); });
+
 // le proche suit son car qui avance en continu
 setInterval(() => friends.forEach(f => { const m = friendMk[f.name + f.code]; if (m && f.last && (f.last.bus || f.last.ride)) m.setLatLng(friendLatLng(f.last)); }), 1000);
 const FriendCtl = L.Control.extend({ options:{ position:'bottomleft' }, onAdd(){ const d = L.DomUtil.create('div', 'fr-ctl'); d.id = 'frCtl'; L.DomEvent.disableClickPropagation(d); return d; } });
