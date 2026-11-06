@@ -1,0 +1,105 @@
+{
+ "builtAt": 1793647242622,
+ "nets": [
+  {
+   "id": "citalis",
+   "name": "Citalis",
+   "zone": "Nord · CINOR",
+   "color": "E30613",
+   "rt": false,
+   "bbox": [
+    -20.97427,
+    55.39139,
+    -20.8747,
+    55.64344
+   ],
+   "from": "20260715",
+   "to": "20261231",
+   "lines": 71,
+   "stops": 1618,
+   "trips": 12782,
+   "kb": 497,
+   "v": "2609b9377b"
+  },
+  {
+   "id": "karouest",
+   "name": "Kar’Ouest",
+   "zone": "Ouest · TCO",
+   "color": "0081C6",
+   "rt": false,
+   "bbox": [
+    -21.25053,
+    55.21878,
+    -20.92283,
+    55.39446
+   ],
+   "from": "20260817",
+   "to": "20261231",
+   "lines": 76,
+   "stops": 2283,
+   "trips": 4297,
+   "kb": 597,
+   "v": "94cd693126"
+  },
+  {
+   "id": "alterneo",
+   "name": "Alternéo",
+   "zone": "Sud · CIVIS",
+   "color": "00A3A6",
+   "rt": true,
+   "bbox": [
+    -21.37099,
+    55.32282,
+    -21.11713,
+    55.58829
+   ],
+   "from": "20261101",
+   "to": "20270228",
+   "lines": 68,
+   "stops": 2350,
+   "trips": 10483,
+   "kb": 637,
+   "v": "2368a9b228"
+  },
+  {
+   "id": "carsud",
+   "name": "Car’Sud",
+   "zone": "Sud · CASUD",
+   "color": "7AB51D",
+   "rt": true,
+   "bbox": [
+    -21.38711,
+    55.46025,
+    -21.18229,
+    55.80191
+   ],
+   "from": "20261026",
+   "to": "20271031",
+   "lines": 43,
+   "stops": 2139,
+   "trips": 1352,
+   "kb": 276,
+   "v": "b828e2666e"
+  },
+  {
+   "id": "estival",
+   "name": "Estival",
+   "zone": "Est · CIREST",
+   "color": "F39200",
+   "rt": false,
+   "bbox": [
+    -21.22015,
+    55.45083,
+    -20.91376,
+    55.82686
+   ],
+   "from": "20260101",
+   "to": "20261231",
+   "lines": 37,
+   "stops": 1206,
+   "trips": 717,
+   "kb": 127,
+   "v": "bf2b729a76"
+  }
+ ]
+}
