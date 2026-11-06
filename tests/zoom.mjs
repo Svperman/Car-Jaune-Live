@@ -46,10 +46,12 @@ await t('toucher deux fois la carte : zoom +', async () => {
   await p.waitForTimeout(700);
   const z = await p.evaluate('map.getZoom()'); return z > 12.5 || 'zoom ' + z;
 });
-await t('dézoom limité : on ne perd pas l’île dans l’océan', async () => {
+await t('carte du monde : on peut dézoomer jusqu’au monde entier, puis revenir sur l’île', async () => {
   await p.evaluate('map.setZoom(2, { animate:false }); 1'); await p.waitForTimeout(300);
+  const z = await p.evaluate('map.getZoom()');
+  await p.tap('#btnFit'); await p.waitForTimeout(1200);
   const r = await p.evaluate('[map.getZoom(), map.getBounds().contains([-21.1, 55.5])]');
-  return (r[0] >= 8 && r[1]) || JSON.stringify(r);
+  return (z <= 2.5 && r[0] >= 8 && r[1]) || JSON.stringify([z, r]);
 });
 await t('la page elle-même ne zoome pas (seulement la carte)', async () => (await p.evaluate('visualViewport.scale')) === 1 || 'échelle ' + await p.evaluate('visualViewport.scale'));
 errs.forEach(e => fails.push('erreur JS : ' + e));

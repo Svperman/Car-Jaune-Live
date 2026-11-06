@@ -1166,7 +1166,7 @@ const REUNION = [[-21.39, 55.21], [-20.86, 55.84]];
 // Zoom au doigt : la rotation à deux doigts est coupée (avec les doigts côte à côte, elle faisait tourner la carte
 // sur elle-même au lieu de zoomer). Dézoom limité à l'île et ses environs.
 const map = L.map('map', { zoomControl:false, zoomSnap:0.25, zoomDelta:1, wheelPxPerZoomLevel:90,
-  minZoom:8, maxZoom:19, maxBounds:[[-22.4, 54.2], [-19.85, 56.85]], maxBoundsViscosity:0.85, bounceAtZoomLimits:false,
+  minZoom:2, maxZoom:19, worldCopyJump:true, maxBounds:[[-85, -540], [85, 540]], maxBoundsViscosity:1, bounceAtZoomLimits:false,   // carte du monde entière
   rotate:false, touchRotate:false, compassBearing:false, rotateControl:false });   // sans rotation : plus de morceaux de carte vides pendant qu'on la déplace
 const mapBearing = () => (map._rotate && map.getBearing ? map.getBearing() || 0 : 0);
 // iPhone : un pincement commencé sur l'en-tête ou les boutons zoomait toute la page (et la carte restait coincée)
@@ -1219,7 +1219,8 @@ CITIES.forEach(([n, lat, lon, big, al]) => L.marker([lat, lon], { pane:'cities',
   icon: L.divIcon({ className:'', iconSize:[0, 0], html:`<div class="city-lb${big ? ' big' : ''}${al ? ' ' + al : ''}">${esc(n)}</div>` }) }).addTo(map));
 function cityFade(z){
   const c = v => Math.max(0, Math.min(1, v));
-  const big = c((13.6 - z) / 2).toFixed(2);                                   // grandes villes : s'effacent vers le zoom 13,5
+  const far = c((z - 7.6) / .8);                                             // vue du monde : l'île est minuscule, pas de noms empilés
+  const big = (c((13.6 - z) / 2) * far).toFixed(2);                          // grandes villes : s'effacent vers le zoom 13,5
   const small = Math.min(c((z - 9.9) / .6), c((12.8 - z) / 1.8)).toFixed(2);  // petites : apparaissent en zoomant un peu, puis s'effacent
   cityPane.style.setProperty('--city-big', big);
   cityPane.style.setProperty('--city-small', small);
