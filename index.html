@@ -635,6 +635,19 @@
   #smsSheet{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:2450;width:min(440px, calc(100% - 20px));
     background:var(--carte,#fff);border-radius:18px;box-shadow:0 6px 24px rgba(0,0,0,.28);padding:12px 14px 14px;animation:popin .25s}
   #smsSheet[hidden]{display:none}
+  #msgSheet{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:2470;width:min(440px, calc(100% - 20px));
+    background:var(--carte,#fff);border-radius:18px;box-shadow:0 6px 24px rgba(0,0,0,.28);padding:12px 14px 12px;animation:popin .25s}
+  #msgSheet[hidden]{display:none}
+  .msg-log{max-height:180px;overflow:auto;display:flex;flex-direction:column;gap:5px;margin:8px 0}
+  .msg-log:empty{display:none}
+  .msg-b{max-width:82%;padding:7px 10px;border-radius:14px;font-size:13.5px;line-height:1.3;word-break:break-word}
+  .msg-b.in{align-self:flex-start;background:var(--fond);border-bottom-left-radius:4px}
+  .msg-b.out{align-self:flex-end;background:var(--jaune);color:#222;border-bottom-right-radius:4px}
+  .msg-b small{display:block;opacity:.6;font-size:10.5px;margin-top:2px}
+  .msg-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+  .msg-chips button{border:1.5px solid var(--bord,#ddd);background:var(--carte,#fff);border-radius:16px;padding:6px 10px;font:600 13px 'Nunito Sans',sans-serif;cursor:pointer;color:var(--texte,#222)}
+  .msg-in{display:flex;gap:6px} .msg-in[hidden]{display:none} .msg-in input{flex:1;min-width:0}
+  .chat-btn{display:block;width:100%;margin-top:8px}
   #geoSheet{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 78px);z-index:2460;width:min(440px, calc(100% - 20px));
     background:var(--carte,#fff);border-radius:18px;box-shadow:0 6px 24px rgba(0,0,0,.28);padding:12px 14px 14px;animation:popin .25s}
   #geoSheet[hidden]{display:none}
@@ -960,7 +973,7 @@
     <summary><span class="sa-i">👥</span><span class="sa-t"><b>Mes proches</b><small id="sum-sec-proches"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
     <div class="sa-body"><div id="shareSec"></div>
       <div class="set-row col"><div class="set-l"><b>Mon prénom</b><small>tes proches te retrouvent avec lui</small></div><input class="set-in" id="shName" maxlength="20" placeholder="ex. Samuel"></div>
-      <div class="set-row"><div class="set-l"><b>👥 Me montrer aux autres voyageurs</b><small>point anonyme (sans nom) sur leur carte, seulement quand tu es dans un car</small></div><label class="switch"><input type="checkbox" id="crowdOn"><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>👥 Me montrer aux autres voyageurs</b><small>point anonyme (sans nom) sur leur carte, seulement quand tu es dans un car · ils peuvent te poser des questions toutes faites</small></div><label class="switch"><input type="checkbox" id="crowdOn"><span></span></label></div>
       <div class="set-row dep-name"><div class="set-l"><b>Automatique dans les cars jaunes</b><small>dès que tu montes, jusqu’à 10 min après ta descente</small></div><label class="switch"><input type="checkbox" id="shAuto" checked><span></span></label></div>
       <div class="set-row col dep-name"><div class="set-l"><b>📱 Prévenir mes proches par SMS</b><small id="smsTxt">quand tu montes dans un car et quand tu descends, un message tout prêt : tu n’as qu’à appuyer sur Envoyer</small></div>
         <div class="tf-key"><input class="set-in" id="smsTo" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="0692 12 34 56, 0693 65 43 21"><button class="btn small" id="smsSave">OK</button></div></div>
@@ -975,7 +988,7 @@
         <div class="fr-list" id="frList"></div></div>
     </div>
   </details>
-  <details class="set-sec adv" id="citySec" data-acc>
+  <details class="set-sec" id="citySec" data-acc>
     <summary><span class="sa-i">🏙️</span><span class="sa-t"><b>Cars dans ma ville</b><small id="sum-citySec"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
     <div class="sa-body">
       <div class="set-row"><div class="set-l"><b>M’annoncer les cars autour de moi</b><small id="cityStatus"></small></div><label class="switch"><input type="checkbox" id="cityOn"><span></span></label></div>
@@ -1036,6 +1049,10 @@
 <div id="toast" hidden></div>
 <div id="geoSheet" class="sheet" hidden role="dialog" aria-labelledby="geoTitle"><div class="sms-h"><b id="geoTitle">📍 Autoriser la localisation</b><button id="geoLater" aria-label="Plus tard">✕</button></div>
   <div class="sms-prev" id="geoBody"></div><div class="sms-list" id="geoActs"></div></div>
+<div id="msgSheet" hidden role="dialog" aria-labelledby="msgTitle"><div class="sms-h"><b id="msgTitle"></b><button id="msgClose" aria-label="Fermer">✕</button></div>
+  <div class="msg-log" id="msgLog"></div><div class="msg-chips" id="msgChips"></div>
+  <div class="msg-in" id="msgInRow"><input class="set-in" id="msgIn" maxlength="200" autocomplete="off" placeholder="Ton message…"><button class="btn small" id="msgSend">Envoyer</button></div>
+  <small class="muted" id="msgNote"></small></div>
 <div id="smsSheet" hidden role="dialog" aria-labelledby="smsTitle"><div class="sms-h"><b id="smsTitle"></b><button id="smsLater" aria-label="Plus tard">✕</button></div>
   <div class="sms-prev" id="smsPrev"></div><div class="sms-list" id="smsList"></div></div>
 <div id="offBar" hidden role="status"><b>📴 Hors ligne</b><span id="offBarTx"></span></div>
@@ -1459,7 +1476,7 @@ const VIEW_NAMES = { map:'Carte en direct', trip:'Mon trajet', board:"Horaires �
 /* ---------- bouton « retour » d'Android (et retour du navigateur) ----------
    Ferme la fenêtre ouverte (réglages, signalement, prochain car, cloche…) ou revient à la carte,
    au lieu de quitter l'appli. */
-const BACK_OV = ['settingsModal', 'ficheModal', 'repSheet', 'nextSheet', 'bellMenu', 'smsSheet', 'geoSheet'];
+const BACK_OV = ['settingsModal', 'ficheModal', 'repSheet', 'nextSheet', 'bellMenu', 'smsSheet', 'geoSheet', 'msgSheet'];
 let backSkip = 0;
 const BACK_ON = !IN_GAS || !!window.__testBack;    // (Apps Script : la page est dans un cadre, on ne touche pas à l'historique)
 const backOpen = () => BACK_OV.filter(id => { const e = document.getElementById(id); return e && !e.hidden; });
@@ -5934,6 +5951,7 @@ async function pollFriend(f){
       f.since = m.id;
       try {
         const o = await unseal(key, m.message);
+        if (o.k === 'msg' || o.k === 'msg-r'){ chatIncomingFriend(f, o, m.id); continue; }   // messages : pas une position
         if (!f.last || o.t >= f.last.t) f.last = o;
         f.bad = false;
         if (o.ev) friendEvent(f, o.ev);
@@ -6020,7 +6038,8 @@ function friendPopup(f){
       ${b.dl != null ? `<span class="delay ${fmtDelay(b.dl, b.de).c}">${esc(fmtDelay(b.dl, b.de).long)}</span><br>` : ''}`
     : `${esc(st.t.split(' · ')[0])}<br>`}
     ${riding(o) && riding(o).v && Date.now() - o.t > 2 * 60e3 ? '<span class="muted">📡 Son appli est fermée : on suit la position en direct de son car.</span><br>' : ''}
-    <span class="muted">Position ${o ? agoTxt(o.t) : '—'}${o && o.acc ? ` · ± ${fmtDist(o.acc)}` : ''}${o && o.bg ? '<br>⚠️ son appli est en arrière-plan : la position peut ne plus suivre' : ''}</span>`;
+    <span class="muted">Position ${o ? agoTxt(o.t) : '—'}${o && o.acc ? ` · ± ${fmtDist(o.acc)}` : ''}${o && o.bg ? '<br>⚠️ son appli est en arrière-plan : la position peut ne plus suivre' : ''}</span>
+    <button class="btn small chat-btn" data-chat-friend="${esc(f.name + '|' + f.code)}">💬 Message à ${esc(f.name)}</button>`;
 }
 function renderFriends(){
   friends.forEach(f => {
@@ -6073,7 +6092,8 @@ function crowdTick(){
 }
 /** Les autres voyageurs : relevé toutes les 20 s quand la carte est à l'écran. */
 async function crowdPoll(){
-  if (shareCfg.crowdView === false || document.hidden || view !== 'map' || navigator.onLine === false) return;
+  const wantMap = shareCfg.crowdView !== false && view === 'map';
+  if (!(wantMap || shareCfg.crowd) || document.hidden || navigator.onLine === false) return;
   if (Date.now() - crowd.at < 18e3) return;
   crowd.at = Date.now();
   try {
@@ -6083,6 +6103,7 @@ async function crowdPoll(){
       let m; try { m = JSON.parse(l); } catch(e){ return; }
       if (!m || m.event !== 'message') return;
       let o; try { o = JSON.parse(m.message); } catch(e){ return; }
+      if (o && o.k === 'cjm1' && /^[\w]{4,16}$/.test(String(o.from))){ chatIncomingCrowd(o, m.time * 1000); return; }
       if (!o || o.k !== 'cjv1' || !/^[\w]{4,16}$/.test(String(o.id)) || o.id === me) return;
       const t = Math.min(+o.t || m.time * 1000, m.time * 1000 + 5000);   // l'heure du serveur ntfy fait foi
       const prev = crowd.people[o.id];
@@ -6110,7 +6131,8 @@ function crowdDraw(){
       if (m._html !== html){ m.setIcon(L.divIcon({ className:'', html, iconSize:[0, 0] })); m._html = html; }
       animateTo(m, L.latLng(p.lat, p.lon));
     }
-    m.bindPopup(`<div class="pop-h"><b>👤 Un voyageur${p.l ? ' dans le ' + esc(p.l) : ''}</b></div><span class="muted">Anonyme · position ${agoTxt(p.t)}</span>`);
+    m.bindPopup(`<div class="pop-h"><b>👤 Un voyageur${p.l ? ' dans le ' + esc(p.l) : ''}</b></div><span class="muted">Anonyme · position ${agoTxt(p.t)}</span>
+      <button class="btn small chat-btn" data-chat-crowd="${esc(id)}">💬 Lui poser une question</button>`);
   });
   Object.keys(crowd.mk).forEach(id => { if (!seen[id]){ crowdLayer.removeLayer(crowd.mk[id]); delete crowd.mk[id]; } });
 }
@@ -6123,6 +6145,121 @@ $('#crowdOn').addEventListener('change', e => {
   else crowdTick();
 });
 $('#crowdView').addEventListener('change', e => { shareCfg.crowdView = e.target.checked; saveShare(); crowd.at = 0; crowdDraw(); crowdPoll(); });
+
+/* ====================== Messages depuis la carte ======================
+   - à un proche (bulle de son prénom) : texte libre, chiffré avec votre code commun, passe par son canal
+   - à un voyageur anonyme : questions toutes faites seulement (pas de texte libre, pas de nom), réponse en 1 touche */
+const CHAT_Q = ['👋 Salut !', '🧍 Ton car est plein ?', '⏱️ Il a du retard ?', '🚏 Il est à quel arrêt ?', '👍 Oui', '👎 Non', '🙂 Il reste de la place', '🙏 Merci !'];
+const chats = {};                      // clé → [{ dir:'in'|'out', txt, t }]
+let chatOpen = null, chatSeen = {};
+try { chatSeen = JSON.parse(localStorage.getItem('cj_chat_seen') || '{}'); } catch(e){}
+const saveChatSeen = () => { try { localStorage.setItem('cj_chat_seen', JSON.stringify(chatSeen)); } catch(e){} };
+function chatPush(key, dir, txt, t){
+  const l = chats[key] || (chats[key] = []);
+  if (l.some(x => x.dir === dir && x.txt === txt && Math.abs(x.t - t) < 2000)) return;
+  l.push({ dir, txt, t }); l.sort((a, b) => a.t - b.t); if (l.length > 30) l.shift();
+  if (chatOpen && chatOpen.key === key) chatRender();
+}
+function chatRender(){
+  const c = chatOpen; if (!c) return;
+  $('#msgTitle').textContent = c.title;
+  $('#msgLog').innerHTML = (chats[c.key] || []).map(x => `<div class="msg-b ${x.dir}">${esc(x.txt)}<small>${fmtHM(x.t)}</small></div>`).join('');
+  $('#msgLog').scrollTop = 1e6;
+  $('#msgChips').innerHTML = (c.kind === 'crowd' ? CHAT_Q : CHAT_Q.slice(0, 3).concat(['🚌 Je suis dans le car', '📍 J’arrive bientôt']))
+    .map((q, i) => `<button data-q="${esc(q)}">${esc(q)}</button>`).join('');
+  $('#msgInRow').hidden = c.kind === 'crowd';
+  $('#msgNote').textContent = c.kind === 'crowd' ? 'Questions toutes faites seulement : pas de texte libre ni de nom entre voyageurs.' : `Message privé, chiffré avec votre code commun.`;
+}
+function chatOpenFriend(f, asOwner){
+  // asOwner : c'est moi qui partage, je réponds à un proche qui m'a écrit (via mon propre canal)
+  chatOpen = { kind: asOwner ? 'owner' : 'friend', key: asOwner ? 'me|' + nameKey(asOwner) : 'f|' + f.name + '|' + f.code, f, to: asOwner,
+    title: asOwner ? `💬 ${asOwner}` : `💬 ${f.name}` };
+  chatRender(); $('#msgSheet').hidden = false; map.closePopup();
+}
+function chatOpenCrowd(id){
+  const p = crowd.people[id];
+  chatOpen = { kind:'crowd', key:'c|' + id, id, title: `💬 Voyageur${p && p.l ? ' du ' + p.l : ''} (anonyme)` };
+  chatRender(); $('#msgSheet').hidden = false; map.closePopup();
+}
+async function chatSend(txt){
+  txt = String(txt || '').trim().slice(0, 200); const c = chatOpen; if (!txt || !c) return;
+  const t = Date.now();
+  try {
+    if (c.kind === 'crowd'){
+      if (!CHAT_Q.includes(txt)) return;
+      await crowdSend({ k:'cjm1', to: c.id, from: crowdId(), q: CHAT_Q.indexOf(txt), l: onBus ? (vehicles.find(v => v.id === onBus) || { route:{} }).route.s || '' : '', t });
+    } else if (c.kind === 'friend'){
+      const { topic, key } = await shareKeys(c.f.name, c.f.code);
+      const r = await fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic, message: await seal(key, { k:'msg', from: shareCfg.name.trim() || 'Un proche', txt, t }) }) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+    } else {
+      const { topic, key } = await shareKeys(shareCfg.name, shareCfg.code);
+      const r = await fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic, message: await seal(key, { k:'msg-r', from: shareCfg.name.trim(), to: c.to, txt, t }) }) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+    }
+    chatPush(c.key, 'out', txt, t);
+    $('#msgIn').value = '';
+  } catch(e){ toast('💬 Message non envoyé (pas de réseau ?)'); }
+}
+/** Réponse d'un proche que je suis (il répond dans son canal). */
+function chatIncomingFriend(f, o, mid){
+  if (o.k !== 'msg-r' || nameKey(o.to || '') !== nameKey(shareCfg.name || '') || !o.txt) return;   // ses réponses à moi seulement
+  const key = 'f|' + f.name + '|' + f.code;
+  if (chatSeen[key + mid]) { chatPush(key, 'in', o.txt, o.t); return; }
+  chatSeen[key + mid] = 1; saveChatSeen();
+  chatPush(key, 'in', String(o.txt).slice(0, 200), o.t);
+  if (Date.now() - o.t < 30 * 60e3 && !(chatOpen && chatOpen.key === key))
+    { notify(`💬 ${f.name}`, String(o.txt).slice(0, 200), 'bus'); toast(`💬 ${f.name} : ${String(o.txt).slice(0, 60)} — touche pour répondre`, () => chatOpenFriend(f)); }
+}
+/** Messages reçus dans MON canal (mes proches m'écrivent) — si je partage ma position. */
+let chatOwnSince = '1h', chatOwnAt = 0;
+async function chatPollOwn(){
+  if (!shareCfg.name || !shareCfg.code || !(sharing() || shareCfg.auto) || document.hidden || Date.now() - chatOwnAt < 20e3) return;
+  chatOwnAt = Date.now();
+  try {
+    const { topic, key } = await shareKeys(shareCfg.name, shareCfg.code);
+    const txt = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=${chatOwnSince}`).then(r => r.ok ? r.text() : '');
+    for (const l of txt.split('\n')){
+      let m; try { m = JSON.parse(l); } catch(e){ continue; }
+      if (!m || m.event !== 'message') continue;
+      chatOwnSince = m.id;
+      let o; try { o = await unseal(key, m.message); } catch(e){ continue; }
+      if (o.k !== 'msg' || !o.txt) continue;
+      const from = String(o.from || 'Un proche').slice(0, 30), ck = 'me|' + nameKey(from);
+      chatPush(ck, 'in', String(o.txt).slice(0, 200), o.t);
+      if (chatSeen[m.id]) continue;
+      chatSeen[m.id] = 1; saveChatSeen();
+      if (Date.now() - o.t < 30 * 60e3 && !(chatOpen && chatOpen.key === ck)){
+        notify(`💬 ${from}`, String(o.txt).slice(0, 200), 'bus');
+        toast(`💬 ${from} : ${String(o.txt).slice(0, 60)} — touche pour répondre`, () => chatOpenFriend(null, from));
+      }
+    }
+  } catch(e){}
+}
+/** Questions reçues d'autres voyageurs (si j'apparais aux autres). Appelé par crowdPoll. */
+function chatIncomingCrowd(o, mtime){
+  if (o.to !== crowdId() || !(o.q >= 0 && o.q < CHAT_Q.length)) return;
+  const key = 'c|' + o.from, sid = o.from + '|' + o.t;
+  const t = Math.min(+o.t || mtime, mtime + 5000);
+  chatPush(key, 'in', CHAT_Q[o.q], t);
+  if (chatSeen[sid] || Date.now() - t > 10 * 60e3) return;
+  chatSeen[sid] = 1; saveChatSeen();
+  if (!crowd.people[o.from]) crowd.people[o.from] = { off: true, t, l: String(o.l || '').slice(0, 6) };
+  if (!(chatOpen && chatOpen.key === key)){
+    notify(`💬 Un voyageur${o.l ? ' du ' + String(o.l).slice(0, 6) : ''}`, CHAT_Q[o.q], 'bus');
+    toast(`💬 Un voyageur : « ${CHAT_Q[o.q]} » — touche pour répondre`, () => chatOpenCrowd(o.from));
+  }
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-chat-friend]'), b = e.target.closest('[data-chat-crowd]');
+  if (a){ const [n, c] = a.dataset.chatFriend.split('|'); const f = friends.find(x => x.name === n && x.code === c); if (f) chatOpenFriend(f); }
+  if (b) chatOpenCrowd(b.dataset.chatCrowd);
+});
+$('#msgChips').addEventListener('click', e => { const q = e.target.closest('[data-q]'); if (q) chatSend(q.dataset.q); });
+$('#msgSend').addEventListener('click', () => chatSend($('#msgIn').value));
+$('#msgIn').addEventListener('keydown', e => { if (e.key === 'Enter') chatSend($('#msgIn').value); });
+$('#msgClose').addEventListener('click', () => { $('#msgSheet').hidden = true; chatOpen = null; });
+setInterval(() => { try { chatPollOwn(); } catch(e){} }, 5000);
 
 // le proche suit son car qui avance en continu
 setInterval(() => friends.forEach(f => { const m = friendMk[f.name + f.code]; if (m && f.last && (f.last.bus || f.last.ride)) m.setLatLng(friendLatLng(f.last)); }), 1000);

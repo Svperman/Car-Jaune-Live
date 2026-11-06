@@ -51,6 +51,7 @@ jobs:
           node tests/ou-campus.mjs
           node tests/trafic-alertes.mjs
           node tests/voyageurs.mjs
+          node tests/messages.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site
