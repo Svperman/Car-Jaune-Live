@@ -67,9 +67,9 @@ await p.evaluate(`(() => {
   map.setView([-21.1, 55.53], 9.75, { animate:false }); render();
 })()`);
 await p.waitForTimeout(400);
-const over = () => p.evaluate(`(() => { const r = [...document.querySelectorAll('.bus-mk:not(.dot):not(.urb) .pill2')].map(e => e.getBoundingClientRect()); let n = 0;
+const over = () => p.evaluate(`(() => { const r = [...document.querySelectorAll('.bus-mk:not(.dot) .pill2')].map(e => e.getBoundingClientRect()); let n = 0;
   for (let i = 0; i < r.length; i++) for (let j = i + 1; j < r.length; j++) if (!(r[i].right < r[j].left || r[i].left > r[j].right || r[i].bottom < r[j].top || r[i].top > r[j].bottom)) n++;
-  return [r.length, document.querySelectorAll('.bus-mk.dot:not(.urb)').length, n]; })()`);
+  return [r.length, document.querySelectorAll('.bus-mk.dot').length, n]; })()`);
 await t('île entière, 60 cars : aucune étiquette ne se chevauche (les autres en points)', async () => {
   const r = await over(); return (r[2] === 0 && r[1] > 0 && r[0] > 5) || `étiquettes ${r[0]}, points ${r[1]}, chevauchements ${r[2]}`;
 });
@@ -77,7 +77,7 @@ await t('le car où je suis garde toujours son étiquette', async () => (await p
 await t('en zoomant : plus d’étiquettes, toujours sans chevauchement', async () => {
   const a = (await over())[0];
   await p.evaluate("map.setView([-20.95, 55.6], 12.5, { animate:false }); render(); 1"); await p.waitForTimeout(400);
-  const r = await over(); const vis = await p.evaluate("document.querySelectorAll('.bus-mk:not(.urb)').length");
+  const r = await over(); const vis = await p.evaluate("document.querySelectorAll('.bus-mk').length");
   return (r[2] === 0 && r[0] / Math.max(1, vis) >= a / 60) || JSON.stringify([a, r, vis]);
 });
 errs.forEach(e => fails.push('erreur JS : ' + e));
