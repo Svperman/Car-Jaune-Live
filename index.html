@@ -491,6 +491,9 @@
   .set-foot{padding:14px 18px 22px;font-size:12px;color:var(--gris);text-align:center}
   .bus-mk.urb .pill2{font-size:11px;padding:2px 6px;border-radius:7px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
   .bus-mk.urb.stale{opacity:.5}
+  .bus-mk.urb.est .pill2{border-style:dashed;opacity:.82}
+  .bus-mk.urb.est .pill2::before{content:'≈ ';font-weight:400}
+  .urb-est-l{flex-basis:100%}
   .urb-net{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gris,#667);margin:-2px 0 6px}
   .urb-dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
   .muted.sm{font-size:11.5px;margin-top:6px}
@@ -1047,7 +1050,7 @@
       <div class="set-row"><div class="set-l"><b>Trafic sur la carte</b><small>routes colorées et bouchons repérés par les cars</small></div><label class="switch"><input type="checkbox" id="tfOn" checked><span></span></label></div>
       <div class="set-row col adv" id="tfKeyRow"><div class="set-l"><b>Clé TomTom</b><small id="tfKeyTxt"></small></div>
         <div class="tf-key" id="tfKeyEdit"><input class="set-in" id="tfKey" placeholder="colle ta clé gratuite (developer.tomtom.com)" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div></div>
-      <div class="set-row col"><div class="set-l"><b>Bus urbains sur la carte</b><small>lignes dès que tu zoomes, arrêts avec leurs prochains départs · 📡 bus en direct</small></div><div class="chk-row" id="urbNets"></div></div>
+      <div class="set-row col"><div class="set-l"><b>Bus urbains sur la carte</b><small>lignes dès que tu zoomes, arrêts avec leurs prochains départs · 📡 bus en direct · ≈ bus estimés d’après l’horaire</small></div><div class="chk-row" id="urbNets"></div></div>
       <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt"></small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
       <div class="set-row"><div class="set-l"><b>Taille du texte</b></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
       <div class="set-row adv"><div class="set-l"><b>Économie de batterie</b><small id="ecoTxt"></small></div><label class="switch"><input type="checkbox" id="ecoOn" checked><span></span></label></div>
@@ -5413,7 +5416,8 @@ setInterval(urbRtTick, 10000);
 function urbRenderSettings(){
   const box = $('#urbNets'); if (!box) return;
   const nets = (urb.index && urb.index.nets) || URB_ALL.map(id => ({ id, name: id }));
-  box.innerHTML = nets.map(n => `<label><input type="checkbox" data-urb="${esc(n.id)}"${urbOn[n.id] ? ' checked' : ''}><span class="urb-dot" style="background:#${esc(n.color || '999')}"></span>${esc(n.name)}${n.rt ? ' 📡' : ''}${n.zone ? ` <small class="muted">${esc(n.zone.split(' · ')[0])}</small>` : ''}</label>`).join('');
+  box.innerHTML = nets.map(n => `<label><input type="checkbox" data-urb="${esc(n.id)}"${urbOn[n.id] ? ' checked' : ''}><span class="urb-dot" style="background:#${esc(n.color || '999')}"></span>${esc(n.name)}${n.rt ? ' 📡' : ''}${n.zone ? ` <small class="muted">${esc(n.zone.split(' · ')[0])}</small>` : ''}</label>`).join('')
+    + `<label class="urb-est-l"><input type="checkbox" id="urbEst"${typeof urbEstOn === 'undefined' || urbEstOn ? ' checked' : ''}>≈ bus estimés d’après l’horaire <small class="muted">(réseaux sans GPS)</small></label>`;
 }
 document.addEventListener('change', e => {
   const c = e.target.closest('[data-urb]'); if (!c) return;
@@ -5585,6 +5589,132 @@ async function urbFillFiche(d){
 document.addEventListener('toggle', e => { const d = e.target; if (d.classList && d.classList.contains('urb-fc') && d.open) urbFillFiche(d); }, true);
 document.addEventListener('change', e => { if (e.target.closest('[data-urb]')){ urbRenderFiches(); } });
 urbIndex().then(() => { urbRenderFiches(); urbStopsLoad(); });
+
+/* ---------- ≈ Bus estimés : où devrait être chaque bus d'après l'horaire officiel ----------
+   Citalis, Kar’Ouest et Estival ne publient pas la position de leurs bus : on la déduit des horaires
+   (entre l'arrêt précédent et le suivant, le long du tracé de la ligne). Pour Alternéo et Car’Sud,
+   seulement pour les courses dont le bus n'émet pas. */
+let urbEstOn = true;
+try { urbEstOn = localStorage.getItem('cj_urb_est') !== '0'; } catch(e){}
+const urbEstLayer = L.layerGroup().addTo(map), urbEstMk = new Map();
+const urbFlat = (lat, lon) => [lon * 0.934, lat];                 // degrés « à plat » (cos 21°)
+function urbProj(pts, lat, lon){
+  const [px, py] = urbFlat(lat, lon);
+  let best = { d: 1e9, i: 0, f: 0 };
+  for (let i = 0; i < pts.length - 1; i++){
+    const [ax, ay] = urbFlat(pts[i][0], pts[i][1]), [bx, by] = urbFlat(pts[i + 1][0], pts[i + 1][1]);
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+    const f = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+    const qx = ax + f * dx - px, qy = ay + f * dy - py, d = qx * qx + qy * qy;
+    if (d < best.d) best = { d, i, f };
+  }
+  return best;
+}
+const urbAt = (pts, p) => { const a = pts[p.i], b = pts[p.i + 1] || a; return [a[0] + (b[0] - a[0]) * p.f, a[1] + (b[1] - a[1]) * p.f]; };
+/** Morceau du tracé entre deux arrêts qui se suivent (ligne droite si le tracé ne passe pas par les deux). */
+function urbSeg(N, ri, a, b){
+  N.seg = N.seg || {};
+  const k = ri + '|' + a + '|' + b;
+  if (N.seg[k]) return N.seg[k];
+  const A = N.stops[a], B = N.stops[b];
+  let out = [[A[1], A[2]], [B[1], B[2]]];
+  N.dec = N.dec || {};
+  const polys = N.dec[ri] || (N.dec[ri] = (N.shapes[ri] || []).map(decodePoly));
+  let best = null;
+  polys.forEach(pts => {
+    if (pts.length < 2) return;
+    const pa = urbProj(pts, A[1], A[2]), pb = urbProj(pts, B[1], B[2]);
+    const tol = 0.0016 * 0.0016;                                    // ~170 m du tracé au maximum
+    if (pa.d > tol || pb.d > tol) return;
+    if (!best || pa.d + pb.d < best.s) best = { s: pa.d + pb.d, pts, pa, pb };
+  });
+  if (best){
+    const { pts, pa, pb } = best, fwd = pa.i + pa.f <= pb.i + pb.f;
+    const mid = fwd ? pts.slice(pa.i + 1, pb.i + 1) : pts.slice(pb.i + 1, pa.i + 1).reverse();
+    const seg = [urbAt(pts, pa), ...mid, urbAt(pts, pb)];
+    // le tracé fait un grand détour (boucle) : on garde la ligne droite
+    let len = 0; for (let i = 1; i < seg.length; i++) len += distM(seg[i - 1][0], seg[i - 1][1], seg[i][0], seg[i][1]);
+    if (len < 4 * distM(A[1], A[2], B[1], B[2]) + 300) out = seg;
+  }
+  // longueurs cumulées pour avancer à vitesse régulière
+  const cum = [0]; for (let i = 1; i < out.length; i++) cum.push(cum[i - 1] + distM(out[i - 1][0], out[i - 1][1], out[i][0], out[i][1]));
+  return N.seg[k] = { pts: out, cum };
+}
+function urbAlong(seg, f){
+  const L = seg.cum[seg.cum.length - 1], want = L * f;
+  for (let i = 1; i < seg.pts.length; i++) if (seg.cum[i] >= want){
+    const a = seg.pts[i - 1], b = seg.pts[i], s = seg.cum[i] - seg.cum[i - 1], g = s ? (want - seg.cum[i - 1]) / s : 0;
+    return [a[0] + (b[0] - a[0]) * g, a[1] + (b[1] - a[1]) * g];
+  }
+  return seg.pts[seg.pts.length - 1];
+}
+/** Courses d'un jour donné : [indice, début, fin] en minutes (gardé en mémoire pour la journée). */
+function urbDayTrips(N, dayMs){
+  N.dayTrips = N.dayTrips || {};
+  const k = ymd(reuDate(dayMs + 12 * 3600e3));
+  if (N.dayTrips[k]) return N.dayTrips[k];
+  const act = urbActiveSet(N, dayMs + 12 * 3600e3), out = [];
+  N.trips.forEach((t, ti) => { if (act.has(t[2])){ const tp = N.tps[t[4]]; out.push([ti, t[5], t[5] + tp[tp.length - 1]]); } });
+  const ks = Object.keys(N.dayTrips).sort(); if (ks.length > 2) ks.slice(0, ks.length - 2).forEach(x => delete N.dayTrips[x]);   // hier et aujourd'hui seulement
+  return N.dayTrips[k] = out;
+}
+/** Où devrait être la course ti, à l'instant now, pour un service commencé le jour dayMs. */
+function urbEstPos(N, ti, dayMs, now){
+  const t = N.trips[ti], tp = N.tps[t[4]], pat = N.pats[t[3]];
+  const m = (now - dayMs) / 60000 - t[5];
+  if (m < 0 || m > tp[tp.length - 1]) return null;
+  let pos = 0; while (pos < tp.length - 2 && tp[pos + 1] <= m) pos++;
+  const span = tp[pos + 1] - tp[pos], f = span > 0 ? Math.min(1, (m - tp[pos]) / span) : 1;
+  const ll = urbAlong(urbSeg(N, t[0], pat[pos], pat[pos + 1]), f);
+  return { lat: ll[0], lon: ll[1], next: pat[pos + 1], nextAt: dayMs + (t[5] + tp[pos + 1]) * 60000, pos };
+}
+function urbEstTick(){
+  if (!urb.index || document.hidden || view !== 'map'){ return; }
+  const z = map.getZoom();
+  if (!urbEstOn || z < 12){ if (urbEstMk.size){ urbEstLayer.clearLayers(); urbEstMk.clear(); } return; }
+  const b = map.getBounds().pad(0.15), now = Date.now(), today = midnightMs(now), seen = new Set();
+  urbVisibleNets().filter(n => bboxIn(n.bbox, b)).forEach(n => {
+    const N = urb.nets[n.id]; if (!N) return;
+    const live = urb.veh[n.id] && urb.rtAt[n.id] && now - urb.rtAt[n.id] < 120000 ? urb.veh[n.id] : null;
+    for (const day of [today - 864e5, today]){
+      const mNow = (now - day) / 60000;
+      urbDayTrips(N, day).forEach(([ti, s, e]) => {
+        if (mNow < s || mNow > e || seen.size > 300) return;
+        const tid = N.tripIds && N.tripIds[ti];
+        if (live && tid && live.byTrip[tid]) return;                    // ce bus émet : on montre le vrai
+        const p = urbEstPos(N, ti, day, now); if (!p || !b.contains([p.lat, p.lon])) return;
+        const r = N.R[N.trips[ti][0]];
+        if (live && live.list.some(v => v.route.s === r.s && distM(v.lat, v.lon, p.lat, p.lon) < 800)) return;
+        const key = n.id + '|' + ti + '|' + day; seen.add(key);
+        let mk = urbEstMk.get(key);
+        if (!mk){
+          const html = `<div class="bus-mk urb est" title="Position estimée d’après l’horaire"><div class="pill2" style="background:#${esc(r.c)};color:#${esc(r.t)}">${esc(r.s)}</div></div>`;
+          mk = L.marker([p.lat, p.lon], { icon: L.divIcon({ className: '', html, iconSize: [0, 0] }), zIndexOffset: -500, keyboard: false })
+            .bindPopup(() => urbEstPopup(mk), { maxWidth: 270 }).addTo(urbEstLayer);
+          mk._u = { N, ti, day }; urbEstMk.set(key, mk);
+        } else mk.setLatLng([p.lat, p.lon]);
+      });
+    }
+  });
+  urbEstMk.forEach((mk, k) => { if (!seen.has(k)){ urbEstLayer.removeLayer(mk); urbEstMk.delete(k); } });
+}
+function urbEstPopup(mk){
+  const { N, ti, day } = mk._u, t = N.trips[ti], r = N.R[t[0]], pat = N.pats[t[3]], tp = N.tps[t[4]], now = Date.now();
+  const p = urbEstPos(N, ti, day, now);
+  const dest = N.heads[t[1]] || N.stops[pat[pat.length - 1]][0];
+  const hm = m => fmtHM(day + m * 60000);
+  return `<div class="pop-h">${badge(r)}<b>${esc(dest)}</b></div>
+    <div class="urb-net">${urbDot(N.color)}${esc(N.name)} · ${esc(N.zone)}</div>
+    ${p ? `<div>Prochain arrêt : <b>${esc(N.stops[p.next][0])}</b> vers ${fmtHM(p.nextAt)}</div>` : '<div>Course terminée.</div>'}
+    <div class="muted sm">Départ ${esc(N.stops[pat[0]][0])} ${hm(t[5])} · arrivée ${hm(t[5] + tp[tp.length - 1])}</div>
+    <div class="muted sm">≈ <b>Position estimée</b> d’après l’horaire officiel${N.rt ? ' (ce bus n’envoie pas sa position en ce moment)' : ' : ce réseau ne publie pas la position de ses bus'}. Le vrai bus peut être en avance ou en retard.</div>`;
+}
+setInterval(urbEstTick, 3000);
+map.on('moveend zoomend', () => urbEstTick());
+document.addEventListener('change', e => {
+  if (e.target.id === 'urbEst'){ urbEstOn = e.target.checked; try { localStorage.setItem('cj_urb_est', urbEstOn ? '1' : '0'); } catch(err){} urbEstTick(); }
+  else if (e.target.closest('[data-urb]')) urbEstTick();
+});
 
 const tfPane = map.createPane('traffic'); tfPane.style.zIndex = 350; tfPane.style.pointerEvents = 'none';
 let tfFlow = null, tfInc = null;

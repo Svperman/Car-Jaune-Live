@@ -87,6 +87,30 @@ await t('Fiches : les 5 réseaux et leurs lignes', async () => {
   await page.evaluate("document.querySelector('#ficheModal').hidden = true; 1");
   return (n === 5 && r[1] && r[2]) || JSON.stringify([n, r]);
 });
+// ---------- ≈ bus estimés d'après l'horaire ----------
+await t('≈ bus estimés : Citalis un mardi à 8 h, sur le tracé', async () => {
+  const r = await page.evaluate(`(() => {
+    let d = midnightMs(Date.now()); while (reuDate(d).wd !== 1) d += 864e5;
+    const real = Date.now; Date.now = () => d + 8 * 3600e3;
+    try { setView('map'); map.invalidateSize(); map.setView([-20.8789, 55.4481], 14, { animate:false }); urbEstTick(); } finally { Date.now = real; }
+    const list = [...urbEstMk.values()];
+    // chaque bus estimé est à moins de 1,5 km d'un arrêt de sa course
+    const far = list.filter(mk => { const { N, ti } = mk._u, ll = mk.getLatLng();
+      return !N.pats[N.trips[ti][3]].some(si => distM(ll.lat, ll.lng, N.stops[si][1], N.stops[si][2]) < 1500); }).length;
+    return [list.length, far, document.querySelectorAll('.bus-mk.urb.est').length];
+  })()`);
+  console.log('   ', JSON.stringify(r));
+  return (r[0] > 3 && r[1] === 0 && r[2] === r[0]) || JSON.stringify(r);
+});
+await t('≈ bus estimés : popup « position estimée »', async () => {
+  const h = await page.evaluate(`(() => { const mk = [...urbEstMk.values()][0]; mk.openPopup(); return document.querySelector('.leaflet-popup-content').innerText; })()`);
+  return /estimée/.test(h) && /Prochain arrêt|terminée/.test(h) || h;
+});
+await t('≈ bus estimés : se coupent dans les réglages', async () => {
+  const r = await page.evaluate(`(() => { const c = document.querySelector('#urbEst'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles:true }));
+    const n = urbEstMk.size; c.checked = true; c.dispatchEvent(new Event('change', { bubbles:true })); return [n, localStorage.getItem('cj_urb_est')]; })()`);
+  return (r[0] === 0 && r[1] === '1') || JSON.stringify(r);
+});
 await t('popup d’un arrêt urbain', async () => {
   await page.evaluate(`(() => { const N = urb.nets.citalis; urbStopPopup(N, 0); })()`);
   await page.waitForTimeout(300);
