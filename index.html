@@ -936,6 +936,7 @@
       <div class="set-row"><div class="set-l"><b>Notifications</b><small id="setOnTxt"></small></div><label class="switch"><input type="checkbox" id="setOn"><span></span></label></div>
       <div class="set-row col"><div class="set-l"><b>Pause</b><small id="pauseTxt">Coupe-les un moment, elles reviennent toutes seules.</small></div><div class="pseg" id="pauseSeg"><button data-pause="60">1 h</button><button data-pause="180">3 h</button><button data-pause="tomorrow">Jusqu’à demain</button><button data-pause="0" id="pauseOff" hidden>▶ Reprendre</button></div></div>
       <div class="set-row"><div class="set-l"><b>Me prévenir</b><small>avant chaque car</small></div><select class="set-sel" id="alLead" aria-label="Délai"><option value="2">2 min</option><option value="5" selected>5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></div>
+      <div class="set-row"><div class="set-l"><b>🚗 Bouchons et accidents</b><small>sur ton trajet et devant ton car</small></div><label class="switch"><input type="checkbox" id="alJam" checked><span></span></label></div>
       <div class="set-row adv"><div class="set-l"><b>Même appli fermée</b><small id="pushStatus"></small></div><label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
       <div class="set-row col dep-push adv" id="pushSec"><div class="set-l"><b>Canal ntfy</b><small>installe l’appli gratuite <b>ntfy</b> et abonne-toi à ce nom</small></div>
         <div class="set-ctl"><code id="pushTopic" class="sh-code sm"></code><button class="btn ghost small" id="pushCopy">Copier</button><button class="btn ghost small" id="pushTest">🧪 Tester</button></div></div>
@@ -3465,6 +3466,7 @@ function loadAlertCfg(){
   alertCfg.ntfy = pushCfg.on ? pushCfg.topic : '';
   if (alertCfg.muteUntil && Date.now() >= alertCfg.muteUntil) alertCfg.muteUntil = 0;   // pause terminée
   $('#alLead').value = String(alertCfg.lead);
+  $('#alJam').checked = alertCfg.jam !== false;
   $('#alQuai').checked = alertCfg.quai; $('#alLate').checked = alertCfg.late; $('#alNoBus').checked = alertCfg.noBus; $('#alLast').checked = alertCfg.lastBus !== false;
   $('#alFollow').checked = alertCfg.follow;
   if (alertCfg.follow) setFollow(true);
@@ -3473,6 +3475,7 @@ $('#geoBtn').addEventListener('click', locateOnce);
 $('#alFollow').addEventListener('change', e => setFollow(e.target.checked));
 $('#alLead').addEventListener('change', e => { alertCfg.lead = +e.target.value; saveAlertCfg(); renderAlertStatus(); });
 $('#alLine').addEventListener('change', e => { alertCfg.line = e.target.value; saveAlertCfg(); renderAlertStatus(); });
+$('#alJam').addEventListener('change', e => { alertCfg.jam = e.target.checked; saveAlertCfg(); if (e.target.checked) trafficAlertTick(true); });
 ['alQuai', 'alLate', 'alNoBus', 'alLast'].forEach(id => $('#' + id).addEventListener('change', e => {
   alertCfg[{ alQuai:'quai', alLate:'late', alNoBus:'noBus', alLast:'lastBus' }[id]] = e.target.checked; saveAlertCfg();
 }));
@@ -3785,6 +3788,7 @@ function parseFeed(feed){
   loadTripSchedules();          // horaires arrêt par arrêt des cars en circulation (une fois par ligne)
   try { cityTick(); renderCityChip(); } catch(e){}
   try { busJamTick(); } catch(e){}
+  try { trafficAlertTick(); } catch(e){}
 }
 
 /* ====================== Avance / retard estimés ======================
@@ -5075,6 +5079,92 @@ function routeStopPts(rid){
   return [...ids].map(id => S.stops[id]).filter(Boolean);
 }
 const stopPtsCache = {};
+/* ====================== Alertes bouchons / accidents ======================
+   Te prévient quand un bouchon, un accident, une route fermée… se trouve :
+   - devant le car où tu es (sur sa ligne, dans les 8 km à venir)
+   - sur ton trajet (lignes qui relient ton départ et ton arrivée, entre les deux)
+   Sources : TomTom si tu as mis la clé (toutes les routes), sinon les bouchons vus par les cars jaunes eux-mêmes.
+   Chaque incident n'est signalé qu'une fois. */
+const TF_ALERT_CATS = { 1:1, 6:1, 7:1, 8:1, 9:1, 11:1, 14:1 };
+let tfTripCache = { key:'', lines:[] }, tfAlertLast = 0;
+function tripLinesFor(){
+  if (!tripReady() || !S || !S.routes) return [];
+  const key = trip.a + '|' + trip.b;
+  if (tfTripCache.key === key) return tfTripCache.lines;
+  const A = findGroup(trip.a), B = findGroup(trip.b), out = [];
+  if (A && B && isFinite(A.lat) && isFinite(B.lat)) Object.keys(S.routes).forEach(rid => routeLines(rid).forEach(line => {
+    const pa = projectOn(line, A.lat, A.lon), pb = projectOn(line, B.lat, B.lon);
+    if (pa.d < 350 && pb.d < 350 && Math.abs(pa.s - pb.s) > 300)
+      out.push({ line, from: Math.min(pa.s, pb.s) - 200, to: Math.max(pa.s, pb.s) + 200, route: S.routes[rid], why: 'trip' });
+  }));
+  return (tfTripCache = { key, lines: out }).lines;
+}
+function busAheadLine(){
+  if (!onBus) return null;
+  const v = vehicles.find(x => x.id === onBus), st = motion[onBus];
+  if (!v || !st || !st.line) return null;
+  const s0 = st.s0, dir = st.dir || 1;
+  return { line: st.line, from: dir > 0 ? s0 : s0 - 8000, to: dir > 0 ? s0 + 8000 : s0, route: v.route, why: 'bus', me: s0, dir };
+}
+/** L'incident touche-t-il ce bout de ligne ? → distance le long de la ligne (ou null). */
+function hitOnLine(L, pts){
+  for (const [lat, lon] of pts){
+    const pr = projectOn(L.line, lat, lon);
+    if (pr.d < 130 && pr.s >= L.from && pr.s <= L.to) return pr.s;
+  }
+  return null;
+}
+function incPoints(inc){
+  const c = inc.geo && inc.geo.coordinates; if (!c) return [];
+  const pts = inc.geo.type === 'Point' ? [c] : c, step = Math.max(1, Math.floor(pts.length / 6));
+  return pts.filter((p, i) => i % step === 0 || i === pts.length - 1).map(p => [p[1], p[0]]);
+}
+function trafficAlertTick(force){
+  if (!alertCfg.on || alertCfg.jam === false || isMuted()) return;
+  const zones = [busAheadLine(), ...tripLinesFor()].filter(Boolean);
+  if (!zones.length) return;
+  if (TF.key && (force || Date.now() - TF.at > 5 * 60e3)) loadIncidents();     // incidents TomTom, même carte trafic masquée
+  const now = Date.now(), found = [];
+  (TF.incidents || []).forEach(inc => {
+    if (!TF_ALERT_CATS[inc.iconCategory]) return;
+    if (inc.iconCategory === 9 && (inc.magnitudeOfDelay || 0) < 2) return;            // petits travaux : on laisse
+    if (inc.iconCategory === 6 && (inc.magnitudeOfDelay || 0) < 2 && (inc.delay || 0) < 180) return;   // ralentissement léger
+    const pts = incPoints(inc);
+    for (const Z of zones){
+      const at = hitOnLine(Z, pts);
+      if (at == null) continue;
+      const c = pts[Math.floor(pts.length / 2)] || pts[0];
+      found.push({ key: 'tt|' + inc.iconCategory + '|' + (inc.from || '') + '|' + (inc.to || '') + '|' + c[0].toFixed(3) + c[1].toFixed(3),
+        kind: TF_KIND[inc.iconCategory] || 'Incident', icon: TF_ICON[inc.iconCategory] || '⚠️', road: (inc.roadNumbers || [])[0] || '',
+        town: typeof communeAt === 'function' ? communeAt(c[0], c[1]) : '', from: inc.from, to: inc.to,
+        delay: inc.delay || 0, closed: inc.iconCategory === 8 || inc.magnitudeOfDelay === 4, Z, ahead: Z.why === 'bus' ? Math.abs(at - Z.me) : null, sev: (inc.magnitudeOfDelay || 0) + (inc.iconCategory === 1 || inc.iconCategory === 8 ? 2 : 0) });
+      break;
+    }
+  });
+  Object.values(TF.jams || {}).forEach(j => {                                          // bouchons vus par les cars jaunes
+    for (const Z of zones){
+      const at = hitOnLine(Z, [[j.lat, j.lon]]);
+      if (at == null) continue;
+      found.push({ key: 'cj|' + Math.round(j.lat * 500) + ',' + Math.round(j.lon * 500), kind: 'Bouchon', icon: '🚗', road: '', town: typeof communeAt === 'function' ? communeAt(j.lat, j.lon) : '',
+        from: j.near ? 'vers ' + j.near : '', delay: 0, closed: false, Z, ahead: Z.why === 'bus' ? Math.abs(at - Z.me) : null, sev: 2, byBus: j.l });
+      break;
+    }
+  });
+  if (!found.length) return;
+  found.sort((a, b) => (a.Z.why === 'bus' ? -1 : 0) - (b.Z.why === 'bus' ? -1 : 0) || b.sev - a.sev);
+  const f = found.find(x => !alertSent[x.key]);
+  if (!f || now - tfAlertLast < 4 * 60e3) return;
+  alertSent[f.key] = { at: now }; saveSent(); tfAlertLast = now;
+  const where = [f.road, f.town].filter(Boolean).join(' · ') || [f.from, f.to].filter(Boolean).join(' → ');
+  const title = f.Z.why === 'bus'
+    ? `${f.icon} ${f.closed ? 'Route fermée' : f.kind} devant ton car${f.ahead != null ? ' (à ' + fmtDist(f.ahead) + ')' : ''}`
+    : `${f.icon} ${f.closed ? 'Route fermée' : f.kind} sur ton trajet`;
+  const body = `${where ? where + '. ' : ''}${f.delay >= 60 ? `Environ +${Math.round(f.delay / 60)} min de ralentissement. ` : ''}`
+    + (f.Z.why === 'bus' ? `Ton ${f.Z.route.s} risque d’arriver en retard.` : `Les cars ${f.Z.route.s ? f.Z.route.s + ' ' : ''}entre ${trip.a} et ${trip.b} peuvent avoir du retard.`)
+    + (f.byBus ? ` (repéré par un car ${f.byBus} qui roule au pas)` : '');
+  notify(title, body, 'warn');
+}
+
 function busJamTick(){
   const now = Date.now();
   vehicles.forEach(v => {
