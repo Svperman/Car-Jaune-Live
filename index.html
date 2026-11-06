@@ -1178,10 +1178,11 @@ const SRC = ' · Données Région Réunion (Licence Ouverte)';
 // sur téléphone, Leaflet n'affichait les nouveaux morceaux de carte qu'une fois le doigt levé (zones vides pendant
 // le déplacement) : on charge en continu et on garde plus de morceaux autour de l'écran
 const TILE_OPTS = { updateWhenIdle:false, updateInterval:150, keepBuffer:4 };
-// « Plan » : fond CARTO Voyager, sans le cercle violet des eaux territoriales que dessine le plan OpenStreetMap
+// « Plan » : plan Esri (gratuit, sans clé), sans le cercle violet des eaux territoriales du plan OpenStreetMap.
+// (CARTO demande désormais une clé : ses cartes s'affichaient avec « API KEY REQUIRED ».)
 const BASES = {
-  'Plan': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { ...TILE_OPTS,
-    subdomains:'abcd', maxZoom:19, attribution:'© OpenStreetMap, © CARTO' + SRC }),
+  'Plan': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
+    maxZoom:19, maxNativeZoom:19, attribution:'Plan © Esri, HERE, Garmin, © OpenStreetMap' + SRC }),
   'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
     maxZoom:19, attribution:'Imagerie © Esri' + SRC })
 };

@@ -1,5 +1,5 @@
 /* Car Jaune Live — service worker : appli utilisable hors ligne (coquille), données toujours fraîches */
-const VERSION = 'cj-v31';
+const VERSION = 'cj-v32';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png',
@@ -7,7 +7,7 @@ const SHELL = [
   './lib/images/layers.png', './lib/images/layers-2x.png'
 ];
 
-const TILE_CACHE = 'cj-tiles-v1', TILE_MAX = 4000;     // ~40 Mo maximum
+const TILE_CACHE = 'cj-tiles-v2', TILE_MAX = 4000;     // ~40 Mo maximum
 let tilePuts = 0;
 async function trimTiles(c){
   const keys = await c.keys();
