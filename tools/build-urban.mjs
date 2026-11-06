@@ -209,14 +209,67 @@ export function buildNet(net, zipBytes, today = new Date()){
   return out;
 }
 
+/* ---------- index des arrêts pour la recherche (onglet Horaires) ----------
+   même nom à moins de 600 m = un seul arrêt ; deux arrêts du même nom ailleurs = on précise la commune */
+function inPoly(geo, lat, lon){
+  const polys = geo.type === 'MultiPolygon' ? geo.coordinates : [geo.coordinates];
+  return polys.some(rings => {
+    let inside = false;
+    rings.forEach(ring => {
+      let c = false;
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++){
+        const [xi, yi] = ring[i], [xj, yj] = ring[j];
+        if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c;
+      }
+      if (c) inside = !inside;
+    });
+    return inside;
+  });
+}
+export async function loadCommunes(){
+  try {
+    const r = await fetch('https://geo.api.gouv.fr/communes?codeDepartement=974&fields=nom,contour&format=json');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const list = (await r.json()).filter(c => c.contour);
+    console.log(`✓ ${list.length} communes`);
+    return (lat, lon) => { const c = list.find(c => inPoly(c.contour, lat, lon)); return c ? c.nom : ''; };
+  } catch(e){ console.log('✗ communes : ' + e.message); return () => ''; }
+}
+export function stopGroupsOf(d, communeOf){
+  communeOf = communeOf || (() => '');
+  const by = new Map();
+  d.stops.forEach((s, i) => {
+    const k = s[0].trim(); if (!k) return;
+    let list = by.get(k); if (!list) by.set(k, list = []);
+    let g = list.find(g => Math.abs(g.lat - s[1]) < .0055 && Math.abs(g.lon - s[2]) < .0058);
+    if (!g) list.push(g = { lat: s[1], lon: s[2], ids: [] });
+    g.ids.push(i);
+  });
+  const out = [];
+  by.forEach((list, name) => {
+    list.sort((a, b) => a.lon - b.lon);
+    list.forEach(g => g.com = communeOf(g.lat, g.lon));
+    list.forEach((g, j) => {
+      let n = name;
+      if (list.length > 1){
+        const same = list.filter(x => x.com === g.com);
+        n = g.com ? `${name} (${g.com}${same.length > 1 ? ' ' + (same.indexOf(g) + 1) : ''})` : `${name} (${j + 1})`;
+      }
+      out.push([n, +g.lat.toFixed(5), +g.lon.toFixed(5), g.ids, g.com]);
+    });
+  });
+  return out.sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+}
+
 /* ---------- tous les réseaux ---------- */
 async function main(){
   const local = process.argv[2];
   mkdirSync('data/urbain', { recursive: true });
-  const index = { builtAt: Date.now(), nets: [] };
+  const index = { builtAt: Date.now(), nets: [] }, allStops = {};
   let prev = {};
   try { prev = JSON.parse(readFileSync('data/urbain/index.json', 'utf8')); } catch(e){}
   let ok = 0;
+  const communeOf = await loadCommunes();
   for (const net of NETS){
     try {
       let bytes;
@@ -229,6 +282,7 @@ async function main(){
       const d = buildNet(net, bytes);
       const json = JSON.stringify(d);
       writeFileSync(`data/urbain/${net.id}.json`, json);
+      allStops[net.id] = stopGroupsOf(d, communeOf);
       index.nets.push({ id: net.id, name: net.name, zone: net.zone, color: net.color, rt: !!net.rt, bbox: d.bbox,
         from: d.from, to: d.to, lines: d.routes.length, stops: d.stops.length, trips: d.trips.length, kb: Math.round(json.length / 1024), v: createHash('sha1').update(json).digest('hex').slice(0, 10) });
       console.log(`✓ ${net.name} : ${d.routes.length} lignes, ${d.stops.length} arrêts, ${d.trips.length} courses, ${Math.round(json.length / 1024)} Ko (${d.from} → ${d.to})`);
@@ -236,9 +290,12 @@ async function main(){
     } catch(e){
       console.log(`✗ ${net.name} : ${e.message}`);
       const old = (prev.nets || []).find(x => x.id === net.id);
-      if (old && existsSync(`data/urbain/${net.id}.json`)){ index.nets.push(Object.assign(old, { err: e.message })); console.log('  → version précédente gardée'); }
+      if (old && existsSync(`data/urbain/${net.id}.json`)){ index.nets.push(Object.assign(old, { err: e.message })); allStops[net.id] = stopGroupsOf(JSON.parse(readFileSync(`data/urbain/${net.id}.json`, 'utf8')), communeOf); console.log('  → version précédente gardée'); }
     }
   }
+  const stopsJson = JSON.stringify(allStops);
+  writeFileSync('data/urbain/stops.json', stopsJson);
+  index.sv = createHash('sha1').update(stopsJson).digest('hex').slice(0, 10);
   writeFileSync('data/urbain/index.json', JSON.stringify(index, null, 1));
   if (!ok) process.exit(1);
 }

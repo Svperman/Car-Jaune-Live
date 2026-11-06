@@ -494,6 +494,22 @@
   .urb-net{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--gris,#667);margin:-2px 0 6px}
   .urb-dot{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
   .muted.sm{font-size:11.5px;margin-top:6px}
+  #urbFiches{margin-top:22px}
+  .urb-h{margin:0 0 4px}
+  details.urb-fc{background:var(--carte);border-radius:10px;box-shadow:var(--ombre);margin-bottom:10px}
+  details.urb-fc>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:14px 16px;flex-wrap:wrap}
+  details.urb-fc>summary::-webkit-details-marker{display:none}
+  details.urb-fc>summary small{color:var(--gris);font-size:12px}
+  details.urb-fc>summary .sa-c{margin-left:auto;transition:transform .2s}
+  details.urb-fc[open]>summary .sa-c{transform:rotate(90deg)}
+  .urb-lines{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px;padding:0 12px 14px}
+  .urb-line{display:flex;align-items:center;gap:8px;text-align:left;background:var(--fond);border:1px solid var(--ligne);border-radius:9px;padding:7px 9px;cursor:pointer;font:inherit;font-size:13px;color:var(--texte);min-height:40px}
+  .urb-line span{overflow:hidden;text-overflow:ellipsis}
+  .urb-line:hover{border-color:var(--jaune)}
+  .urb-at{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 8px}
+  .urb-at .lbl{font-size:12px;color:var(--gris)}
+  .urb-lb{background:none;border:0;padding:2px;cursor:pointer}
+  #suggest li .urb-dot{vertical-align:middle}
   .al-link{border:none;background:none;color:var(--titre);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
 
   /* ---------- trafic routier ---------- */
@@ -874,7 +890,7 @@
       <div class="card field">
         <label for="stopInput">Nom de l'arrêt</label>
         <div class="field-row">
-          <input id="stopInput" class="search" type="search" placeholder="Arrêt, gare… (ex. Gare de St-Denis)" autocomplete="off">
+          <input id="stopInput" class="search" type="search" placeholder="Arrêt, gare… Car Jaune ou bus de ville" autocomplete="off">
           <button id="favBtn" class="round star" title="Ajouter aux favoris" aria-label="Ajouter aux favoris">☆</button>
           <ul id="suggest" hidden></ul>
         </div>
@@ -905,7 +921,7 @@
   <section class="view" id="view-fiches">
     <div class="wrap">
       <h1>Fiches horaires</h1>
-      <p class="lead">Les fiches PDF officielles de chaque ligne, récupérées automatiquement sur carjaune.re.</p>
+      <p class="lead">Les fiches PDF officielles de chaque ligne Car Jaune (carjaune.re), et plus bas les horaires des bus urbains.</p>
       <details class="card tarif-card" style="margin-bottom:16px">
         <summary><span class="sa-i">🎫</span><span class="sa-t"><b>Tarifs et titres de transport</b><small>gratuit pour les étudiants · abonnements dès 15 €/mois</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
         <div class="cls-body tarifs">
@@ -927,6 +943,7 @@
       <div class="card" id="calCard" style="margin-bottom:16px"><h2>Calendrier scolaire · La Réunion</h2><p class="muted">Chargement…</p></div>
       <div class="grid" id="fichesGrid"><div class="card">Chargement…</div></div>
       <div class="note" id="fichesNote"></div>
+      <div id="urbFiches"></div>
       <div class="alert" id="ficheWarn" hidden style="margin-top:12px;border-left-color:var(--retard)"></div>
       <div class="fiche-prog"></div>
     </div>
@@ -2994,7 +3011,7 @@ function alertContext(){
 }
 function alertRows(){
   const g = board.group;
-  if (!g || board.loading) return [];
+  if (!g || board.loading || g.urb) return [];
   const pool = board.error ? [] : gtfsRows(g);
   const rows = ficheRows(g, pool) || pool;
   return alertCfg.line ? rows.filter(r => r.route.s === alertCfg.line) : rows;
@@ -4584,7 +4601,8 @@ function searchStops(q){
   return stopGroups
     .filter(g => words.every(w => g.key.includes(w)))
     .sort((a, b) => (b.key.startsWith(words[0]) - a.key.startsWith(words[0])) || (/gare/.test(b.key) - /gare/.test(a.key)) || a.name.localeCompare(b.name, 'fr'))
-    .slice(0, 8);
+    .slice(0, 8)
+    .concat(typeof urbSearchStops === 'function' ? urbSearchStops(words) : []);   // + arrêts des bus urbains
 }
 
 let sugIdx = -1, sugItems = [];
@@ -4594,7 +4612,9 @@ function showSuggest(){
   sugIdx = -1;
   const ul = $('#suggest');
   if (!sugItems.length){ ul.hidden = true; return; }
-  ul.innerHTML = sugItems.map((g, i) => `<li data-i="${i}"><span>${esc(g.name)}</span>${favs.includes(g.name) ? '<small>★</small>' : ''}</li>`).join('');
+  ul.innerHTML = sugItems.map((g, i) => g.urb
+    ? `<li data-i="${i}"><span>${urbDot(g.urb.color)} ${esc(g.stop)}</span><small>${favs.includes(g.name) ? '★ ' : ''}${esc(g.urb.name)}${g.urb.com ? ' · ' + esc(g.urb.com) : ''}</small></li>`
+    : `<li data-i="${i}"><span>${esc(g.name)}</span>${favs.includes(g.name) ? '<small>★</small>' : ''}</li>`).join('');
   ul.hidden = false;
 }
 function pickStop(g){
@@ -4604,7 +4624,7 @@ function pickStop(g){
   selectStop(g);
 }
 $('#stopInput').addEventListener('input', showSuggest);
-$('#stopInput').addEventListener('focus', showSuggest);
+$('#stopInput').addEventListener('focus', () => { if (typeof urbStopsLoad === 'function') urbStopsLoad(); showSuggest(); });
 $('#stopInput').addEventListener('keydown', e => {
   const ul = $('#suggest');
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
@@ -4623,6 +4643,7 @@ $('#suggest').addEventListener('mousedown', e => {
 document.addEventListener('click', e => { if (!e.target.closest('.field-row')) $('#suggest').hidden = true; });
 
 async function selectStop(g){
+  if (g && g.urb) return urbSelectStop(g);                // arrêt de bus urbain (Citalis, Kar’Ouest…)
   board = { group: g, data: null, loading: true, at: 0 };
   try { syncPush(); } catch(e){}
   savePrefs();
@@ -4645,6 +4666,8 @@ function restoreLastStop(){
     const name = localStorage.getItem('cj_stop');
     const g = name && stopGroups.find(x => x.name === name);
     if (g){ $('#stopInput').value = g.name; selectStop(g); }
+    else if (name && / · /.test(name) && typeof urbStopsLoad === 'function')
+      urbStopsLoad().then(() => { const u = anyStopGroup(name); if (u && !board.group){ $('#stopInput').value = u.name; selectStop(u); } });
   } catch(e){}
 }
 
@@ -4658,7 +4681,7 @@ function updateFavBtn(){
 }
 function renderFavs(){
   const box = $('#favs');
-  let names = favs.filter(n => stopGroups.some(g => g.name === n));
+  let names = favs.filter(n => stopGroups.some(g => g.name === n) || (typeof urbStopGroups !== 'undefined' && (urbStopGroups || []).some(g => g.name === n)));
   let lbl = 'Mes favoris :';
   if (!names.length){
     lbl = 'Gares principales :';
@@ -4669,7 +4692,7 @@ function renderFavs(){
 }
 $('#favs').addEventListener('click', e => {
   const b = e.target.closest('[data-stop]'); if (!b) return;
-  pickStop(stopGroups.find(g => g.name === b.dataset.stop));
+  pickStop(stopGroups.find(g => g.name === b.dataset.stop) || anyStopGroup(b.dataset.stop));
 });
 $('#favBtn').addEventListener('click', () => {
   if (!board.group){ toast('Choisis d’abord un arrêt.'); return; }
@@ -4856,6 +4879,7 @@ function renderBoard(){
     card.innerHTML = `<div class="placeholder"><div class="big">🚏</div>Choisis un arrêt (recherche ou boutons par ligne) pour voir ses prochains départs.</div>`;
     return;
   }
+  if (g.urb) return renderUrbBoard(card, g);
   const pNow = (CAL.holidays || []).length ? periodOf(Date.now()) : null;
   const pTxt = !pNow ? '' : pNow.type === 'ferie' ? `<span class="tag tag-f">Horaires de jour férié</span>`
              : pNow.type === 'vacances' ? `<span class="tag tag-v">Horaires vacances scolaires</span>`
@@ -5399,6 +5423,168 @@ document.addEventListener('change', e => {
 });
 const urbSummary = () => { const n = URB_ALL.filter(id => urbOn[id]).length; return n ? `bus urbains (${n})` : ''; };
 (async () => { await urbIndex(); urbRenderSettings(); urbDraw(true); setTimeout(urbRtTick, 4000); })();
+
+/* ---------- 🕒 Horaires : arrêts des bus urbains dans la recherche ---------- */
+let urbStopGroups = null, urbStopsLoading = null;
+function urbStopsLoad(){
+  if (urbStopGroups) return Promise.resolve(urbStopGroups);
+  return urbStopsLoading = urbStopsLoading || (async () => {
+    const ix = await urbIndex();
+    let c = await idb.get('urb|stops');
+    if (!c || (ix && ix.sv && c.v !== ix.sv)){
+      try {
+        const r = await fetch(urbBase() + 'stops.json' + (ix && ix.sv ? '?v=' + ix.sv : ''));
+        if (r.ok){ c = { v: ix && ix.sv, d: await r.json() }; idb.set('urb|stops', c); }
+      } catch(e){}
+    }
+    if (!c){ urbStopsLoading = null; return []; }
+    const nets = (ix && ix.nets) || [], out = [];
+    Object.keys(c.d).forEach(id => {
+      const n = nets.find(x => x.id === id) || { id, name: id, color: '999' };
+      c.d[id].forEach(s => out.push({ name: `${s[0]} · ${n.name}`, stop: s[0], key: norm(s[0] + ' ' + n.name + ' ' + (s[4] || '')),
+        lat: s[1], lon: s[2], ids: [], wb: '', urb: { net: id, idx: s[3], name: n.name, color: n.color || '999', zone: n.zone || '', com: s[4] || '' } }));
+    });
+    urbStopGroups = out;
+    try { if (document.activeElement === $('#stopInput')) showSuggest(); renderFavs(); } catch(e){}
+    return out;
+  })();
+}
+const anyStopGroup = name => stopGroups.find(g => g.name === name) || (urbStopGroups || []).find(g => g.name === name);
+function urbSearchStops(words){
+  if (!urbStopGroups){ urbStopsLoad(); return []; }
+  return urbStopGroups.filter(g => urbOn[g.urb.net] && words.every(w => g.key.includes(w)))
+    .sort((a, b) => (b.key.startsWith(words[0]) - a.key.startsWith(words[0])) || a.name.localeCompare(b.name, 'fr'))
+    .slice(0, 6);
+}
+const urbLineName = r => !r.l || r.l === r.s ? 'Ligne ' + r.s : r.l.replace(/\s*<>\s*/g, ' ↔ ');
+const urbDot = c => `<span class="urb-dot" style="background:#${esc(c)}"></span>`;
+/** Lignes qui passent à ces arrêts (index des lignes du réseau). */
+function urbLinesAt(N, idxs){
+  urbIndexStops(N);
+  const set = new Set();
+  idxs.forEach(si => (N.at[si] || []).forEach(([pi]) => N.patTrips[pi].forEach(ti => set.add(N.trips[ti][0]))));
+  return [...set].sort((a, b) => N.R[a].s.localeCompare(N.R[b].s, 'fr', { numeric: true }));
+}
+async function urbSelectStop(g){
+  board = { group: g, data: null, loading: true, at: 0 };
+  savePrefs(); updateFavBtn(); renderBoard();
+  const N = await urbLoad(g.urb.net);
+  if (board.group !== g) return;
+  board.loading = false; board.error = N ? null : 'Horaires indisponibles pour le moment (pas de connexion ?).';
+  renderBoard(); try { updateAlertUI(); } catch(e){}
+}
+function renderUrbBoard(card, g){
+  const u = g.urb, N = urb.nets[u.net], now = Date.now();
+  const pmr = N && u.idx.some(i => N.stops[i] && N.stops[i][3] === 1) ? ' <span class="pmr" title="Arrêt accessible en fauteuil roulant">♿ accessible</span>' : '';
+  const head = `<div class="board-head"><h2>${esc(g.stop)}${pmr}</h2><span class="upd">${N && N.rt ? '📡 bus en direct quand ils émettent' : 'Horaires officiels'}</span></div>
+    <div class="urb-net">${urbDot(u.color)}<b>${esc(u.name)}</b>&nbsp;· ${esc(u.zone)}${u.com ? ' · ' + esc(u.com) : ''}</div>`;
+  if (board.loading){ card.innerHTML = head + `<div class="placeholder">Chargement des horaires ${esc(u.name)}…</div>`; return; }
+  if (!N){ card.innerHTML = head + `<div class="placeholder"><div class="big">📵</div>${esc(board.error || 'Horaires indisponibles.')}</div>`; return; }
+  if (N.rt && (!urb.rtAt[N.id] || now - urb.rtAt[N.id] > 20000) && !urb.rtBusy[N.id])
+    urbRtFetch(N.id).then(() => { if (view === 'board' && board.group === g) renderBoard(); }).catch(() => { urb.rtAt[N.id] = now + 100000; });
+  const lines = urbLinesAt(N, u.idx);
+  const lineBtns = lines.length ? `<div class="urb-at"><span class="lbl">Lignes :</span>${lines.map(ri => `<button class="urb-lb" data-urbline="${esc(N.id)}|${ri}" title="Fiche horaire de la ligne ${esc(N.R[ri].s)}">${badge(N.R[ri])}</button>`).join('')}
+    <button class="see" data-urbmap="${esc(g.name)}">🗺️ Voir sur la carte</button></div>` : '';
+  const rows = urbDepartures(N, u.idx, now, 40);
+  const src = `<p class="src-note">Horaires officiels ${esc(u.name)} (transport.data.gouv.fr)${N.rt ? ', corrigés en direct quand le bus est suivi 📡' : ''} · touche une ligne pour sa fiche complète</p>`;
+  if (!rows.length){ card.innerHTML = head + lineBtns + src + `<div class="placeholder"><div class="big">🌙</div>Aucun départ prévu à cet arrêt dans les prochaines heures.</div>`; return; }
+  let lastDay = midnightMs(now), html = '';
+  rows.forEach(r => {
+    const day = midnightMs(r.eff);
+    if (day !== lastDay){ html += `<tr class="sep"><td colspan="5">${dayLabel(r.eff).replace(/^./, c => c.toUpperCase())}</td></tr>`; lastDay = day; }
+    const mins = Math.round((r.eff - now) / 60000);
+    const when = mins <= 0 ? `<span class="when soon">À quai</span>` : mins < 60 ? `<span class="when${mins <= 2 ? ' soon' : ''}">${mins}<small>min</small></span>` : `<span class="when">${fmtHM(r.eff)}</span>`;
+    const dl = r.live && r.live.delay != null ? fmtDelay(r.live.delay) : null;
+    html += `<tr><td>${when}${r.live ? ' <span title="Bus suivi en direct">📡</span>' : ''}</td><td><button class="urb-lb" data-urbline="${esc(N.id)}|${N.R.indexOf(r.route)}">${badge(r.route)}</button></td>
+      <td class="b-dest">${esc(r.dest)}</td><td>${fmtHM(r.sched)}</td>
+      <td>${dl ? `<span class="delay ${dl.c}">${dl.t}</span>` : r.live ? '<span class="th">suivi en direct</span>' : '<span class="th">Horaire officiel</span>'}</td></tr>`;
+  });
+  card.innerHTML = head + lineBtns + src + `<table class="board"><thead><tr><th>Départ</th><th>Ligne</th><th>Direction</th><th>Horaire</th><th>Info</th></tr></thead><tbody>${html}</tbody></table>`;
+}
+$('#boardCard').addEventListener('click', e => {
+  const m = e.target.closest('[data-urbmap]'); if (!m) return;
+  const g = anyStopGroup(m.dataset.urbmap); if (!g || !g.urb) return;
+  if (!urbOn[g.urb.net]){ urbOn[g.urb.net] = true; try { localStorage.setItem('cj_urb', JSON.stringify(urbOn)); } catch(err){} urbRenderSettings(); }
+  setView('map'); savePrefs();
+  setTimeout(() => { map.setView([g.lat, g.lon], 17); urbLoad(g.urb.net).then(N => { if (N){ urbDraw(true); urbStopPopup(N, g.urb.idx[0], [g.lat, g.lon]); } }); }, 120);
+});
+
+/* ---------- 📄 Fiches : une fiche par ligne urbaine, tirée des horaires officiels ---------- */
+const URB_DAYS = [{ k: 'auto', t: 'Aujourd’hui' }, { k: 'dem', t: 'Demain' }, { k: 'sem', t: 'Lundi–vendredi' }, { k: 'sam', t: 'Samedi' }, { k: 'dim', t: 'Dimanche' }];
+function urbDayMs(k){
+  const today = midnightMs(Date.now());
+  if (k === 'auto') return today;
+  if (k === 'dem') return today + 864e5;
+  for (let i = 0; i < 8; i++){
+    const d = today + i * 864e5, wd = reuDate(d + 12 * 3600e3).wd;
+    if (k === 'sem' ? wd <= 4 && i > 0 : k === 'sam' ? wd === 5 : wd === 6) return d;
+  }
+  return today;
+}
+const fmtMin = m => pad(Math.floor(m / 60) % 24) + ':' + pad(m % 60);
+const ymdTxt = s => s ? `${s.slice(6, 8)}/${s.slice(4, 6)}/${s.slice(0, 4)}` : '';
+async function openUrbFiche(netId, ri, k){
+  k = k || 'auto';
+  const N = await urbLoad(netId); if (!N) { toast('Horaires indisponibles (pas de connexion ?)'); return; }
+  const r = N.R[ri], day = urbDayMs(k), act = urbActiveSet(N, day + 12 * 3600e3);
+  const info = (urb.index && urb.index.nets.find(n => n.id === netId)) || {};
+  const nowMin = k === 'auto' ? Math.round((Date.now() - day) / 60000) : null;
+  const here = board.group && board.group.urb && board.group.urb.net === netId ? new Set(board.group.urb.idx) : null;
+  const trips = N.trips.filter(t => t[0] === ri && act.has(t[2]));
+  const dl = dayLabel(day + 12 * 3600e3);
+  let html = `<div class="modal-head"><h2>${badge(r)} ${esc(urbLineName(r))}</h2><button class="round" data-close title="Fermer" aria-label="Fermer">✕</button></div>
+    <div class="src-note" style="margin-top:6px">${urbDot(N.color)} <b>${esc(N.name)}</b> · horaires officiels (transport.data.gouv.fr)${info.from ? `, valables du ${ymdTxt(info.from)} au ${ymdTxt(info.to)}` : ''} · ${k === 'auto' || k === 'dem' ? dl : dl + ' ' + reuDate(day + 12 * 3600e3).d + '/' + pad(reuDate(day + 12 * 3600e3).m)}</div>
+    <div class="ptabs">${URB_DAYS.map(x => `<button class="chip${x.k === k ? ' on' : ''}" data-urbday="${x.k}" data-urbline="${esc(netId)}|${ri}">${x.t}</button>`).join('')}</div>`;
+  if (!trips.length) html += `<div class="placeholder"><div class="big">🚫</div>Pas de service ce jour-là sur cette ligne.</div>`;
+  [0, 1].forEach(dir => {
+    const list = trips.filter(t => (t[6] || 0) === dir).sort((a, b) => a[5] - b[5]);
+    if (!list.length) return;
+    // ordre des arrêts : le parcours le plus long, complété par les arrêts des autres parcours
+    const pats = [...new Set(list.map(t => t[3]))].sort((a, b) => N.pats[b].length - N.pats[a].length);
+    const order = N.pats[pats[0]].slice();
+    pats.slice(1).forEach(pi => N.pats[pi].forEach((s, pos) => {
+      if (order.includes(s)) return;
+      const prev = N.pats[pi][pos - 1], at = prev != null ? order.indexOf(prev) : -1;
+      order.splice(at + 1, 0, s);
+    }));
+    const cols = list.map(t => { const p = N.pats[t[3]], o = {}; p.forEach((s, pos) => { if (o[s] == null) o[s] = t[5] + N.tps[t[4]][pos]; }); return { t, o, first: t[5] }; });
+    const heads = {}; list.forEach(t => { const h = N.heads[t[1]] || ''; heads[h] = (heads[h] || 0) + 1; });
+    const dest = Object.keys(heads).sort((a, b) => heads[b] - heads[a])[0] || N.stops[order[order.length - 1]][0];
+    const nextCol = nowMin == null ? -1 : cols.findIndex(c => c.first >= nowMin);
+    html += `<div class="dir-h">Direction ${esc(dest)}<small>${list.length} départ${list.length > 1 ? 's' : ''} · ${fmtMin(cols[0].first)} → ${fmtMin(cols[cols.length - 1].first)}</small></div><div class="tt-wrap"><table class="fiche"><tbody>` +
+      order.map(s => `<tr class="${here && here.has(s) ? 'here' : ''}"><td>${esc(N.stops[s][0])}</td>` + cols.map((c, ci) => {
+        const m = c.o[s];
+        const cls = nowMin == null ? '' : ci === nextCol ? 'next' : c.first < nowMin ? 'past' : '';
+        return `<td class="${cls}">${m == null ? '–' : fmtMin(m)}</td>`;
+      }).join('') + '</tr>').join('') + `</tbody></table></div>`;
+  });
+  $('#ficheModalBox').innerHTML = html;
+  $('#ficheModal').hidden = false;
+  const nx = $('#ficheModalBox td.next'); if (nx) nx.scrollIntoView({ inline: 'center', block: 'nearest' });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-urbline]'); if (!b) return;
+  const [net, ri] = b.dataset.urbline.split('|');
+  openUrbFiche(net, +ri, b.dataset.urbday);
+});
+function urbRenderFiches(){
+  const box = $('#urbFiches'); if (!box) return;
+  const nets = urb.index ? urb.index.nets.filter(n => urbOn[n.id]) : [];
+  if (!nets.length){ box.innerHTML = ''; return; }
+  const open = new Set([...box.querySelectorAll('details[open]')].map(d => d.dataset.net));
+  box.innerHTML = `<h2 class="urb-h">🚌 Bus urbains</h2><p class="muted sm" style="margin:0 0 10px">Horaires officiels de chaque ligne, mis à jour chaque semaine · touche un réseau puis une ligne.</p>` +
+    nets.map(n => `<details class="urb-fc" data-net="${esc(n.id)}"${open.has(n.id) ? ' open' : ''}><summary>${urbDot(n.color)}<b>${esc(n.name)}</b><small>${esc(n.zone)} · ${n.lines} lignes${n.rt ? ' · 📡 en direct' : ''}</small><span class="sa-c" aria-hidden="true">›</span></summary><div class="urb-lines">Chargement…</div></details>`).join('');
+  box.querySelectorAll('details[open]').forEach(urbFillFiche);
+}
+async function urbFillFiche(d){
+  const N = await urbLoad(d.dataset.net), box = d.querySelector('.urb-lines');
+  if (!N){ box.textContent = 'Horaires indisponibles pour le moment (pas de connexion ?).'; return; }
+  box.innerHTML = N.R.map((r, ri) => ({ r, ri })).sort((a, b) => a.r.s.localeCompare(b.r.s, 'fr', { numeric: true }))
+    .map(({ r, ri }) => `<button class="urb-line" data-urbline="${esc(N.id)}|${ri}">${badge(r)}<span>${esc(urbLineName(r))}</span></button>`).join('');
+}
+document.addEventListener('toggle', e => { const d = e.target; if (d.classList && d.classList.contains('urb-fc') && d.open) urbFillFiche(d); }, true);
+document.addEventListener('change', e => { if (e.target.closest('[data-urb]')){ urbRenderFiches(); } });
+urbIndex().then(() => { urbRenderFiches(); urbStopsLoad(); });
 
 const tfPane = map.createPane('traffic'); tfPane.style.zIndex = 350; tfPane.style.pointerEvents = 'none';
 let tfFlow = null, tfInc = null;

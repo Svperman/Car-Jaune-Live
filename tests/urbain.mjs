@@ -36,6 +36,57 @@ for (const [id, ll] of [['citalis', [-20.8789, 55.4481]], ['karouest', [-21.0094
     return r[1] > 0 || 'aucun départ à ' + r[0];
   });
 }
+// ---------- 🕒 Horaires : chercher un arrêt de bus de ville ----------
+await t('Horaires : un arrêt Citalis dans la recherche', async () => {
+  await page.evaluate("setView('board'); 1");
+  await page.waitForFunction('!!urbStopGroups', null, { timeout: 15000 });
+  await page.fill('#stopInput', 'hotel de ville ste marie');
+  await page.dispatchEvent('#stopInput', 'input');
+  await page.waitForTimeout(200);
+  const r = await page.evaluate('[...document.querySelectorAll("#suggest li")].map(li => li.innerText.replace(/\\s+/g, " "))');
+  return r.some(x => /Citalis/.test(x)) || JSON.stringify(r);
+});
+await t('Horaires : départs de l’arrêt urbain (un mardi matin)', async () => {
+  const r = await page.evaluate(`(async () => {
+    const g = urbStopGroups.find(x => x.urb.net === 'citalis' && /Hôtel de Ville de Ste Marie/.test(x.stop));
+    let d = midnightMs(Date.now()); while (reuDate(d).wd !== 1) d += 864e5;
+    const real = Date.now; Date.now = () => d + 8 * 3600e3;
+    try { await selectStop(g); renderBoard(); } finally { Date.now = real; }
+    return [document.querySelectorAll('#boardCard table.board tbody tr:not(.sep)').length, document.querySelectorAll('#boardCard [data-urbline]').length, document.querySelector('#boardCard h2').innerText, localStorage.getItem('cj_stop')];
+  })()`);
+  console.log('   ', JSON.stringify(r));
+  return (r[0] > 3 && r[1] > 0 && /Ste Marie/.test(r[2]) && /· Citalis$/.test(r[3])) || JSON.stringify(r);
+});
+await t('Horaires : favori ★ sur un arrêt urbain', async () => {
+  await page.click('#favBtn');
+  const r = await page.evaluate('[...document.querySelectorAll("#favs [data-stop]")].map(b => b.dataset.stop)');
+  return r.some(x => /· Citalis$/.test(x)) || JSON.stringify(r);
+});
+// ---------- 📄 Fiches : une fiche par ligne ----------
+await t('Fiches : la fiche d’une ligne depuis l’arrêt', async () => {
+  await page.evaluate(`(async () => { const b = document.querySelector('#boardCard [data-urbline]'); const [n, ri] = b.dataset.urbline.split('|'); await openUrbFiche(n, +ri, 'sem'); })()`);
+  await page.waitForTimeout(200);
+  const r = await page.evaluate('[!document.querySelector("#ficheModal").hidden, document.querySelectorAll("#ficheModalBox .dir-h").length, document.querySelectorAll("#ficheModalBox table.fiche td").length, document.querySelectorAll("#ficheModalBox tr.here").length]');
+  return (r[0] && r[1] >= 1 && r[2] > 20 && r[3] >= 1) || JSON.stringify(r);
+});
+await t('Fiches : dimanche (ou pas de service) sans erreur', async () => {
+  await page.click('#ficheModalBox [data-urbday="dim"]');
+  await page.waitForTimeout(200);
+  const r = await page.evaluate('[document.querySelectorAll("#ficheModalBox .dir-h").length, !!document.querySelector("#ficheModalBox .placeholder"), document.querySelector("#ficheModalBox .chip.on").innerText]');
+  await page.evaluate("document.querySelector('#ficheModal').hidden = true; 1");
+  return ((r[0] > 0 || r[1]) && r[2] === 'Dimanche') || JSON.stringify(r);
+});
+await t('Fiches : les 5 réseaux et leurs lignes', async () => {
+  await page.evaluate("setView('fiches'); 1");
+  const n = await page.evaluate('document.querySelectorAll("#urbFiches details.urb-fc").length');
+  await page.evaluate(`document.querySelector('#urbFiches details[data-net="karouest"] summary').click(); 1`);
+  await page.waitForFunction('document.querySelectorAll("#urbFiches details[data-net=karouest] .urb-line").length > 10', null, { timeout: 15000 });
+  await page.evaluate(`document.querySelector('#urbFiches details[data-net="karouest"] .urb-line').click(); 1`);
+  await page.waitForTimeout(300);
+  const r = await page.evaluate('[document.querySelectorAll("#urbFiches details[data-net=karouest] .urb-line").length, !document.querySelector("#ficheModal").hidden, /Kar/.test(document.querySelector("#ficheModalBox").innerText)]');
+  await page.evaluate("document.querySelector('#ficheModal').hidden = true; 1");
+  return (n === 5 && r[1] && r[2]) || JSON.stringify([n, r]);
+});
 await t('popup d’un arrêt urbain', async () => {
   await page.evaluate(`(() => { const N = urb.nets.citalis; urbStopPopup(N, 0); })()`);
   await page.waitForTimeout(300);
@@ -50,6 +101,7 @@ await t('Alternéo : bus en direct (via serveur)', async () => {
   return (r[0] === 'srv' && r[1] === 1 && r[2] >= 1 && r[3] === 240) || JSON.stringify(r);
 });
 await t('décocher un réseau le masque', async () => {
+  await page.evaluate("setView('map'); 1");
   await page.evaluate(`(() => { const c = document.querySelector('[data-urb="alterneo"]'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles:true })); })()`);
   await page.waitForTimeout(200);
   const r = await page.evaluate('[urbVehLayer.getLayers().length, (urb.veh.carsud ? urb.veh.carsud.list.length : 0), JSON.parse(localStorage.getItem("cj_urb")).alterneo]');
