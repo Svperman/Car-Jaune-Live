@@ -1178,16 +1178,15 @@ const SRC = ' · Données Région Réunion (Licence Ouverte)';
 // sur téléphone, Leaflet n'affichait les nouveaux morceaux de carte qu'une fois le doigt levé (zones vides pendant
 // le déplacement) : on charge en continu et on garde plus de morceaux autour de l'écran
 const TILE_OPTS = { updateWhenIdle:false, updateInterval:150, keepBuffer:4 };
+// « Plan » : fond CARTO Voyager, sans le cercle violet des eaux territoriales que dessine le plan OpenStreetMap
 const BASES = {
-  'Plan détaillé': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { ...TILE_OPTS,
-    maxZoom:19, attribution:'© OpenStreetMap' + SRC }),
-  'Plan clair': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { ...TILE_OPTS,
+  'Plan': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { ...TILE_OPTS,
     subdomains:'abcd', maxZoom:19, attribution:'© OpenStreetMap, © CARTO' + SRC }),
   'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
     maxZoom:19, attribution:'Imagerie © Esri' + SRC })
 };
-let baseName = 'Plan détaillé';
-try { const b = localStorage.getItem('cj_base'); if (BASES[b]) baseName = b; } catch(e){}
+let baseName = 'Plan';
+try { const b = localStorage.getItem('cj_base'); if (BASES[b]) baseName = b; else if (b) localStorage.setItem('cj_base', 'Plan'); } catch(e){}   // anciens « Plan détaillé / Plan clair » → Plan
 BASES[baseName].addTo(map);
 L.control.layers(BASES, null, { position:'bottomright' }).addTo(map);
 L.control.zoom({ position:'topleft', zoomInTitle:'Zoom avant', zoomOutTitle:'Zoom arrière' }).addTo(map);
