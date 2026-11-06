@@ -634,6 +634,10 @@
   #focusBar button{border:0;background:var(--fond);border-radius:14px;padding:5px 10px;font:700 12px 'Nunito Sans',sans-serif;cursor:pointer;color:var(--titre);flex:none}
   body:has(#offBar:not([hidden])) #focusBar{top:calc(env(safe-area-inset-top,0px) + 112px)}
   .bus-mk.dim{opacity:.38;transform:scale(.78);filter:saturate(.4)}
+  .zlow .bus-mk .arrow{display:none}
+  .bus-mk.dot .d{position:absolute;left:0;top:0;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;border:2px solid #222;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .bus-mk.dot .d.late{border-color:var(--retard);box-shadow:0 0 0 2px rgba(220,38,38,.35)}
+  .bus-mk.dot.stale .d{opacity:.5}
   .bus-mk.dim .dly{display:none}
   .where{font-size:12.5px;font-weight:700;color:var(--titre);margin:1px 0 2px}
   .leaflet-popup .where{margin:-2px 0 6px}
@@ -4164,10 +4168,18 @@ function badge(route){
 
 function iconFor(v){
   const stale = v.age != null && v.age > STALE_MS;
+  if (busDots.has(v.id)){                                    // étiquette qui chevaucherait : simple point de la couleur de la ligne
+    const pk0 = punctOf(v.delay), late = pk0 === 'late' && Math.abs(v.delay || 0) >= 300;
+    const F0 = typeof focusSet === 'function' ? focusSet() : null;
+    const html = `<div class="bus-mk dot${stale ? ' stale' : ''}${F0 && !F0.has(v.routeId) ? ' dim' : ''}"><div class="d${late ? ' late' : ''}" style="background:#${esc(v.route.c)}"></div></div>`;
+    return { key: html, icon: L.divIcon({ className:'', html, iconSize:[0, 0] }) };
+  }
   const has = v.bearing != null && v.bearing !== 0;
   const arrow = `<div class="arrow" style="transform:rotate(${Math.round((v.bearing || 0) + mapBearing())}deg);${has ? '' : 'display:none'}"></div>`;
   const pk = punctOf(v.delay), dm = Math.abs(Math.round((v.delay || 0) / 60));
-  const dly = pk === 'late' ? `<div class="dly late">+${dm}′</div>` : pk === 'early' ? `<div class="dly early">−${dm}′</div>` : '';
+  // retard affiché seulement s'il compte (≥ 5 min) ou quand on est zoomé sur un quartier : moins de bruit
+  const showD = dm >= 5 || map.getZoom() >= 13;
+  const dly = !showD ? '' : pk === 'late' ? `<div class="dly late">+${dm}′</div>` : pk === 'early' ? `<div class="dly early">−${dm}′</div>` : '';
   const F = typeof focusSet === 'function' ? focusSet() : null;
   const html = `<div class="bus-mk${stale ? ' stale' : ''}${typeof onBus !== 'undefined' && onBus === v.id ? ' mine' : ''}${F && !F.has(v.routeId) ? ' dim' : ''}">${arrow}<div class="pill2" style="background:#${esc(v.route.c)};color:#${esc(v.route.t)}">${esc(v.route.s)}</div>${dly}</div>`;
   // la clé ignore l'orientation de la flèche (mise à jour en continu par l'animation)
@@ -4324,9 +4336,33 @@ function animateTo(m, to){
   requestAnimationFrame(step);
 }
 
+/* ---------- étiquettes des cars sans chevauchement ----------
+   Les cars sont placés par ordre d'importance (le mien, mes lignes, les plus en retard, puis les autres).
+   Une étiquette qui toucherait une étiquette déjà placée devient un simple point coloré : on lit tout,
+   et en zoomant les points redeviennent des étiquettes. */
+var busDots = new Set();
+function declutter(vis){
+  const dots = new Set(), boxes = [], F = typeof focusSet === 'function' ? focusSet() : null, z = map.getZoom();
+  const prio = v => (v.id === onBus ? 0 : F && F.has(v.routeId) ? 1 : 2);
+  vis.slice().sort((a, b) => prio(a) - prio(b) || Math.abs(b.delay || 0) - Math.abs(a.delay || 0) || String(a.id).localeCompare(String(b.id)))
+    .forEach(v => {
+      const m = markers.get(v.id), ll = m ? m.getLatLng() : L.latLng(v.lat, v.lon);
+      const pt = map.latLngToContainerPoint(ll);
+      const dm = Math.abs(Math.round((v.delay || 0) / 60)), withD = punctOf(v.delay) !== 'ok' && (dm >= 5 || z >= 13);
+      const w = 9 * String(v.route.s).length + 24, h = withD ? 40 : 28;
+      const box = [pt.x - w / 2 - 2, pt.y - 15, pt.x + w / 2 + 2, pt.y - 15 + h];
+      if (prio(v) > 0 && boxes.some(b => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) dots.add(v.id);
+      else boxes.push(box);
+    });
+  return dots;
+}
+map.on('zoomend', () => { map.getContainer().classList.toggle('zlow', map.getZoom() < 12); if (vehicles.length) render(); });
+map.getContainer().classList.toggle('zlow', map.getZoom() < 12);
+
 function render(){
   if (mode === 'sleep'){ renderSleep(); return; }
   try { drawShapes(); } catch(e){}                         // mes lignes ont pu changer (trajet, car, proche)
+  try { busDots = declutter(vehicles.filter(isVisible)); } catch(e){ busDots = new Set(); }
   const vis = vehicles.filter(isVisible);
   setPanel(panelOpen);
   $('#count').textContent = vehicles.length;
@@ -4347,7 +4383,9 @@ function render(){
       if (!motion[v.id]) updateMotion(v);         // la boucle d'animation se charge du déplacement
       if (m._key !== key){ m.setIcon(icon); m._key = key; }
     }
-    m.setZIndexOffset(v.age != null && v.age > STALE_MS ? 0 : 500);
+    // les points passent sous les étiquettes ; le car où je suis et mes lignes passent au-dessus de tout
+    m.setZIndexOffset(busDots.has(v.id) ? -500 : v.id === onBus ? 1500 : (v.age != null && v.age > STALE_MS ? 0 : 500));
+    m._veh = v;
     if (m.getPopup()) m.setPopupContent(popupFor(v)); else m.bindPopup(popupFor(v));
   });
   markers.forEach((m, id) => { if (!keep.has(id)) { map.removeLayer(m); markers.delete(id); } });
