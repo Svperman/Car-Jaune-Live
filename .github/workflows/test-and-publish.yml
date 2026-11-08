@@ -56,6 +56,7 @@ jobs:
           node tests/maj.mjs
           node tests/batterie.mjs
           node tests/accessibilite.mjs
+          node tests/voyage.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site

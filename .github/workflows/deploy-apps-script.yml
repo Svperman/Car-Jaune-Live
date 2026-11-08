@@ -88,3 +88,10 @@ jobs:
           done
           echo "::warning::Le code est déployé, mais le test n'a pas répondu {\"ok\":true}. Si une nouvelle autorisation Google est nécessaire, ouvre l'éditeur Apps Script et exécute refreshSchoolCalendar une fois."
           echo "$BODY" | head -c 400
+
+      - name: Vigilance météo (contrôle de la source Météo-France)
+        if: steps.check.outputs.ok == 'true'
+        continue-on-error: true
+        run: |
+          URL="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?action=getVigilance"
+          curl -sL --max-time 90 "$URL" | head -c 1500; echo

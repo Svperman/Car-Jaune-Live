@@ -94,7 +94,8 @@ const API_ = {
   saveStats:         function (json) { return saveStats(json); },
   getStats:          function () { return getStats(); },
   report:            function (json) { return report(json); },
-  getReports:        function () { return getReports(); }
+  getReports:        function () { return getReports(); },
+  getVigilance:      function () { return getVigilance(); }
 };
 
 function api_(action, args) {
@@ -125,6 +126,96 @@ function getRealtime() {
   };
   cachePut_(cache, 'rt', JSON.stringify(out), RT_TTL);
   return out;
+}
+
+/* ------------------------------------------------------------------ */
+/*  🌀 Vigilance météo et alerte cyclonique (Météo-France, La Réunion)  */
+/* ------------------------------------------------------------------ */
+// Source officielle et gratuite : le fichier « Vigilance Outre-Mer » de Météo-France, mis à jour chaque minute
+// (descriptif technique Météo-France, avril 2025). Si tu ajoutes une clé gratuite du portail API Météo-France
+// dans les propriétés du script (MF_API_KEY), le service officiel de l'API est essayé en premier.
+const VIGI_URLS = [
+  'https://vigilance.meteofrance.com/data/vigilance_OM.zip',
+  'http://vigilance.meteofrance.com/data/vigilance_OM.zip'
+];
+const VIGI_API = 'https://public-api.meteofrance.fr/public/DPVigilance/v1/vigilanceom/flux/dernier';
+const VIGI_PHEN = { 1: 'Vent violent', 9: 'Vagues-submersion', 10: 'Cyclone', 12: 'Fortes pluies et orages' };
+
+function getVigilance() {
+  const cache = CacheService.getScriptCache();
+  const hit = cacheGet_(cache, 'vigi974');
+  if (hit) return hit;
+  let out;
+  try {
+    out = JSON.stringify(Object.assign({ ok: true, at: Date.now() }, readVigilance_()));
+    cachePut_(cache, 'vigi974', out, 600);             // 10 min
+  } catch (e) {
+    out = JSON.stringify({ ok: false, at: Date.now(), error: String(e && e.message || e).slice(0, 200) });
+    cachePut_(cache, 'vigi974', out, 120);
+  }
+  return out;
+}
+
+/** Télécharge le flux et ne garde que La Réunion (domaine VIGI974). */
+function readVigilance_() {
+  const docs = [];
+  const errors = [];
+  const key = PropertiesService.getScriptProperties().getProperty('MF_API_KEY');
+  const tries = (key ? [{ url: VIGI_API, headers: { apikey: key } }] : []).concat(VIGI_URLS.map(function (u) { return { url: u }; }));
+  for (let i = 0; i < tries.length && !docs.length; i++) {
+    try {
+      const r = UrlFetchApp.fetch(tries[i].url, { muteHttpExceptions: true, followRedirects: true, headers: tries[i].headers || {} });
+      if (r.getResponseCode() !== 200) { errors.push(tries[i].url.split('/')[2] + ' ' + r.getResponseCode()); continue; }
+      const blob = r.getBlob(), bytes = blob.getBytes();
+      if (bytes.length > 1 && bytes[0] === 0x50 && bytes[1] === 0x4B) {          // « PK » : fichier zip
+        blob.setContentType('application/zip');
+        Utilities.unzip(blob).forEach(function (f) {
+          const name = f.getName();
+          if (/\.json$/i.test(name) || /CDPV9[56]/.test(name)) {
+            try { docs.push({ name: name, json: JSON.parse(f.getDataAsString('UTF-8')) }); } catch (e) { /* pas du JSON */ }
+          }
+        });
+      } else {
+        docs.push({ name: 'api', json: JSON.parse(r.getContentText('UTF-8')) });
+      }
+    } catch (e) { errors.push(String(e.message || e).slice(0, 80)); }
+  }
+  if (!docs.length) throw new Error('flux vigilance indisponible : ' + errors.join(' ; '));
+
+  // niveaux : l'objet du domaine global VIGI974 (max_color_id + phenomenon_items)
+  let dom = null, upd = null, end = null;
+  const texts = [];
+  const walk = function (o, fn) {
+    if (!o || typeof o !== 'object') return;
+    if (Array.isArray(o)) { o.forEach(function (x) { walk(x, fn); }); return; }
+    fn(o);
+    Object.keys(o).forEach(function (k) { walk(o[k], fn); });
+  };
+  docs.forEach(function (d) {
+    walk(d.json, function (o) {
+      if (o.domain_id === 'VIGI974' && (o.max_color_id != null || o.phenomenon_items) && !dom) dom = o;
+      if (o.domain_id === 'VIGI974' && o.text_bloc_items) texts.push(o);
+      if (!upd && o.update_time) upd = o.update_time;
+      if (!end && o.end_validity_time) end = o.end_validity_time;
+    });
+  });
+  if (!dom) throw new Error('La Réunion absente du flux');
+  const phen = (dom.phenomenon_items || []).map(function (p) {
+    const id = +p.phenomenon_id;
+    return { id: id, name: VIGI_PHEN[id] || ('Phénomène ' + id), c: +(p.phenomenon_max_color_id != null ? p.phenomenon_max_color_id : p.color_id) };
+  });
+  const cyc = phen.filter(function (p) { return p.id === 10; })[0];
+  const level = Math.max.apply(null, [1].concat(phen.filter(function (p) { return p.id !== 10 && p.c >= 1 && p.c <= 4; }).map(function (p) { return p.c; })));
+  let text = '';
+  texts.slice(0, 1).forEach(function (t) {
+    (t.text_bloc_items || []).forEach(function (b) {
+      const parts = [b.bloc_title].concat((b.text_items || []).map(function (x) { return (x.title ? x.title + ' : ' : '') + (x.text || ''); }));
+      text += parts.filter(String).join('\n') + '\n';
+      if (t.update_time) upd = t.update_time;
+      if (t.end_validity_time) end = t.end_validity_time;
+    });
+  });
+  return { level: level, cyc: cyc ? cyc.c : -1, phen: phen, text: text.trim().slice(0, 1500), upd: upd, end: end };
 }
 
 /* ------------------------------------------------------------------ */
@@ -945,7 +1036,7 @@ function weight_(row) { return (row || []).reduce(function (a, c) { return a + (
 /* ------------------------------------------------------------------ */
 /*  Version du serveur (l'appli affiche un voyant « à jour »)          */
 /* ------------------------------------------------------------------ */
-const SERVER_VERSION = '2026-11-02.5';
+const SERVER_VERSION = '2026-11-08.1';
 function getVersion() {
   let trigger = false;
   try { trigger = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'pushTick'; }); } catch (e) {}

@@ -623,6 +623,60 @@
   .dchip small{font-weight:600;opacity:.8}
   .bus-mk .dly{position:absolute;left:50%;top:13px;transform:translateX(-50%);font:800 10.5px/1 'Nunito Sans',sans-serif;color:#fff;border-radius:6px;padding:2px 4px;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.3)}
   .bus-mk .dly.late{background:var(--retard)} .bus-mk .dly.early{background:var(--avance)}
+  #vigiBar{position:fixed;left:62px;right:62px;top:calc(env(safe-area-inset-top,0px) + 64px);z-index:1260;display:flex;align-items:center;gap:8px;text-align:left;
+    border:0;border-radius:14px;padding:8px 10px;font:inherit;box-shadow:0 4px 14px rgba(0,0,0,.28);cursor:pointer}
+  #vigiBar[hidden]{display:none}
+  #vigiBar .vg-i{font-size:22px}
+  #vigiBar .vg-tx{display:flex;flex-direction:column;min-width:0;flex:1;line-height:1.25}
+  #vigiBar b{font-size:14px}
+  #vigiBar small{font-size:11.5px;opacity:.92;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  #vigiBar .vg-x{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.15)}
+  body.vigi-on #descChip{top:calc(env(safe-area-inset-top,0px) + 132px)}
+  .vg-card{border:2px solid;border-radius:12px;overflow:hidden;margin:0 0 14px;background:var(--carte)}
+  .vg-h{padding:10px 14px;font-weight:800}
+  .vg-b{padding:10px 14px}
+  .vg-b p{margin:0 0 8px}
+  .vg-phs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .vg-ph{font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px}
+  .vg-txt{white-space:pre-line;font-size:13px}
+  #descChip{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 66px);z-index:1250;display:flex;align-items:center;gap:8px;
+    background:var(--titre);color:#fff;border-radius:16px;padding:6px 8px 6px 12px;font-size:13px;box-shadow:0 3px 12px rgba(0,0,0,.25);width:max-content;max-width:calc(100% - 130px)}
+  #descChip[hidden]{display:none}
+  #descChip i{font-style:normal;font-size:18px}
+  #descChip .tx{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+  #descChip b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #descChip span{opacity:.8;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #descChip button{background:rgba(255,255,255,.18);border:0;color:#fff;border-radius:50%;width:26px;height:26px;cursor:pointer;flex:none}
+  #signBtn{position:fixed;right:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 150px);z-index:1250;display:flex;align-items:center;gap:6px;
+    background:var(--jaune);color:#1A1A1A;border:0;border-radius:24px;padding:11px 16px;font:inherit;font-weight:800;font-size:15px;box-shadow:0 4px 14px rgba(0,0,0,.3);cursor:pointer}
+  #signBtn[hidden]{display:none}
+  #signBtn.pulse{animation:sgPulse 1s ease-in-out infinite}
+  @keyframes sgPulse{0%,100%{transform:scale(1);box-shadow:0 4px 14px rgba(0,0,0,.3)}50%{transform:scale(1.08);box-shadow:0 0 0 10px rgba(255,204,0,.35)}}
+  #descAlarm{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:20px;background:#FFCC00;animation:daBlink 1s steps(2) infinite}
+  #descAlarm[hidden]{display:none}
+  @keyframes daBlink{50%{background:#fff4b8}}
+  .da-box{text-align:center;color:#1A1A1A;max-width:420px}
+  .da-ic{font-size:72px;line-height:1;animation:daRing .5s ease-in-out infinite alternate}
+  @keyframes daRing{from{transform:rotate(-14deg)}to{transform:rotate(14deg)}}
+  .da-t{font-size:28px;font-weight:900;margin:14px 0 6px}
+  .da-n{font-size:22px;font-weight:700;margin-bottom:6px}
+  .da-s{font-size:15px;margin-bottom:22px}
+  #descAlOk{font-size:18px;padding:14px 26px;background:#1A1A1A;color:#fff}
+  #signOv{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;background:#FFD400;animation:sgFlash .5s steps(2) infinite}
+  #signOv[hidden]{display:none}
+  @keyframes sgFlash{50%{background:#ffffff}}
+  @media (prefers-reduced-motion:reduce){ #signOv{animation-duration:1s} #descAlarm{animation:none} }
+  .sg-in{text-align:center;color:#1A1A1A;padding:20px}
+  .sg-stop{font-size:min(28vw,150px);font-weight:900;letter-spacing:.04em;line-height:1}
+  .sg-line{font-size:min(16vw,80px);font-weight:900;margin-top:6px}
+  .sg-sub{font-size:16px;font-weight:600;margin:8px 0 22px}
+  .sg-btns{display:flex;gap:10px;justify-content:center}
+  .sg-btns .btn{font-size:16px;padding:12px 20px}
+  #signTorch.on{background:#1A1A1A;color:#fff}
+  .sg-tip{font-size:13px;margin-top:18px;opacity:.75}
+  .sign-b{margin:-2px 0 10px}
+  .desc-sel{display:block;margin-top:9px;font-size:12.5px;font-weight:600}
+  .desc-sel select{display:block;width:100%;margin-top:4px;font:inherit;font-weight:400;padding:6px 8px;border-radius:8px;border:1px solid var(--ligne)}
   #offBar{position:fixed;left:56px;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:1200;max-width:calc(100% - 182px);
     display:flex;flex-direction:column;gap:1px;background:#2A2F36;color:#fff;border-radius:12px;padding:6px 12px;font-size:12.5px;line-height:1.25;
     box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none}
@@ -946,6 +1000,7 @@
     <div class="wrap">
       <h1>Infos trafic</h1>
       <p class="lead">Perturbations publiées dans le flux temps réel du réseau. Les embouteillages s’affichent directement sur la carte.</p>
+      <div id="vigiBox"></div>
       <div id="alertsList"></div>
 
     </div>
@@ -991,6 +1046,8 @@
       <div class="set-row"><div class="set-l"><b>Arrivée à quai</b><small>quand le car arrive à l’arrêt</small></div><label class="switch"><input type="checkbox" id="alQuai" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Avance / retard</b><small>si le retard change de 2 min ou plus</small></div><label class="switch"><input type="checkbox" id="alLate" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Aucun car dans l’heure</b></div><label class="switch"><input type="checkbox" id="alNoBus" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>🛎️ Avant de descendre</b><small>dans le car : rappel 2 arrêts avant, puis « descends au prochain arrêt » (arrivée de Mon trajet, ou l’arrêt choisi en touchant le car)</small></div><label class="switch"><input type="checkbox" id="alDesc" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>🔁 Correspondance</b><small>si le retard te fait rater ton 2e car : le suivant tout de suite</small></div><label class="switch"><input type="checkbox" id="alCorr" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>🌙 Dernier car</b><small>30 min puis 10 min avant le dernier car du jour</small></div><label class="switch"><input type="checkbox" id="alLast" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Arrêt le plus proche</b><small>choisi tout seul selon ta position</small></div><label class="switch"><input type="checkbox" id="alFollow"><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Son</b></div><label class="switch"><input type="checkbox" id="alSound" checked><span></span></label></div>
@@ -1087,6 +1144,17 @@
 <div id="smsSheet" hidden role="dialog" aria-labelledby="smsTitle"><div class="sms-h"><b id="smsTitle"></b><button id="smsLater" aria-label="Plus tard">✕</button></div>
   <div class="sms-prev" id="smsPrev"></div><div class="sms-list" id="smsList"></div></div>
 <div id="focusBar" hidden></div>
+<button id="vigiBar" hidden></button>
+<div id="descChip" hidden role="status" aria-live="polite"></div>
+<button id="signBtn" hidden data-sign title="Faire signe au car" aria-label="Faire signe au car">🔦<span>Faire signe</span></button>
+<div id="descAlarm" hidden role="alertdialog" aria-modal="true" aria-labelledby="descAlT"><div class="da-box">
+  <div class="da-ic" aria-hidden="true">🛎️</div><div class="da-t" id="descAlT">Descends au prochain arrêt</div>
+  <div class="da-n" id="descAlName"></div><div class="da-s">Appuie sur le bouton d’arrêt du car</div>
+  <button class="btn" id="descAlOk">OK, je descends</button></div></div>
+<div id="signOv" hidden role="dialog" aria-modal="true" aria-label="Faire signe au car"><div class="sg-in">
+  <div class="sg-stop">STOP</div><div class="sg-line" id="signLine">🚌</div><div class="sg-sub" id="signSub"></div>
+  <div class="sg-btns"><button class="btn" id="signTorch">🔦 Lampe</button><button class="btn ghost" id="signClose">Fermer</button></div>
+  <div class="sg-tip">Tends le bras, l’écran tourné vers le chauffeur</div></div></div>
 <div id="offBar" hidden role="status"><b>📴 Hors ligne</b><span id="offBarTx"></span></div>
 
 <script src="lib/leaflet.js"></script>
@@ -1561,7 +1629,7 @@ const VIEW_NAMES = { map:'Carte en direct', trip:'Mon trajet', board:"Horaires �
 /* ---------- bouton « retour » d'Android (et retour du navigateur) ----------
    Ferme la fenêtre ouverte (réglages, signalement, prochain car, cloche…) ou revient à la carte,
    au lieu de quitter l'appli. */
-const BACK_OV = ['settingsModal', 'ficheModal', 'repSheet', 'nextSheet', 'bellMenu', 'smsSheet', 'geoSheet', 'msgSheet'];
+const BACK_OV = ['settingsModal', 'ficheModal', 'repSheet', 'nextSheet', 'bellMenu', 'smsSheet', 'geoSheet', 'msgSheet', 'descAlarm', 'signOv'];
 let backSkip = 0;
 const BACK_ON = !IN_GAS || !!window.__testBack;    // (Apps Script : la page est dans un cadre, on ne touche pas à l'historique)
 const backOpen = () => BACK_OV.filter(id => { const e = document.getElementById(id); return e && !e.hidden; });
@@ -1578,6 +1646,8 @@ if (BACK_ON){
       else if (id === 'nextSheet') closeNext();
       else if (id === 'smsSheet') closeSms(false);
       else if (id === 'geoSheet') $('#geoSheet').hidden = true;
+      else if (id === 'signOv') closeSign();
+      else if (id === 'descAlarm') stopDescAlarm();
       else document.getElementById(id).hidden = true;
       if (id === 'bellMenu' && typeof renderBell === 'function') try { renderBell(); } catch(e){}
     } else if (map && map._popup && map.hasLayer(map._popup)) map.closePopup();
@@ -1600,6 +1670,7 @@ function setView(v, silent){
   }
   view = v;
   if (typeof renderFocusBar === 'function') try { renderFocusBar(); } catch(e){}
+  try { renderVigi(); renderDescChip(); signTick(); } catch(e){}
   document.querySelectorAll('.tab').forEach(t => { t.classList.toggle('on', t.dataset.view === v); if (t.dataset.view === v) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current'); });
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === 'view-' + v));
   $('#crumbCur').textContent = VIEW_NAMES[v];
@@ -3336,7 +3407,7 @@ setInterval(() => { if (pushCfg.on && alertCfg.on && document.visibilityState ==
 document.addEventListener('visibilitychange', () => { if (pushCfg.on && document.visibilityState === 'visible') call('pushSeen', pushCfg.topic).catch(() => {}); });
 
 /* ---------- voyant du serveur : est-il à la dernière version ? ---------- */
-const SERVER_WANTED = '2026-11-02.5';                 // version de Code.gs attendue par cette version de l'appli
+const SERVER_WANTED = '2026-11-02.5';                 // (getVigilance : 2026-11-08.1, facultatif — sans lui, pas de bandeau météo)                 // version de Code.gs attendue par cette version de l'appli
 const srv = { state:'', version:'', trigger:false, at:0 };
 async function checkServer(){
   if (IN_GAS) return;
@@ -3620,7 +3691,7 @@ function loadAlertCfg(){
   if (alertCfg.muteUntil && Date.now() >= alertCfg.muteUntil) alertCfg.muteUntil = 0;   // pause terminée
   $('#alLead').value = String(alertCfg.lead);
   $('#alJam').checked = alertCfg.jam !== false;
-  $('#alQuai').checked = alertCfg.quai; $('#alLate').checked = alertCfg.late; $('#alNoBus').checked = alertCfg.noBus; $('#alLast').checked = alertCfg.lastBus !== false;
+  $('#alQuai').checked = alertCfg.quai; $('#alLate').checked = alertCfg.late; $('#alNoBus').checked = alertCfg.noBus; $('#alLast').checked = alertCfg.lastBus !== false; $('#alDesc').checked = alertCfg.desc !== false; $('#alCorr').checked = alertCfg.corr !== false;
   $('#alFollow').checked = alertCfg.follow;
   if (alertCfg.follow) setFollow(true);
 }
@@ -3629,8 +3700,8 @@ $('#alFollow').addEventListener('change', e => setFollow(e.target.checked));
 $('#alLead').addEventListener('change', e => { alertCfg.lead = +e.target.value; saveAlertCfg(); renderAlertStatus(); });
 $('#alLine').addEventListener('change', e => { alertCfg.line = e.target.value; saveAlertCfg(); renderAlertStatus(); });
 $('#alJam').addEventListener('change', e => { alertCfg.jam = e.target.checked; saveAlertCfg(); if (e.target.checked) trafficAlertTick(true); });
-['alQuai', 'alLate', 'alNoBus', 'alLast'].forEach(id => $('#' + id).addEventListener('change', e => {
-  alertCfg[{ alQuai:'quai', alLate:'late', alNoBus:'noBus', alLast:'lastBus' }[id]] = e.target.checked; saveAlertCfg();
+['alQuai', 'alLate', 'alNoBus', 'alLast', 'alDesc', 'alCorr'].forEach(id => $('#' + id).addEventListener('change', e => {
+  alertCfg[{ alQuai:'quai', alLate:'late', alNoBus:'noBus', alLast:'lastBus', alDesc:'desc', alCorr:'corr' }[id]] = e.target.checked; saveAlertCfg();
 }));
 $('#alToggle').addEventListener('click', () => { if (!alertCfg.on) alertCfg.journey = false; toggleAlerts(); });
 $('#geoInfo').addEventListener('click', e => {
@@ -4336,7 +4407,8 @@ function popupFor(v){
     ${v.times ? timesTable(v.times, v) : (v.stopName ? `Prochain arrêt : <b>${esc(v.stopName)}</b><br>` : '')}
     <span class="delay ${d.c}">${esc(d.long)}</span>${speed ? ' · ' + speed : ''}<br>
     <span style="opacity:.7">Position ${fmtAge(v.age)}${v.label ? ' · véhicule ' + esc(v.label) : ''}</span>
-    ${ficheLinks(v.route.s) ? `<div style="margin-top:8px">${ficheLinks(v.route.s)}</div>` : ''}`;
+    ${ficheLinks(v.route.s) ? `<div style="margin-top:8px">${ficheLinks(v.route.s)}</div>` : ''}
+    ${typeof descSelect === 'function' ? descSelect(v) : ''}`;
 }
 
 /* ====================== Mouvement continu des cars ======================
@@ -4994,7 +5066,8 @@ function renderBoard(){
   try { loadReports(); } catch(e){}
   const head = stopReportsHtml(g.name) + `<div class="board-head"><h2>${esc(g.name)}${stopPmr(g)}${pTxt}</h2><span class="upd">${
     mode === 'sleep' ? 'Réseau fermé · horaires théoriques'
-    : `Temps réel ${feedTime ? 'à ' + fmtHM(feedTime) : ''} · actualisation auto`}</span></div>`;
+    : `Temps réel ${feedTime ? 'à ' + fmtHM(feedTime) : ''} · actualisation auto`}</span></div>`
+    + (mode === 'sleep' ? '' : `<button class="btn small sign-b" data-sign title="Écran jaune clignotant pour que le chauffeur te voie">🔦 Faire signe au car</button>`);
   if (board.loading){ card.innerHTML = head + `<div class="placeholder">Chargement des passages…</div>`; return; }
 
   const pool = board.error ? [] : gtfsRows(g);
@@ -6078,6 +6151,318 @@ function rideTick(){
   } else if (ride.phase === 'wait' && sp > 2 && !(nearStop(250))) ride = { phase:'idle', stop:'', since: now, sent:{}, veh:'', info:null };
 }
 
+/* ====================== 🌀 Vigilance météo et alerte cyclonique (Météo-France) ======================
+   Le serveur lit le flux officiel « Vigilance Outre-Mer » toutes les 10 min. Ici : bandeau en haut de la carte
+   dès la vigilance orange ou une alerte cyclonique, détail dans Infos trafic, alerte quand ça change. */
+const VIGI_CYC = {
+  6:  { t:'Phase de sauvegarde', c:'#5f8dd3', fg:'#fff', m:'Le danger s’éloigne mais reste prudent : les cars jaunes reprennent peu à peu. Regarde Infos trafic avant de partir.' },
+  7:  { t:'Pré-alerte cyclonique', c:'#f2d600', fg:'#1A1A1A', m:'Un cyclone peut menacer l’île : prépare-toi. Les cars jaunes risquent de s’arrêter dans les prochains jours.' },
+  8:  { t:'Alerte orange cyclonique', c:'#ff8c00', fg:'#1A1A1A', m:'Danger dans les 24 h : écoles fermées, cars jaunes perturbés puis arrêtés. Rentre chez toi tant qu’ils roulent.' },
+  9:  { t:'Alerte rouge cyclonique', c:'#e3001b', fg:'#fff', m:'Interdiction de circuler : les cars jaunes ne roulent pas. Reste à l’abri.' },
+  10: { t:'Alerte violette cyclonique', c:'#903078', fg:'#fff', m:'Confinement strict : aucun car. Reste à l’abri.' }
+};
+const VIGI_COL = { 2: ['jaune', '#f2d600', '#1A1A1A'], 3: ['orange', '#ff8c00', '#1A1A1A'], 4: ['rouge', '#e3001b', '#fff'] };
+let vigi = (() => { try { return JSON.parse(localStorage.getItem('cj_vigi') || 'null'); } catch(e){ return null; } })();
+/** Ce qu'on affiche : l'alerte cyclonique d'abord, sinon la pire vigilance (orange ou rouge pour le bandeau). */
+function vigiView(v){
+  if (!v || !v.ok) return null;
+  if (v.cyc >= 6 && VIGI_CYC[v.cyc]) return Object.assign({ key: 'c' + v.cyc, big: v.cyc >= 7 || v.cyc === 6 }, VIGI_CYC[v.cyc]);
+  if (v.level >= 2 && VIGI_COL[v.level]){
+    const ph = (v.phen || []).filter(p => p.id !== 10 && p.c === v.level).map(p => p.name.toLowerCase());
+    const [nom, c, fg] = VIGI_COL[v.level];
+    const m = v.level === 4 ? 'Évite de te déplacer : routes et radiers peuvent être coupés, les cars jaunes très perturbés.'
+      : v.level === 3 ? 'Prudence : radiers submergés et routes coupées possibles, retards ou détours des cars jaunes.'
+      : 'Sois attentif : quelques perturbations possibles.';
+    return { key: 'v' + v.level + ph.join(), t: `Vigilance ${nom}${ph.length ? ' ' + ph.join(', ') : ''}`, c, fg, m, big: v.level >= 3 };
+  }
+  return { key: 'ok', t: 'Pas de vigilance particulière', c: '#2e9e5b', fg: '#fff', m: 'Météo-France ne signale pas de danger à La Réunion.', big: false };
+}
+function renderVigi(){
+  const w = vigiView(vigi), bar = $('#vigiBar'), box = $('#vigiBox');
+  let dismissed = ''; try { dismissed = sessionStorage.getItem('cj_vigi_x') || ''; } catch(e){}
+  const show = !!(w && w.big && dismissed !== w.key && view === 'map');
+  if (bar){
+    bar.hidden = !show;
+    document.body.classList.toggle('vigi-on', show);
+    if (show){
+      bar.style.background = w.c; bar.style.color = w.fg;
+      bar.innerHTML = `<span class="vg-i" aria-hidden="true">🌀</span><span class="vg-tx"><b>${esc(w.t)}</b><small>${esc(w.m)}</small></span><span class="vg-x" data-vigix role="button" aria-label="Masquer" title="Masquer">✕</span>`;
+    }
+  }
+  if (box){
+    if (!w){ box.innerHTML = ''; return; }
+    const upd = vigi.upd ? new Date(vigi.upd) : null;
+    const ph = (vigi.phen || []).filter(p => p.c >= 2 && p.id !== 10).map(p => `<span class="vg-ph" style="background:${(VIGI_COL[p.c] || [])[1] || '#ccc'};color:${(VIGI_COL[p.c] || [])[2] || '#1A1A1A'}">${esc(p.name)}</span>`).join('');
+    box.innerHTML = `<div class="vg-card" style="border-color:${w.c}"><div class="vg-h" style="background:${w.c};color:${w.fg}">🌀 ${esc(w.t)}</div>
+      <div class="vg-b"><p>${esc(w.m)}</p>${ph ? `<div class="vg-phs">${ph}</div>` : ''}
+      ${vigi.text ? `<details><summary>Bulletin de Météo-France</summary><p class="vg-txt">${esc(vigi.text)}</p></details>` : ''}
+      <p class="src-note">Source : Météo-France${upd && !isNaN(upd) ? ', mis à jour à ' + fmtHM(upd.getTime()) : ''} · <a href="https://vigilance.meteofrance.fr/fr/la-reunion" target="_blank" rel="noopener">voir la carte de vigilance</a></p></div></div>`;
+  }
+}
+async function vigiLoad(){
+  try {
+    const v = JSON.parse(await call('getVigilance'));
+    if (!v || !v.ok) return;
+    const before = vigiView(vigi), now = vigiView(v);
+    vigi = v; try { localStorage.setItem('cj_vigi', JSON.stringify(v)); } catch(e){}
+    if (now && before && now.key !== before.key && (now.big || before.big) && alertCfg.on)
+      notify('🌀 ' + now.t, now.m, now.big ? 'warn' : 'bus', { force: now.key.startsWith('c') });
+  } catch(e){ /* serveur pas encore à jour ou flux indisponible : on garde la dernière info */ }
+  renderVigi();
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-vigix]')){ e.stopPropagation(); const w = vigiView(vigi); try { sessionStorage.setItem('cj_vigi_x', w ? w.key : ''); } catch(err){} renderVigi(); return; }
+  if (e.target.closest('#vigiBar')) setView('trafic');
+});
+setTimeout(vigiLoad, 2500);
+setInterval(() => { if (!document.hidden) vigiLoad(); }, 10 * 60e3);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && (!vigi || Date.now() - (vigi.at || 0) > 10 * 60e3)) vigiLoad(); });
+
+/* ====================== 🛎️ Descente · 🔁 Correspondance · 🔦 Faire signe ====================== */
+
+/* ---------- 🛎️ « Descends au prochain arrêt » ----------
+   L'arrêt où je descends : celui que j'ai choisi (popup du car, valable 4 h), sinon mon arrivée de « Mon trajet ».
+   Dès que l'appli me reconnaît dans un car qui y passe : rappel 2 arrêts avant, puis grosse alerte (écran jaune,
+   son, vibration) quand c'est le prochain arrêt. L'écran reste allumé pendant le trajet pour que ça sonne. */
+let descPick = (() => { try { const d = JSON.parse(localStorage.getItem('cj_desc') || 'null'); return d && Date.now() - d.at < 4 * 3600e3 ? d : null; } catch(e){ return null; } })();
+let descRun = { key:'', prep:false, now:false, ntfy:false };
+function setDescPick(name){
+  descPick = name ? { name, at: Date.now() } : null;
+  try { if (descPick) localStorage.setItem('cj_desc', JSON.stringify(descPick)); else localStorage.removeItem('cj_desc'); } catch(e){}
+  descRun = { key:'', prep:false, now:false, ntfy:false };
+  descTick(); renderDescChip();
+  if (name) toast(`🛎️ Je te préviens avant ${name}.`);
+}
+/** Arrêt visé : choix manuel, sinon l'arrivée de Mon trajet dans le sens du moment. */
+function descTargetName(){
+  if (descPick && Date.now() - descPick.at < 4 * 3600e3) return { name: descPick.name, manual: true };
+  if (typeof tripReady === 'function' && tripReady()){
+    try { const s = detectSens(); const to = s.sens === 'aller' ? s.B : s.A; if (to) return { name: to.name, manual: false }; } catch(e){}
+  }
+  return null;
+}
+/** Où en est ce car par rapport à l'arrêt visé : arrêts restants, heure, distance. */
+function descState(v){
+  const t = descTargetName(); if (!t || !v || !v.tripId) return null;
+  const g = findGroup(t.name); if (!g || !g.ids.length) return null;
+  const G = tripGeom(v.tripId, v.routeId); if (!G) return null;
+  let from = v.est ? v.est.next : -1;
+  if (from < 0){        // pas encore d'estimation : arrêt le plus proche du car, puis le suivant
+    let best = 0, bd = Infinity;
+    G.stops.forEach((s, i) => { const d = distM(v.lat, v.lon, s.lat, s.lon); if (d < bd){ bd = d; best = i; } });
+    from = Math.min(G.stops.length - 1, best + (bd < 80 ? 1 : 0));
+  }
+  const k = G.stops.findIndex((s, i) => i >= from && g.ids.includes(s.id));
+  if (k < 0) return null;
+  const base = v.est ? v.est.base : serviceDayMs(v.startDate, G.stops[0].sec);
+  const eta = plausibleEta(base + G.stops[k].sec * 1000 + Math.max(0, v.delay || 0) * 1000);
+  const st = G.stops[k];
+  return { name: g.name, manual: t.manual, left: k - from, eta, dist: distM(v.lat, v.lon, st.lat, st.lon), prev: k > 0 ? (S.stops[G.stops[k - 1].id] || [])[0] || '' : '', veh: v.id };
+}
+let descAlarmT = null;
+function descAlarm(ds){
+  const ov = $('#descAlarm'); if (!ov) return;
+  $('#descAlName').textContent = ds.name;
+  ov.hidden = false;
+  let n = 0;
+  const ring = () => {
+    if (ov.hidden || ++n > 45) return stopDescAlarm();
+    try { if (alertCfg.sound !== false) beep('warn'); } catch(e){}
+    try { if (alertCfg.vibe !== false && navigator.vibrate) navigator.vibrate([400, 150, 400]); } catch(e){}
+  };
+  ring(); clearInterval(descAlarmT); descAlarmT = setInterval(ring, 2000);
+}
+function stopDescAlarm(){ clearInterval(descAlarmT); descAlarmT = null; const ov = $('#descAlarm'); if (ov && !ov.hidden) ov.hidden = true; }
+async function descWake(on){
+  try {
+    if (on && !document.hidden && navigator.wakeLock && (!wakeLock || wakeLock.released)){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
+    if (!on && wakeLock && !alertCfg.wake){ await wakeLock.release(); wakeLock = null; }
+  } catch(e){}
+}
+function descTick(){
+  const v = typeof onBus !== 'undefined' && onBus ? vehicles.find(x => x.id === onBus) : null;
+  const ds = v && alertCfg.desc !== false ? descState(v) : null;
+  renderDescChip(ds);
+  if (!ds){ if (descRun.key){ descRun = { key:'', prep:false, now:false, ntfy:false }; descWake(false); } return; }
+  const key = ds.veh + '|' + ds.name;
+  if (descRun.key !== key){ descRun = { key, prep:false, now:false, ntfy:false }; descWake(true); }
+  const left = ds.eta ? ds.eta - Date.now() : null;
+  // 1. « prépare-toi » : 2 arrêts avant, ou 5 min avant
+  if (!descRun.prep && !descRun.now && ((ds.left >= 1 && ds.left <= 2) || (left != null && left <= 5 * 60e3 && ds.left >= 1))){
+    descRun.prep = true;
+    notify('🛎️ Prépare-toi à descendre', `${ds.name} dans ${ds.left} arrêt${ds.left > 1 ? 's' : ''}${ds.eta ? ' (~' + fmtHM(ds.eta) + ')' : ''}${ds.prev ? ` : juste après ${ds.prev}` : ''}.`, 'bus', { force: true });
+  }
+  // 2. « descends au prochain arrêt » : c'est le prochain arrêt, et le car en approche
+  if (!descRun.now && ds.left === 0 && (ds.dist < 1500 || (left != null && left <= 2.5 * 60e3))){
+    descRun.now = descRun.prep = true;
+    notify('🛎️ Descends au prochain arrêt !', `${ds.name} : appuie sur le bouton d’arrêt du car.`, 'warn', { force: true });
+    if (!document.hidden) descAlarm(ds);
+  }
+}
+/** Appli cachée pendant le trajet (iPhone : elle s'endort) : rappel programmé sur ntfy si « Même appli fermée » est réglé. */
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) return;
+  const v = onBus ? vehicles.find(x => x.id === onBus) : null, ds = v && alertCfg.desc !== false ? descState(v) : null;
+  if (!ds || descRun.now || descRun.ntfy || !ds.eta) return;
+  const at = Math.round((ds.eta - 3 * 60e3) / 1000);
+  if (at * 1000 < Date.now() + 60e3) return;
+  descRun.ntfy = true;
+  if (LNOTIF && lnPerm === 'granted'){
+    LNOTIF.schedule({ notifications: [{ id: 974001, title: '🛎️ Prépare-toi à descendre', body: `${ds.name} vers ${fmtHM(ds.eta)} : descends au prochain arrêt.`, schedule: { at: new Date(at * 1000) } }] }).catch(() => {});
+  } else if (alertCfg.ntfy){
+    fetch('https://ntfy.sh/', { method:'POST', body: JSON.stringify({ topic: alertCfg.ntfy, title: '🛎️ Prépare-toi à descendre',
+      message: `${ds.name} vers ${fmtHM(ds.eta)} (heure prévue, le car peut avoir de l’avance ou du retard).`, priority: 5, tags: ['bell'], delay: String(at) }) }).catch(() => {});
+  }
+});
+function renderDescChip(ds){
+  const el = $('#descChip'); if (!el) return;
+  if (ds === undefined){ const v = onBus ? vehicles.find(x => x.id === onBus) : null; ds = v && alertCfg.desc !== false ? descState(v) : null; }
+  const pick = descPick && Date.now() - descPick.at < 4 * 3600e3 ? descPick : null;
+  if ((!ds && !pick) || view !== 'map'){ el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = ds
+    ? `<i aria-hidden="true">🛎️</i><div class="tx"><b>${esc(ds.name)}</b><span>${ds.left === 0 ? 'prochain arrêt' : 'dans ' + ds.left + ' arrêt' + (ds.left > 1 ? 's' : '')}${ds.eta ? ' · vers ' + fmtHM(ds.eta) : ''}</span></div>${ds.manual ? '<button data-descoff title="Ne plus me prévenir" aria-label="Ne plus me prévenir">✕</button>' : ''}`
+    : `<i aria-hidden="true">🛎️</i><div class="tx"><b>${esc(pick.name)}</b><span>réveil dès que tu montes</span></div><button data-descoff title="Ne plus me prévenir" aria-label="Ne plus me prévenir">✕</button>`;
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-descoff]')){ setDescPick(null); stopDescAlarm(); return; }
+  if (e.target.closest('#descAlOk')) stopDescAlarm();
+});
+document.addEventListener('change', e => { const s = e.target.closest('[data-descsel]'); if (s) setDescPick(s.value || null); });
+/** Liste des arrêts suivants d'un car, pour choisir où descendre (popup du car). */
+function descSelect(v){
+  if (!v || !v.tripId) return '';
+  const G = tripGeom(v.tripId, v.routeId); if (!G) return '';
+  const from = v.est ? v.est.next : 0, seen = new Set(), opts = [];
+  G.stops.slice(Math.max(0, from)).forEach(s => {
+    const n = (S.stops[s.id] || [])[0]; if (!n) return;
+    const g = findGroup(n); const name = g ? g.name : n;
+    if (seen.has(name)) return; seen.add(name); opts.push(name);
+  });
+  if (!opts.length) return '';
+  const cur = descPick ? descPick.name : '';
+  return `<label class="desc-sel">🛎️ Me prévenir avant de descendre à
+    <select data-descsel aria-label="Arrêt où je descends"><option value="">— choisir —</option>${opts.map(n => `<option${n === cur ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></label>`;
+}
+
+/* ---------- 🔁 Correspondance surveillée ----------
+   Dans un car qui ne va pas jusqu'à l'arrivée de Mon trajet : on regarde la gare où je change.
+   Si le retard me fait rater le car prévu, on le dit tout de suite, avec le suivant, et on propose de prévenir les proches. */
+let corrSent = {};
+function corrTick(){
+  if (alertCfg.corr === false || !alertCfg.on || typeof tripReady !== 'function' || !tripReady() || !S.routeStops) return;
+  const v = onBus ? vehicles.find(x => x.id === onBus) : null; if (!v || !v.tripId) return;
+  const G = tripGeom(v.tripId, v.routeId); if (!G) return;
+  let s; try { s = detectSens(); } catch(e){ return; }
+  const from = s.sens === 'aller' ? s.A : s.B, to = s.sens === 'aller' ? s.B : s.A;
+  if (!from || !to) return;
+  const rest = G.stops.slice(Math.max(0, v.est ? v.est.next : 0));
+  if (rest.some(st => to.ids.includes(st.id))) return;                    // ce car va jusqu'au bout : pas de changement
+  if (!tripBoard.data){ loadTripBoard(); return; }
+  if (transfer.key !== transferKey(from, to) || !transfer.done){ loadTransfers(from, to); return; }
+  const base = v.est ? v.est.base : serviceDayMs(v.startDate, G.stops[0].sec);
+  // la gare de changement : la première sur mon parcours
+  let hub = null;
+  transfer.hubs.forEach(p => {
+    const k = rest.findIndex(st => p.X1.ids.includes(st.id));
+    if (k >= 0 && (!hub || k < hub.k)) hub = { p, k, st: rest[k] };
+  });
+  if (!hub) return;
+  const sched = base + hub.st.sec * 1000, eta = plausibleEta(sched + Math.max(0, v.delay || 0) * 1000) || sched;
+  const margin = (hub.p.walk + (hub.p.walk ? 2 : 3)) * 60e3;
+  const l2 = journeyRows(hub.p.X2, to).filter(r => r.route.s !== v.route.s);
+  const planned = l2.find(r => r.sched >= sched + margin);
+  const real = l2.find(r => r.eff >= eta + margin);
+  if (!planned) return;
+  const key = v.id + '|' + planned.sched;
+  const arrive = r => r.rarr != null ? r.rarr : r.arr;
+  if (real !== planned && !corrSent[key + 'miss']){
+    corrSent[key + 'miss'] = true;
+    const dl = Math.round(Math.max(0, v.delay || 0) / 60);
+    notify(`🔁 Correspondance ratée à ${hub.p.X1.name}`,
+      `${dl ? `Avec ${dl} min de retard, t` : 'T'}u arrives vers ${fmtHM(eta)} : le ${planned.route.s} de ${fmtHM(planned.eff)} sera parti. ` +
+      (real ? `Prochain : ${real.route.s} à ${fmtHM(real.eff)} (arrivée à ${to.name} vers ${fmtHM(arrive(real))}).` : 'Pas d’autre car dans l’heure : prévois un autre moyen.'), 'warn');
+    if (real) offerSms({ k:'late', to: to.name, eta: arrive(real), l: real.route.s, stop: hub.p.X1.name, at: Date.now() });
+  } else if (real === planned && !corrSent[key + 'tight'] && planned.eff - eta < margin + 2 * 60e3){
+    corrSent[key + 'tight'] = true;
+    notify(`⏱️ Correspondance serrée à ${hub.p.X1.name}`,
+      `Tu arrives vers ${fmtHM(eta)}, le ${planned.route.s} part à ${fmtHM(planned.eff)}${hub.p.walk ? ` (${hub.p.walk} min à pied jusqu’à ${hub.p.X2.name})` : ''} : descends vite !`, 'bus');
+  }
+}
+
+/* ---------- 🔦 Faire signe au car ----------
+   Le car jaune ne s'arrête que si on lui fait signe : écran jaune qui clignote doucement (2 fois par seconde,
+   sans danger pour les yeux sensibles) et lampe du téléphone quand c'est possible (Android). */
+let signTorch = null;
+function signLines(){
+  const g = typeof ride !== 'undefined' && ride.phase === 'wait' ? findGroup(ride.stop) : (board.group || null);
+  const near = g ? signApproaching(g) : [];
+  return { g, near };
+}
+/** Cars qui arrivent à cet arrêt (moins de 10 min ou 2 km), du plus proche au plus loin. */
+function signApproaching(g){
+  const out = [];
+  vehicles.forEach(v => {
+    if (!v.tripId) return;
+    const G = tripGeom(v.tripId, v.routeId); if (!G) return;
+    const from = v.est ? v.est.next : 0;
+    const k = G.stops.findIndex((s, i) => i >= from && g.ids.includes(s.id)); if (k < 0) return;
+    const s = G.stops[k], d = distM(v.lat, v.lon, s.lat, s.lon);
+    const base = v.est ? v.est.base : serviceDayMs(v.startDate, G.stops[0].sec);
+    const eta = base + s.sec * 1000 + (v.delay || 0) * 1000, min = (eta - Date.now()) / 60e3;
+    if (d < 2000 || (min > -1 && min < 10)) out.push({ v, d, min });
+  });
+  return out.sort((a, b) => a.d - b.d);
+}
+function openSign(){
+  const ov = $('#signOv'); if (!ov) return;
+  const { g, near } = signLines();
+  const ls = [...new Set(near.map(x => x.v.route.s))];
+  $('#signLine').textContent = ls.length ? ls.slice(0, 3).join(' · ') : '🚌';
+  $('#signSub').textContent = near.length ? `${near[0].v.route.s} → ${near[0].v.headsign || ''} · ${near[0].d < 1000 ? Math.round(near[0].d / 10) * 10 + ' m' : (near[0].d / 1000).toFixed(1) + ' km'}` : (g ? g.name : 'Tends le bras, l’écran vers le chauffeur');
+  ov.hidden = false;
+  descWake(true);
+  $('#signTorch').hidden = !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) || IOS;
+  clearTimeout(openSign._t); openSign._t = setTimeout(closeSign, 3 * 60e3);
+}
+async function toggleTorch(){
+  try {
+    if (signTorch){ signTorch.getTracks().forEach(t => t.stop()); signTorch = null; $('#signTorch').classList.remove('on'); return; }
+    const st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const tr = st.getVideoTracks()[0], caps = tr.getCapabilities ? tr.getCapabilities() : {};
+    if (!caps.torch){ st.getTracks().forEach(t => t.stop()); toast('Lampe non disponible sur ce téléphone : l’écran suffit.'); $('#signTorch').hidden = true; return; }
+    await tr.applyConstraints({ advanced: [{ torch: true }] });
+    signTorch = st; $('#signTorch').classList.add('on');
+  } catch(e){ toast('Lampe non disponible : l’écran clignotant suffit.'); }
+}
+function closeSign(){
+  const ov = $('#signOv'); if (!ov || ov.hidden) return;
+  ov.hidden = true;
+  if (signTorch){ signTorch.getTracks().forEach(t => t.stop()); signTorch = null; }
+  descWake(!!descRun.key);
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-sign]')) openSign();
+  else if (e.target.closest('#signTorch')) toggleTorch();
+  else if (e.target.closest('#signClose') || e.target.id === 'signOv') closeSign();
+});
+/** À l'arrêt : le bouton 🔦 apparaît, et pulse quand un car arrive (avec un rappel). */
+let signNotif = {};
+function signTick(){
+  const b = $('#signBtn'); if (!b) return;
+  const waiting = typeof ride !== 'undefined' && ride.phase === 'wait' && !onBus;
+  if (!waiting || view !== 'map'){ b.hidden = true; b.classList.remove('pulse'); return; }
+  const g = findGroup(ride.stop), near = g ? signApproaching(g) : [];
+  b.hidden = false;
+  const close = near.find(x => x.d < 1200 || x.min < 3);
+  b.classList.toggle('pulse', !!close);
+  if (close && !signNotif[close.v.id] && alertCfg.on){
+    signNotif[close.v.id] = Date.now();
+    notify(`🔦 Ton car arrive : fais signe !`, `${close.v.route.s} → ${close.v.headsign || '?'} à ${close.d < 1000 ? Math.round(close.d / 10) * 10 + ' m' : (close.d / 1000).toFixed(1) + ' km'}. Touche 🔦 pour éclairer l’écran.`, 'bus');
+  }
+}
+setInterval(() => { try { descTick(); corrTick(); signTick(); } catch(e){ console.warn(e); } }, 5000);
+
 /* ----- SMS aux proches : message tout prêt, une touche pour l'envoyer (Apple n'autorise pas l'envoi sans toucher) ----- */
 const smsNums = () => (shareCfg.smsTo || '').split(/[,;]+/).map(x => x.replace(/[^\d+]/g, '')).filter(x => x.length >= 6);
 const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -6092,6 +6477,8 @@ function smsText(ev){
   if (ev.k === 'depart')
     return `🚌 Je suis dans le car${ev.l ? ' ' + ev.l : ''}${ev.d ? ' → ' + ev.d : ''}, monté${ev.stop ? ' à ' + ev.stop : ''} à ${fmtHM(ev.at)}.`
       + (ev.to && ev.eta ? ` Arrivée prévue à ${ev.to} vers ${fmtHM(ev.eta)}${late}.` : late ? ` Le car a${late.replace(/[()]/g, '')}.` : '') + link;
+  if (ev.k === 'late')
+    return `⏱️ J’ai raté ma correspondance${ev.stop ? ' à ' + ev.stop : ''} (car en retard). Je prends le ${ev.l || 'suivant'}, arrivée à ${ev.to} vers ${fmtHM(ev.eta)}.` + link;
   return `🚶 Je suis descendu${ev.l ? ' du ' + ev.l : ' du car'}${ev.stop ? ' à ' + ev.stop : ''} à ${fmtHM(ev.at)}. Je ne suis plus dans le car.`;
 }
 let smsPending = null;   // { ev, until }
@@ -6108,7 +6495,7 @@ function renderSmsSheet(){
   document.body.classList.toggle('sms-on', on);
   if (!on){ el.hidden = true; smsPending = smsPending && Date.now() <= smsPending.until ? smsPending : null; return; }
   const txt = smsText(smsPending.ev), n = smsNums().length;
-  $('#smsTitle').textContent = smsPending.ev.k === 'depart' ? '📱 Prévenir tes proches que tu es dans le car' : '📱 Prévenir tes proches que tu es descendu';
+  $('#smsTitle').textContent = smsPending.ev.k === 'depart' ? '📱 Prévenir tes proches que tu es dans le car' : smsPending.ev.k === 'late' ? '📱 Prévenir tes proches de ton retard' : '📱 Prévenir tes proches que tu es descendu';
   $('#smsPrev').textContent = txt;
   // un SMS séparé par proche (pas de conversation de groupe) : un bouton chacun
   const nums = smsNums(), next = nums.find(x => !smsPending.done[x]);
