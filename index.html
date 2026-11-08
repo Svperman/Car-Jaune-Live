@@ -735,6 +735,19 @@
 
   footer{background:var(--jaune);color:var(--titre);font-size:12px;padding:7px 20px;flex:none;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 
+  #majOv{position:fixed;inset:0;z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    background:rgba(240,242,246,.86);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);animation:majIn .25s ease}
+  #majOv[hidden]{display:none}
+  html.dark #majOv{background:rgba(14,20,30,.86)}
+  .maj-ic{position:relative;width:96px;height:96px;border-radius:22px;overflow:hidden;box-shadow:0 6px 22px rgba(0,0,0,.22)}
+  .maj-ic img{width:100%;height:100%;display:block;filter:grayscale(1)}
+  .maj-veil{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+  .maj-ring{--p:0;position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:50%;
+    border:3px solid rgba(255,255,255,.9);background:conic-gradient(rgba(255,255,255,.9) calc(var(--p) * 1%), transparent 0);
+    -webkit-mask:radial-gradient(circle,#000 0 15px,transparent 15.5px 17px,#000 17.5px);mask:radial-gradient(circle,#000 0 15px,transparent 15.5px 17px,#000 17.5px)}
+  .maj-t{font-weight:700;font-size:16px;color:var(--texte)}
+  .maj-s{font-size:12.5px;color:var(--gris);margin-top:-6px}
+  @keyframes majIn{from{opacity:0}to{opacity:1}}
   #toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);background:var(--titre);color:#fff;padding:9px 16px;
          border-radius:18px;font-size:13px;line-height:1.35;z-index:9999;width:max-content;max-width:min(460px, calc(100vw - 32px));box-shadow:0 4px 18px rgba(0,0,0,.3);
          display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;text-align:center}
@@ -1062,6 +1075,8 @@
   <div class="bm-f"><button class="al-link" id="bmClear">Tout effacer</button><button class="al-link" data-open-settings>⚙️ Réglages</button></div>
 </div>
 <div id="toast" hidden></div>
+<!-- mise à jour : comme sur l'iPhone, l'icône devient grise avec un cercle qui se remplit -->
+<div id="majOv" hidden aria-live="polite"><div class="maj-ic"><img src="icons/apple-touch-icon.png" alt=""><div class="maj-veil"></div><div class="maj-ring" id="majRing"></div></div><div class="maj-t">Mise à jour…</div><div class="maj-s">Car Jaune Live</div></div>
 <div id="geoSheet" class="sheet" hidden role="dialog" aria-labelledby="geoTitle"><div class="sms-h"><b id="geoTitle">📍 Autoriser la localisation</b><button id="geoLater" aria-label="Plus tard">✕</button></div>
   <div class="sms-prev" id="geoBody"></div><div class="sms-list" id="geoActs"></div></div>
 <div id="msgSheet" hidden role="dialog" aria-labelledby="msgTitle"><div class="sms-h"><b id="msgTitle"></b><button id="msgClose" aria-label="Fermer">✕</button></div>
@@ -1407,7 +1422,25 @@ function updApply(){
     sessionStorage.setItem('cj_maj_from', JSON.stringify({ b: APP_BUILD, at: Date.now() }));
     savePrefs(); sessionStorage.setItem('cj_maj', '1');
   } catch(e){}
-  location.reload();
+  majShow();
+}
+/** Icône grise + cercle qui se remplit (comme une appli qui se met à jour sur l'iPhone), puis rechargement. */
+function majShow(){
+  const ov = $('#majOv'), ring = $('#majRing');
+  if (!ov || !ov.hidden) return;
+  ov.hidden = false;
+  let p = 0, done = false;
+  // on télécharge la nouvelle page pendant que le cercle avance
+  fetch('./?maj=' + Date.now(), { cache:'no-store' }).catch(() => {}).finally(() => { done = true; });
+  const t0 = performance.now();
+  const step = () => {
+    const el = performance.now() - t0;
+    p = Math.min(el / 16, done ? 100 : 85 * (1 - Math.exp(-el / 900)));      // au moins ~1,6 s pour qu'on le voie
+    ring.style.setProperty('--p', p.toFixed(1));
+    if (p >= 100 || el > 8000) setTimeout(() => location.reload(), 180);
+    else requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 async function checkUpdate(force){
   if (IN_GAS || APP_BUILD.startsWith('__') || navigator.onLine === false) return;

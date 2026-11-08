@@ -34,8 +34,12 @@ const reloaded = p => p.evaluate('typeof window.__avant === "undefined"');
 
 await t('nouvelle version : se recharge toute seule au retour sur l’appli', async () => {
   const { ctx, page } = await open();
-  await back(page); await page.waitForTimeout(3500);
-  const r = [await reloaded(page), await page.evaluate("document.querySelector('#toast').innerText")];
+  await back(page); await page.waitForTimeout(700);
+  const ov = await page.evaluate("[!document.querySelector('#majOv').hidden, +getComputedStyle(document.querySelector('#majRing')).getPropertyValue('--p')]").catch(e => [false, e.message.slice(0, 120)]);
+  await page.screenshot({ path: 'test-maj.png' }).catch(() => {});
+  await page.waitForTimeout(3500);
+  const r = [await reloaded(page), await page.evaluate("document.querySelector('#toast').innerText"), ov];
+  if (!ov[0]) return 'pas d’icône grise pendant la mise à jour : ' + JSON.stringify(r);
   await ctx.close();
   return (r[0] && /à jour/.test(r[1])) || JSON.stringify(r);
 });
