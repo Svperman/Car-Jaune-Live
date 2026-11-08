@@ -1382,26 +1382,54 @@ let swReg = null, installEvt = null;
 if (!IN_GAS && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')){
   navigator.serviceWorker.register('sw.js').then(r => { swReg = r; }).catch(() => {});
 }
-/* ---------- mises à jour : tout le monde reçoit la dernière version publiée ----------
-   La page est toujours prise sur le réseau à l'ouverture. Si l'appli reste ouverte longtemps,
-   on vérifie au retour sur l'écran (au plus toutes les 10 min) et on propose de recharger. */
+/* ---------- mises à jour automatiques, pareil sur iPhone et Android (comme Trafic Péi) ----------
+   Rien à toucher : à l'ouverture la page est toujours prise sur le réseau, et quand on revient
+   sur l'appli restée ouverte, on regarde s'il y a une nouvelle version ; si oui elle se recharge
+   toute seule — mais jamais en plein trajet, pendant qu'on écrit, ou avec une fenêtre ouverte
+   (on attend le prochain moment calme). */
 const APP_BUILD = '__BUILD__';                          // remplacé par GitHub à chaque publication
-let updChecked = 0, updShown = false;
-async function checkUpdate(){
-  if (IN_GAS || APP_BUILD.startsWith('__') || updShown || Date.now() - updChecked < 10 * 60e3 || navigator.onLine === false) return;
+let updChecked = 0, updReady = false;
+function updCalm(){
+  try {
+    if (typeof ride !== 'undefined' && ride.phase !== 'idle') return false;         // dans le car / à l'arrêt : on ne coupe pas le suivi
+    const a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return false;              // en train d'écrire
+    if (typeof backOpen === 'function' && backOpen().length) return false;           // une fenêtre est ouverte
+  } catch(e){}
+  return true;
+}
+function updApply(){
+  if (!updReady || !updCalm()) return;
+  try {
+    // sécurité : si on vient déjà de recharger depuis cette même version, pas de boucle
+    const last = JSON.parse(sessionStorage.getItem('cj_maj_from') || 'null');
+    if (last && last.b === APP_BUILD && Date.now() - last.at < 10 * 60e3){ updReady = false; return; }
+    sessionStorage.setItem('cj_maj_from', JSON.stringify({ b: APP_BUILD, at: Date.now() }));
+    savePrefs(); sessionStorage.setItem('cj_maj', '1');
+  } catch(e){}
+  location.reload();
+}
+async function checkUpdate(force){
+  if (IN_GAS || APP_BUILD.startsWith('__') || navigator.onLine === false) return;
+  if (updReady) return updApply();
+  if (!force && Date.now() - updChecked < 60e3) return;
   updChecked = Date.now();
   try {
     const html = await fetch('./?maj=' + Date.now(), { cache:'no-store' }).then(r => r.ok ? r.text() : '');
     const m = html.match(/APP_BUILD\s*=\s*['"]([\w.-]+)['"]/);
     if (m && m[1] !== APP_BUILD && !m[1].startsWith('__')){
-      updShown = true;
-      if (swReg) swReg.update().catch(() => {});
-      toast('🆕 Nouvelle version de Car Jaune Live : touche ici pour l’avoir', () => location.reload());
+      updReady = true;
+      if (swReg) await swReg.update().catch(() => {});
+      updApply();
     }
   } catch(e){}
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible'){ checkUpdate(); if (swReg) swReg.update().catch(() => {}); } });
-setInterval(checkUpdate, 30 * 60e3);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible'){ checkUpdate(true); if (swReg) swReg.update().catch(() => {}); } });
+window.addEventListener('pageshow', e => { if (e.persisted) checkUpdate(true); });   // iPhone : appli reprise depuis la mémoire
+window.addEventListener('online', () => checkUpdate(true));
+setInterval(() => checkUpdate(), 10 * 60e3);
+setInterval(() => { if (updReady) updApply(); }, 15e3);                            // mise à jour en attente : dès que c'est calme
+try { if (sessionStorage.getItem('cj_maj')){ sessionStorage.removeItem('cj_maj'); setTimeout(() => toast('✅ Car Jaune Live est à jour'), 1500); } } catch(e){}
 {
 }
 window.addEventListener('beforeinstallprompt', e => {

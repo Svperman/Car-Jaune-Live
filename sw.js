@@ -1,5 +1,5 @@
 /* Car Jaune Live — service worker : appli utilisable hors ligne (coquille), données toujours fraîches */
-const VERSION = 'cj-v36';
+const VERSION = 'cj-v37';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png',
@@ -43,9 +43,11 @@ self.addEventListener('fetch', e => {
   // données en direct (serveur Apps Script, trafic, PDF) : jamais mises en cache ici
   if (/script\.google|googleusercontent|ntfy\.sh|tomtom\.com|geo\.api\.gouv/.test(url.host)) return;
 
+  if (url.searchParams.has('maj')) return;               // vérification de mise à jour : toujours le réseau
   // page : réseau d'abord (pour recevoir les mises à jour), cache si hors ligne
   if (req.mode === 'navigate'){
-    e.respondWith(fetch(req).then(r => {
+    // cache:'no-store' : on passe outre le cache de 10 min de GitHub, la dernière version arrive tout de suite
+    e.respondWith(fetch(req.url, { cache:'no-store', credentials:'same-origin' }).then(r => {
       const copy = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy));
       return r;
     }).catch(() => caches.match('./index.html')));
