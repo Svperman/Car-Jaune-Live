@@ -676,6 +676,60 @@
   .sg-tip{font-size:13px;margin-top:18px;opacity:.75}
   .sign-b{margin:-2px 0 10px}
   .habit{color:#b45309;font-size:11.5px}
+  .fb{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+  .cr-bars{display:flex;align-items:flex-end;gap:3px;height:90px;margin:10px 0}
+  .cr-b{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end}
+  .cr-b i{display:block;width:100%;background:var(--jaune);border-radius:3px 3px 0 0;min-height:2px}
+  .cr-b span{font-size:9px;color:var(--gris)}
+  .cr-it{padding:6px 0;border-bottom:1px solid var(--ligne);font-size:13px}
+  .cr-it small{display:block;color:var(--gris);font-size:11px}
+  .cr-it.err{font-family:ui-monospace,monospace;font-size:12px}
+  .bl-k.bad b{color:#c0392b}
+  .crowd{color:#9a3412;font-size:11.5px}
+  html.dark .crowd{color:#fdba74}
+  .trip-favs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;align-items:center}
+  .trip-favs:empty{display:none}
+  .tf-ed{font-size:12px;color:var(--gris)}
+  .d2d{position:relative}
+  .d2d-f{display:flex;flex-direction:column;gap:6px}
+  .d2d-f label{font-size:12px;font-weight:600;display:flex;flex-direction:column;gap:3px}
+  .d2d-mid{display:flex;gap:8px;align-items:center;justify-content:space-between}
+  .d2d-sug{position:absolute;left:12px;right:12px;z-index:30;list-style:none;margin:0;padding:4px 0;background:var(--carte);border:1px solid var(--ligne);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+  .d2d-sug li{padding:9px 12px;cursor:pointer;font-size:14px}
+  .d2d-sug li:hover{background:var(--fond)}
+  .d2d-steps{margin:12px 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+  .d2d-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .d2d-alt{margin-top:10px;font-size:13px}
+  .oday{margin-top:14px}
+  .oday-l{display:flex;align-items:center;gap:8px;font-weight:700;flex-wrap:wrap}
+  .oday-h{margin:12px 0 6px;font-weight:700;text-transform:none}
+  .live-tt{background:rgba(255,255,255,.94);border:0;border-radius:6px;padding:1px 6px;font-size:11px;font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .live-tt::before{display:none}
+  .live-tt.tgt{background:#FFCC00;color:#1A1A1A}
+  html.dark .live-tt{background:rgba(30,36,46,.94);color:#fff}
+  #safeOv{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.55)}
+  #safeOv[hidden]{display:none}
+  .sf-box{background:var(--carte);color:var(--texte);border-radius:16px;padding:22px;max-width:380px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .sf-ic{font-size:44px}.sf-t{font-size:22px;font-weight:800;margin:6px 0}.sf-s{margin-bottom:16px}
+  .sf-btns{display:flex;flex-direction:column;gap:8px}
+  #followBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:1240;display:flex;align-items:center;gap:6px;
+    max-width:calc(100% - 24px);background:var(--carte);color:var(--texte);border:2px solid var(--jaune);border-radius:22px;padding:7px 12px;font:inherit;font-size:13px;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer}
+  #followBar[hidden]{display:none}
+  #followBar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sv-open{float:right;margin-top:4px}
+  #simpleOv{position:fixed;inset:0;z-index:100000;background:var(--fond);color:var(--texte);display:flex;align-items:center;justify-content:center;padding:24px}
+  #simpleOv[hidden]{display:none}
+  #simpleClose{position:absolute;top:calc(env(safe-area-inset-top,0px) + 14px);right:14px}
+  #simpleBox{text-align:center;max-width:520px;width:100%}
+  .sv-from{font-size:18px;font-weight:700;margin-bottom:14px}
+  .sv-line .badge{font-size:34px;padding:8px 18px;border-radius:12px}
+  .sv-when{font-size:min(30vw,150px);font-weight:900;line-height:1.05;margin-top:10px}
+  .sv-when small{font-size:.32em;font-weight:700}
+  .sv-time{font-size:20px;margin-top:4px}
+  .sv-dl{display:inline-block;font-size:20px;font-weight:800;margin-top:14px;padding:6px 16px;border-radius:12px;background:var(--carte)}
+  .sv-dl.late{background:#fde2e2;color:#b91c1c}.sv-dl.ok{background:#dcfce7;color:#166534}.sv-dl.early{background:#dbeafe;color:#1e40af}
+  .sv-next{margin-top:22px;font-size:17px}
+  .sv-empty{font-size:20px}
   .leave-b{margin-top:4px;font:inherit;font-size:11.5px;font-weight:700;border:1px solid var(--ligne);background:var(--carte);color:var(--texte);border-radius:12px;padding:3px 8px;cursor:pointer;white-space:nowrap}
   .leave-b.on{background:var(--jaune);border-color:var(--jaune);color:#1A1A1A}
   .bl-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -924,7 +978,7 @@
   <!-- ===== Horaires à l'arrêt ===== -->
   <section class="view" id="view-trip">
     <div class="wrap">
-      <h1>Mon trajet</h1>
+      <h1>Mon trajet <button class="btn small sv-open" data-simple title="Ton prochain car en très grand">🔎 Vue simple</button></h1>
       <p class="lead">Ton aller et ton retour en car jaune : le sens est détecté automatiquement selon ta position.</p>
       <div class="card">
         <div class="trip-form">
@@ -937,7 +991,12 @@
           <span>Sens :</span>
           <div class="seg" id="tripMode"><button data-m="auto">Automatique</button><button data-m="aller">Aller</button><button data-m="retour">Retour</button></div>
         </div>
+        <div class="trip-favs" id="tripFavs"></div>
       </div>
+      <details class="card cls-card" id="d2dCard" style="margin-top:16px">
+        <summary><span class="sa-i">🏠</span><span class="sa-t"><b>De porte à porte</b><small>d’une adresse à une autre : marche, car, marche</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+        <div class="cls-body d2d" id="d2dBody"></div>
+      </details>
       <div class="card" id="tripCard" style="margin-top:16px"></div>
       <details class="card cls-card" id="clsCard" style="margin-top:16px">
         <summary><span class="sa-i">🎓</span><span class="sa-t"><b>Quand partir · mes horaires de cours</b><small id="clsSum">indique tes heures de cours : je te dis quel car prendre</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
@@ -978,6 +1037,7 @@
       <div class="card" id="boardCard">
         <div class="placeholder"><div class="big">🚏</div>Choisis un arrêt pour voir ses prochains départs.</div>
       </div>
+      <div class="card oday" id="odayCard" hidden><label class="oday-l">🗓️ Voir un autre jour <input type="date" class="set-in" id="odayIn"></label><div id="odayBox"></div></div>
       <div class="card" id="alertCard">
         <h2>🔔 Alertes d'arrivée en gare</h2>
         <div class="al-row">
@@ -1126,9 +1186,12 @@
       <div class="set-row"><div class="set-l"><b>Trafic sur la carte</b><small>routes colorées et bouchons repérés par les cars</small></div><label class="switch"><input type="checkbox" id="tfOn" checked><span></span></label></div>
       <div class="set-row col adv" id="tfKeyRow"><div class="set-l"><b>Clé TomTom</b><small id="tfKeyTxt"></small></div>
         <div class="tf-key" id="tfKeyEdit"><input class="set-in" id="tfKey" placeholder="colle ta clé gratuite (developer.tomtom.com)" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div></div>
-      <div class="set-row"><div class="set-l"><b>Langue · Language</b><small>auto : celle du téléphone</small></div><select class="set-sel" id="langSel" aria-label="Langue · Language"><option value="auto">Auto</option><option value="fr">Français</option><option value="en">English</option></select></div>
+      <div class="set-row"><div class="set-l"><b>Langue · Language</b><small>auto : celle du téléphone</small></div><select class="set-sel" id="langSel" aria-label="Langue · Language"><option value="auto">Auto</option><option value="fr">Français</option><option value="en">English</option><option value="rcf">Kréol (bêta)</option></select></div>
       <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt"></small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
       <div class="set-row"><div class="set-l"><b>Taille du texte</b></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
+      <div class="set-row"><div class="set-l"><b>🗺️ Trajet en direct</b><small>dans le car : le parcours sur la carte, arrêts passés en gris, prochains arrêts avec leur heure</small></div><label class="switch"><input type="checkbox" id="liveOn" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>✅ « Tout va bien ? »</b><small>si tu n’es pas descendu 20 min après l’heure prévue, l’appli te le demande, puis propose de prévenir tes proches</small></div><label class="switch"><input type="checkbox" id="safeOn" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>🔎 Ouvrir en vue simple</b><small>ton prochain car en très grand dès l’ouverture</small></div><label class="switch"><input type="checkbox" id="simpleOn"><span></span></label></div>
       <div class="set-row adv"><div class="set-l"><b>Économie de batterie</b><small id="ecoTxt"></small></div><label class="switch"><input type="checkbox" id="ecoOn" checked><span></span></label></div>
       <div class="set-row adv" id="packRow"><div class="set-l"><b>Horaires sans réseau</b><small id="packTxt">les horaires de tous les arrêts sont gardés sur ton téléphone</small></div><button class="btn small ghost" id="packBtn">↻ Mettre à jour</button></div>
       <div class="set-row adv" id="offRow"><div class="set-l"><b>Carte hors ligne</b><small id="offTxt">les zones que tu as déjà regardées restent visibles sans réseau</small></div><button class="btn small ghost" id="offClear">Vider</button></div>
@@ -1144,6 +1207,11 @@
       <div class="set-row" id="apkRow" hidden><div class="set-l"><b>Appli Android</b><small>position partagée même appli fermée</small></div><a class="btn small ghost" href="https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk">📥 APK</a></div>
       <div class="set-row col adv" id="apiRow" hidden><div class="set-l"><b>Serveur <span id="srvState"></span></b><small id="apiTxt"></small></div>
         <div class="set-ctl"><button class="btn small ghost" id="srvCheck">↻ Vérifier</button><button id="apiBtn" class="btn small ghost">Modifier l’adresse</button></div></div>
+      <div class="set-row col"><div class="set-l"><b>💬 Une idée / un bug ?</b><small>ton message arrive directement au créateur de l’appli (anonyme)</small></div>
+        <div class="fb"><select class="set-sel" id="fbKind" aria-label="Type de message"><option value="idee">💡 Une idée</option><option value="bug">🐞 Un bug</option></select>
+        <textarea class="set-in" id="fbText" rows="3" maxlength="600" placeholder="Dis-moi ce qui te serait utile, ou ce qui ne marche pas…" aria-label="Ton message"></textarea>
+        <button class="btn small" id="fbSend">Envoyer</button></div></div>
+      <details class="set-more adv" id="crSec"><summary>📈 Tableau de bord du créateur</summary><div id="crStats"></div><button class="btn small ghost" id="crRefresh">↻ Actualiser</button></details>
       <details class="set-more adv"><summary>Dépannage</summary>
       <div class="set-row"><div class="set-l"><b>Recharger l’appli</b><small>si quelque chose semble bloqué</small></div><button class="btn small ghost" id="reloadBtn">↻ Recharger</button></div>
       <div class="set-row"><div class="set-l"><b>Journal de trajet</b><small id="diagTxt">enregistre ce que l’appli détecte pendant un trajet (rien n’est envoyé)</small></div><label class="switch"><input type="checkbox" id="diagOn"><span></span></label></div>
@@ -1175,6 +1243,11 @@
 <div id="smsSheet" hidden role="dialog" aria-labelledby="smsTitle"><div class="sms-h"><b id="smsTitle"></b><button id="smsLater" aria-label="Plus tard">✕</button></div>
   <div class="sms-prev" id="smsPrev"></div><div class="sms-list" id="smsList"></div></div>
 <div id="focusBar" hidden></div>
+<div id="safeOv" hidden role="alertdialog" aria-modal="true" aria-labelledby="safeT"><div class="sf-box">
+  <div class="sf-ic" aria-hidden="true">✅</div><div class="sf-t" id="safeT">Tout va bien ?</div><div class="sf-s" id="safeTxt"></div>
+  <div class="sf-btns"><button class="btn" id="safeOk">👍 Oui, tout va bien</button><button class="btn ghost" id="safeHelp">📱 Prévenir mes proches</button></div></div></div>
+<button id="followBar" hidden aria-label="Centrer la carte sur ton proche"></button>
+<div id="simpleOv" hidden role="dialog" aria-modal="true" aria-label="Vue simple : mon prochain car"><button class="round" id="simpleClose" aria-label="Fermer la vue simple">✕</button><div id="simpleBox"></div></div>
 <button id="vigiBar" hidden aria-label="Vigilance météo : voir le détail"></button>
 <div id="descChip" hidden role="status" aria-live="polite"></div>
 <button id="signBtn" hidden data-sign title="Faire signe au car" aria-label="Faire signe au car">🔦<span>Faire signe</span></button>
@@ -1279,7 +1352,7 @@ const $ = s => document.querySelector(s);
 const LANG = (() => {
   let l = 'auto';
   try { l = localStorage.getItem('cj_lang') || 'auto'; } catch(e){}
-  if (l === 'fr' || l === 'en') return l;
+  if (l === 'fr' || l === 'en' || l === 'rcf') return l;
   const nav = (navigator.languages && navigator.languages[0]) || navigator.language || 'fr';
   return /^en/i.test(nav) ? 'en' : 'fr';
 })();
@@ -1453,8 +1526,23 @@ const I18N_RE = [
   [/\bd’habitude \+(\d+) min\b/g, 'usually +$1 min'], [/\(retard (\d+) min\)/g, '($1 min late)'], [/\bex\. /g, 'e.g. '], [/\(avance (\d+) min\)/g, '($1 min early)'], [/, à (\d{1,2}:\d{2})/g, ', at $1'], [/\bà (\d{1,2}:\d{2})/g, 'at $1'], [/\b(\d+) % à l’heure\b/g, '$1% on time'], [/\bvers (\d+) h\b/g, 'around $1:00'], [/\b(\d+) h (\d+)\b/g, '$1 h $2']
 ];
 let I18N_BIG = null;
-/** Traduit un texte français en anglais (sans rien changer si l'appli est en français). */
+/* 🇷🇪 Kréol rényoné (bêta) : menus et messages principaux seulement, le reste reste en français.
+   À faire relire par quelqu'un qui écrit le créole : il suffit de corriger ces lignes. */
+const RCF_EXACT = { 'Carte':'Kart', 'Trajet':'Trajé', 'Horaires':'Lèr', 'Fiches':'Fiche lèr', 'Trafic':'Trafik', 'Infos':'Nouvèl', 'Aller':'Aler', 'Retour':'Rotour', 'Fermer':'Fèrm',
+  'Envoyer':'Anvoy', 'À l’heure':'A lèr', 'À quai':'Lé la', 'aujourd’hui':'zordi', 'demain':'domin', 'Aujourd’hui':'Zordi', 'Demain':'Domin' };
+const RCF_FRAG = { 'Carte en direct':'Kart an diré', 'Mon trajet':'Mon trajé', 'Horaires à l’arrêt':'Lèr pasaz', "Horaires à l'arrêt":'Lèr pasaz', 'Fiches horaires':'Fiche lèr', 'Infos trafic':'Nouvèl trafik',
+  'Paramètres':'Réglaz', 'Mon prochain car':'Mon prosin kar', 'Descends au prochain arrêt !':'Désann o prosin arè !', 'Descends au prochain arrêt':'Désann o prosin arè',
+  'Prépare-toi à descendre':'Paré pou désann', 'appuie sur le bouton d’arrêt du car.':'pès lo bouton arè dann kar.', 'Ton car arrive':'Out kar i ariv', 'Pars maintenant':'Lèv aou astèr',
+  'Faire signe au car':'Fé sinn lo kar', 'Faire signe':'Fé sinn', 'Tout va bien ?':'Tout lé bon ?', 'Oui, tout va bien':'Wi, tout lé bon', 'Prochain arrêt :':'Prosin arè :', 'prochain arrêt':'prosin arè',
+  'Tu es dans le':'Ou lé dann', 'Mes proches':'Mon fanmi', 'Pas de réseau':'Néna pwin rézo', 'Vue simple':'Vi sinp' };
+const RCF_RE = [[/\bRetard (\d+) min\b/g, '$1 min an rotar'], [/\bdans (\d+) (min|arrêts?)\b/g, 'dan $1 $2']];
+/** Traduit un texte français en anglais ou en créole (sans rien changer si l'appli est en français). */
 function tr(s){
+  if (LANG === 'rcf' && s && typeof s === 'string'){
+    const t0 = s.trim(); if (RCF_EXACT[t0] != null) return s.replace(t0, RCF_EXACT[t0]);
+    if (!tr.rcf){ const k = Object.keys(RCF_FRAG).sort((a, b) => b.length - a.length); tr.rcf = new RegExp(k.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g'); }
+    let o = s.replace(tr.rcf, m => RCF_FRAG[m]); RCF_RE.forEach(([re, rp]) => { o = o.replace(re, rp); }); return o;
+  }
   if (LANG !== 'en' || !s || typeof s !== 'string') return s;
   const t = s.trim();
   if (I18N_EXACT[t] != null) return s.replace(t, I18N_EXACT[t]);
@@ -1481,10 +1569,12 @@ function i18nNode(n){
   if (n.nodeName === 'INPUT' && /^(button|submit)$/.test(n.type) && n.value){ const t = tr(n.value); if (t !== n.value) n.value = t; }
   n.childNodes.forEach(i18nNode);
 }
-if (LANG === 'en'){
-  document.documentElement.lang = 'en';
+if (LANG === 'en' || LANG === 'rcf'){
+  document.documentElement.lang = LANG;
   const TABS_EN = { map:'Map<span class="lg"> · live</span>', trip:'<span class="lg">My </span>Trip', board:'Times<span class="lg"> at stop</span>', fiches:'Timetables', trafic:'Traffic<span class="lg"> info</span>' };
-  document.querySelectorAll('.tab[data-view]').forEach(b => { const tl = b.querySelector('.tl'); if (tl && TABS_EN[b.dataset.view]) tl.innerHTML = TABS_EN[b.dataset.view]; });
+  const TABS_RCF = { map:'Kart<span class="lg"> an diré</span>', trip:'<span class="lg">Mon </span>Trajé', board:'Lèr<span class="lg"> pasaz</span>', fiches:'Fiche lèr', trafic:'Trafik' };
+  const TT = LANG === 'en' ? TABS_EN : TABS_RCF;
+  document.querySelectorAll('.tab[data-view]').forEach(b => { const tl = b.querySelector('.tl'); if (tl && TT[b.dataset.view]) tl.innerHTML = TT[b.dataset.view]; });
   try { document.title = 'Car Jaune Live'; } catch(e){}
   i18nNode(document.body);
   new MutationObserver(list => list.forEach(m => {
@@ -1892,7 +1982,7 @@ const VIEW_NAMES = { map:'Carte en direct', trip:'Mon trajet', board:"Horaires �
 /* ---------- bouton « retour » d'Android (et retour du navigateur) ----------
    Ferme la fenêtre ouverte (réglages, signalement, prochain car, cloche…) ou revient à la carte,
    au lieu de quitter l'appli. */
-const BACK_OV = ['settingsModal', 'ficheModal', 'repSheet', 'nextSheet', 'bellMenu', 'smsSheet', 'geoSheet', 'msgSheet', 'descAlarm', 'signOv'];
+const BACK_OV = ['settingsModal', 'ficheModal', 'repSheet', 'nextSheet', 'bellMenu', 'smsSheet', 'geoSheet', 'msgSheet', 'descAlarm', 'signOv', 'safeOv', 'simpleOv'];
 let backSkip = 0;
 const BACK_ON = !IN_GAS || !!window.__testBack;    // (Apps Script : la page est dans un cadre, on ne touche pas à l'historique)
 const backOpen = () => BACK_OV.filter(id => { const e = document.getElementById(id); return e && !e.hidden; });
@@ -1910,6 +2000,7 @@ if (BACK_ON){
       else if (id === 'smsSheet') closeSms(false);
       else if (id === 'geoSheet') $('#geoSheet').hidden = true;
       else if (id === 'signOv') closeSign();
+      else if (id === 'safeOv' || id === 'simpleOv') $('#' + id).hidden = true;
       else if (id === 'descAlarm') stopDescAlarm();
       else document.getElementById(id).hidden = true;
       if (id === 'bellMenu' && typeof renderBell === 'function') try { renderBell(); } catch(e){}
@@ -2765,6 +2856,7 @@ function transferRows(A, B){
 }
 
 function renderTrip(){
+  try { renderTripFavs(); } catch(e){}
   const card = $('#tripCard');
   if (!card) return;
   document.querySelectorAll('#tripMode button').forEach(b => b.classList.toggle('on', b.dataset.m === trip.mode));
@@ -2804,11 +2896,11 @@ function renderTrip(){
       const late = walk != null && walk > 1 && mins < walk;
       const leave = walk != null && walk > 1 && !late && mins - walk <= 30
         ? `<br><span class="walk${mins - walk > 5 ? ' ok' : ''}">🚶 pars ${mins - walk <= 0 ? 'maintenant' : 'dans ' + (mins - walk) + ' min'}</span>` : '';
-      const arm = !late && !r.ghost && mins >= 2 && mins <= 120 ? '<br>' + leaveBtn(from.name, to.name, r) : '';
+      const arm = !late && !r.ghost && mins >= 2 && mins <= 120 ? '<br>' + leaveBtn(from.name, to.name, r) + ' ' + calBtn(r, from.name, to.name) : '';
       t += `<tr class="${late ? 'toolate' : ''}${r.ghost ? ' ghost' : ''}"><td>${when}${leave}${arm}${r.last ? '<br>' + LAST_TAG : ''}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched, r.approx)}</td>
         <td class="arr">${fmtTime(r.rarr, r.arr, r.rarr != null && r.real != null)}${r.real == null && probArr(r) - r.arr >= 120e3 ? `<br><small class="habit">≈ ${fmtHM(probArr(r))} en réalité</small>` : ''}</td>
         <td><span class="dur">${Math.round((arrEff - r.eff) / 60000)} min</span></td>
-        <td>${r.ghost ? '<span class="dchip ghost">🚫 Pas vu en circulation</span>' : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>${habitHtml(r)}`}
+        <td>${r.ghost ? '<span class="dchip ghost">🚫 Pas vu en circulation</span>' : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>${habitHtml(r)}`}${crowdNote(r.route.s, r.sched)}
           ${r.veh ? `<br><button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}</td></tr>`;
     });
     html += `<table class="board jt"><thead><tr><th>Départ</th><th>Ligne</th><th>Part de ${esc(from.name)}</th><th>Arrive à ${esc(to.name)}</th><th>Durée</th><th>Info</th></tr></thead><tbody>${t}</tbody></table>`;
@@ -3779,6 +3871,11 @@ function applyLook(){
 }
 function saveLook(){ try { localStorage.setItem('cj_look', JSON.stringify(look)); } catch(e){} applyLook(); }
 $('#themeSel').addEventListener('change', e => { look.theme = e.target.value; saveLook(); });
+$('#liveOn').checked = look.liveTrip !== false; $('#safeOn').checked = look.safeCheck !== false;
+try { $('#simpleOn').checked = localStorage.getItem('cj_simple') === '1'; } catch(e){}
+$('#liveOn').addEventListener('change', e => { look.liveTrip = e.target.checked; saveLook(); try { liveTick(); } catch(err){} });
+$('#safeOn').addEventListener('change', e => { look.safeCheck = e.target.checked; saveLook(); });
+$('#simpleOn').addEventListener('change', e => { try { localStorage.setItem('cj_simple', e.target.checked ? '1' : '0'); } catch(err){} });
 $('#ecoOn').addEventListener('change', e => { look.eco = e.target.checked; saveLook(); gpsPreciseUntil = 0; try { adaptGps(); } catch(err){} renderEcoUI(); });
 function renderEcoUI(){
   if (!$('#ecoOn')) return;
@@ -5351,6 +5448,7 @@ function renderBoard(){
   const card = $('#boardCard');
   const g = board.group;
   renderLinesBox();
+  try { const oc = $('#odayCard'); if (oc){ oc.hidden = !g || !board.data; if (g && otherDay) renderOtherDay(); } } catch(e){}
   if (!g){
     card.innerHTML = `<div class="placeholder"><div class="big">🚏</div>Choisis un arrêt (recherche ou boutons par ligne) pour voir ses prochains départs.</div>`;
     return;
@@ -5394,6 +5492,7 @@ function renderBoard(){
       const whenL = when + liveIco(r);
       const status = r.ghost ? `<span class="dchip ghost">🚫 Pas vu en circulation</span><br><small class="muted">peut-être supprimé</small>`
         : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>${habitHtml(r)}`;
+      const crowd = typeof crowdNote === 'function' ? crowdNote(r.route.s, r.sched) : '';
       const sensTag = boardGroupBy === 'heure' && r.sens ? `<span class="tag ${r.sens === 'aller' ? 'tag-s' : 'tag-v'}">${r.sens}</span>` : '';
       html += `<tr class="${r.ghost ? 'ghost' : ''}">
         <td>${whenL}</td>
@@ -5402,7 +5501,7 @@ function renderBoard(){
           ${r.veh ? `<button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}
           ${r.sched - now < 30 * 60e3 ? `<button class="see" data-report="${esc(g.name)}" data-line="${esc(r.route.s)}" data-sched="${r.sched}">📣 Signaler</button>` : ''}</td>
         <td>${fmtTime(r.real, r.sched, r.approx)}</td>
-        <td>${status}</td>
+        <td>${status}${crowd}</td>
       </tr>`;
     });
     return `<table class="board"><thead><tr><th>Départ</th><th>Ligne</th><th>Direction</th><th>Horaire</th><th>Info</th></tr></thead><tbody>${html}</tbody></table>`;
@@ -6660,6 +6759,7 @@ document.addEventListener('click', e => {
 document.addEventListener('toggle', e => {
   if (e.target.id === 'avionCard' && e.target.open) renderAvion();
   if (e.target.id === 'bilanCard' && e.target.open) renderBilan();
+  if (e.target.id === 'd2dCard' && e.target.open) renderD2d();
 }, true);
 // lien venant de Roland Garros Live : ?vol=UU975&depart=2026-11-10T15:30 ou &arrivee=…
 (() => {
@@ -6674,6 +6774,396 @@ document.addEventListener('toggle', e => {
   } catch(e){}
 })();
 setTimeout(() => { try { renderBilan(); if (avion) renderAvionRes(); } catch(e){} }, 1500);
+
+/* ====================== 🗺️ Trajet en direct · ✅ Bien rentré · 👁️ Suivi d'un proche · 🔎 Vue simple ====================== */
+
+/* ---------- 🗺️ Trajet en direct ----------
+   Dans un car : le parcours sur la carte, déjà fait en gris, à venir en couleur de la ligne,
+   chaque arrêt à venir avec son heure (retard compris), ton arrêt de descente en 🛎️. */
+const liveLayer = L.layerGroup().addTo(map);
+let liveState = { key:'', at:0 };
+const trackPos = (G, s) => pointAt(G.line, G.rev ? G.line.len - s : s);
+function trackSlice(G, a, b){
+  if (b <= a) return [];
+  const n = Math.min(400, Math.max(2, Math.ceil((b - a) / 40)));
+  const pts = [];
+  for (let i = 0; i <= n; i++){ const p = trackPos(G, a + (b - a) * i / n); pts.push([p[0], p[1]]); }
+  return pts;
+}
+function liveTick(){
+  const v = typeof onBus !== 'undefined' && onBus ? vehicles.find(x => x.id === onBus) : null;
+  const G = v && v.tripId ? tripGeom(v.tripId, v.routeId) : null;
+  if (!G || look.liveTrip === false){ if (liveState.key){ liveLayer.clearLayers(); liveState = { key:'', at:0 }; } return; }
+  const key = v.id + '|' + v.tripId, now = Date.now();
+  if (liveState.key === key && now - liveState.at < 10e3) return;
+  liveState = { key, at: now };
+  liveLayer.clearLayers();
+  const p = projectOn(G.line, v.lat, v.lon), sBus = G.rev ? G.line.len - p.s : p.s;
+  const first = G.stops[0].s, last = G.stops[G.stops.length - 1].s;
+  const col = '#' + ((v.route && v.route.c) || 'F6BE00');
+  L.polyline(trackSlice(G, first, Math.min(sBus, last)), { color:'#9aa3ad', weight:5, opacity:.7, interactive:false }).addTo(liveLayer);
+  L.polyline(trackSlice(G, Math.max(sBus, first), last), { color: col, weight:6, opacity:.95, interactive:false }).addTo(liveLayer);
+  const base = v.est ? v.est.base : serviceDayMs(v.startDate, G.stops[0].sec);
+  const dl = Math.max(0, v.delay || 0) * 1000;
+  const ds = typeof descState === 'function' ? descState(v) : null;
+  let shown = 0;
+  G.stops.forEach((st, i) => {
+    const passed = st.s < sBus - 30, name = (S.stops[st.id] || [])[0] || '';
+    const isTarget = ds && findGroup(name) && findGroup(name).name === ds.name;
+    const t = base + st.sec * 1000 + dl;
+    const mk = L.circleMarker([st.lat, st.lon], { radius: isTarget ? 9 : passed ? 3 : 5, color: passed ? '#9aa3ad' : col, weight: 2,
+      fillColor: isTarget ? '#FFCC00' : passed ? '#c8ced4' : '#fff', fillOpacity: 1, interactive: true }).addTo(liveLayer);
+    mk.bindTooltip(`${isTarget ? '🛎️ ' : ''}${esc(name)}${passed ? '' : ' · ' + fmtHM(t)}`, {
+      permanent: !passed && (shown < 3 || isTarget), direction: 'right', offset: [8, 0], className: 'live-tt' + (isTarget ? ' tgt' : '') });
+    if (!passed) shown++;
+  });
+}
+setInterval(() => { try { liveTick(); } catch(e){} }, 5000);
+
+/* ---------- ✅ « Je suis bien rentré » ----------
+   Dans un car avec une arrivée connue (Mon trajet / arrêt de descente) : 20 min après l'heure prévue,
+   si l'appli ne t'a pas vu descendre, elle te demande si tout va bien ; sans réponse, elle propose de prévenir tes proches. */
+let safe = { key:'', asked:0, ok:false, sms:false };
+function safeTick(){
+  if (look.safeCheck === false) return;
+  const v = onBus ? vehicles.find(x => x.id === onBus) : null;
+  if (ride.phase !== 'ride' || !v){ if (safe.key && ride.phase === 'idle') safe = { key:'', asked:0, ok:false, sms:false }; return; }
+  const ds = typeof descState === 'function' ? descState(v) : null;
+  const to = ds ? ds.name : (ride.info && ride.info.to) || '';
+  const eta = ds ? ds.eta : (ride.info && ride.info.until) || null;
+  if (!eta || !to) return;
+  const key = v.id + '|' + to;
+  if (safe.key !== key) safe = { key, asked:0, ok:false, sms:false, to, eta };
+  safe.eta = eta;
+  const now = Date.now();
+  if (safe.ok) return;
+  if (!safe.asked && now > eta + 20 * 60e3){
+    safe.asked = now;
+    $('#safeTxt').textContent = `Tu devais arriver à ${to} vers ${fmtHM(eta)}.`;
+    $('#safeOv').hidden = false;
+    notify('✅ Tout va bien ?', `Tu devais arriver à ${to} vers ${fmtHM(eta)}. Touche pour répondre.`, 'warn', { force: true });
+  } else if (safe.asked && !safe.sms && now > safe.asked + 5 * 60e3){
+    safe.sms = true;
+    notify('📱 Prévenir tes proches ?', `Pas de réponse : un SMS tout prêt les rassure ou leur dit où tu es.`, 'warn', { force: true });
+    offerSms({ k:'check', to, eta, at: now, l: v.route.s });
+  }
+}
+function safeAnswer(ok){
+  $('#safeOv').hidden = true;
+  if (ok){ safe.ok = true; toast('👍 Bon trajet !'); }
+  else { safe.sms = true; offerSms({ k:'check', to: safe.to || '', eta: safe.eta, at: Date.now(), l: '' }); }
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('#safeOk')) safeAnswer(true);
+  else if (e.target.closest('#safeHelp')) safeAnswer(false);
+});
+setInterval(() => { try { safeTick(); } catch(e){} }, 15000);
+
+/* ---------- 👁️ Bandeau « tu suis … » ----------
+   Quand un proche suivi est dans un car : un bandeau en bas de la carte (ligne, arrivée prévue), touche = centrer sur lui. */
+function followBar(){
+  const el = $('#followBar'); if (!el) return;
+  const list = (typeof friends !== 'undefined' ? friends : []).map(f => ({ f, r: riding(f.last), b: f.last && f.last.bus })).filter(x => x.r && x.r.v && !x.r.done);
+  if (!list.length || view !== 'map'){ el.hidden = true; return; }
+  const x = list[0], b = x.b || {};
+  el.hidden = false;
+  el.dataset.fol = x.f.name + '|' + x.f.code;
+  el.innerHTML = `👁️ <b>${esc(x.f.name)}</b> ${badge(x.r.v.route)} <span>→ ${esc(x.r.to || b.as || x.r.v.headsign || '')}${x.r.until ? ' · arrivée ~' + fmtHM(x.r.until) : ''}</span>${list.length > 1 ? `<small>+${list.length - 1}</small>` : ''}`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('#followBar'); if (!b) return;
+  const f = friends.find(x => x.name + '|' + x.code === b.dataset.fol); if (!f) return;
+  const ll = friendLatLng(f.last); map.setView(ll, Math.max(map.getZoom(), 14));
+});
+setInterval(() => { try { followBar(); } catch(e){} }, 4000);
+
+/* ---------- 🔎 Vue simple ----------
+   Ton prochain car en très gros (Mon trajet, sinon l'arrêt choisi) : ligne, dans combien de minutes, retard. */
+function simpleData(){
+  try {
+    if (tripReady() && tripBoard.data){
+      const s = detectSens(), A = s.sens === 'aller' ? s.A : s.B, B = s.sens === 'aller' ? s.B : s.A;
+      const rows = journeyRows(A, B).filter(r => !r.ghost && r.eff > Date.now() - 30e3);
+      if (rows.length) return { from: A.name, to: B.name, rows };
+    }
+  } catch(e){}
+  if (board.group && board.data){
+    const rows = alertRows().filter(r => r.eff > Date.now() - 30e3);
+    if (rows.length) return { from: board.group.name, to: '', rows };
+  }
+  return null;
+}
+function renderSimple(){
+  const ov = $('#simpleOv'); if (!ov || ov.hidden) return;
+  const d = simpleData(), box = $('#simpleBox');
+  if (!d){ box.innerHTML = `<div class="sv-empty">Remplis <b>Mon trajet</b> ou choisis un arrêt dans <b>Horaires</b> : ton prochain car s’affichera ici en grand.</div>`; return; }
+  const r = d.rows[0], n = d.rows[1], m = Math.max(0, Math.round((r.eff - Date.now()) / 60000));
+  const dl = r.real != null ? Math.round((r.real - r.sched) / 60000) : null;
+  box.innerHTML = `<div class="sv-from">${esc(d.from)}${d.to ? ' → ' + esc(d.to) : ''}</div>
+    <div class="sv-line">${badge(r.route)}</div>
+    <div class="sv-when">${m <= 0 ? 'À quai' : m < 60 ? m + '<small> min</small>' : fmtHM(r.eff)}</div>
+    <div class="sv-time">départ ${fmtHM(r.eff)}${r.dest ? ' · vers ' + esc(r.dest) : ''}</div>
+    <div class="sv-dl ${dl == null ? '' : dl >= 2 ? 'late' : dl <= -2 ? 'early' : 'ok'}">${dl == null ? 'horaire prévu' : dl >= 2 ? dl + ' min de retard' : dl <= -2 ? -dl + ' min d’avance' : 'à l’heure'}</div>
+    ${n ? `<div class="sv-next">Suivant : ${badge(n.route)} ${midnightMs(n.eff) === midnightMs(Date.now()) ? fmtHM(n.eff) : fmtDayHM(n.eff)}</div>` : ''}`;
+}
+function openSimple(){ $('#simpleOv').hidden = false; try { if (tripReady() && !tripBoard.data) loadTripBoard(); } catch(e){} renderSimple(); }
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-simple]')) openSimple();
+  else if (e.target.closest('#simpleClose')) $('#simpleOv').hidden = true;
+});
+setInterval(() => { try { renderSimple(); } catch(e){} }, 5000);
+try { if (localStorage.getItem('cj_simple') === '1') setTimeout(openSimple, 1500); } catch(e){}
+
+/* ====================== 🏠 Porte à porte · ⭐ Trajets favoris · 📅 Calendrier · 🗓️ Autre jour · 👥 Fréquentation ====================== */
+
+/* ---------- 🏠 Itinéraire de porte à porte ----------
+   Adresses trouvées avec la Base Adresse Nationale (api-adresse.data.gouv.fr, gratuite, sans clé).
+   On essaie les 3 arrêts les plus proches de chaque adresse et on garde l'arrivée la plus tôt (marche comprise). */
+const BAN = 'https://api-adresse.data.gouv.fr/search/';
+let d2d = { from:null, to:null, res:null, busy:false };
+async function banSearch(q){
+  if (!q || q.trim().length < 3) return [];
+  try {
+    const r = await fetch(`${BAN}?q=${encodeURIComponent(q)}&limit=6&lat=-21.12&lon=55.53`);
+    const j = await r.json();
+    return (j.features || []).filter(f => String(f.properties.citycode || '').startsWith('974'))
+      .map(f => ({ label: f.properties.label, lat: f.geometry.coordinates[1], lon: f.geometry.coordinates[0] }));
+  } catch(e){ return []; }
+}
+const nearGroups = (lat, lon, n) => stopGroups.filter(g => isFinite(g.lat))
+  .map(g => ({ g, d: distM(lat, lon, g.lat, g.lon) })).filter(x => x.d < 2500).sort((a, b) => a.d - b.d).slice(0, n);
+let banT = null;
+function banSuggest(inp, which){
+  clearTimeout(banT);
+  banT = setTimeout(async () => {
+    const list = await banSearch(inp.value), ul = $('#d2dSug');
+    if (!list.length || document.activeElement !== inp){ ul.hidden = true; return; }
+    ul.innerHTML = list.map((a, i) => `<li data-ban="${i}">${esc(a.label)}</li>`).join('');
+    ul.hidden = false; ul.dataset.which = which; ul._list = list;
+    const r = inp.getBoundingClientRect(), box = $('#d2dBody').getBoundingClientRect();
+    ul.style.top = (r.bottom - box.top + 2) + 'px';
+  }, 300);
+}
+async function d2dCompute(){
+  const el = $('#d2dRes'); if (!el) return;
+  if (!d2d.from || !d2d.to){ el.innerHTML = '<p class="muted">Tape deux adresses (ou « 📍 ma position » pour le départ).</p>'; return; }
+  const A = nearGroups(d2d.from.lat, d2d.from.lon, 3), B = nearGroups(d2d.to.lat, d2d.to.lon, 3);
+  if (!A.length || !B.length){ el.innerHTML = `<p class="av-no">😕 Pas d’arrêt Car Jaune à moins de 2,5 km de ${!A.length ? 'ton départ' : 'ton arrivée'}.</p>`; return; }
+  el.innerHTML = '<p class="muted">Recherche des cars…</p>';
+  const ids = [...new Set(A.concat(B).flatMap(x => x.g.ids))];
+  tripBoard.data = tripBoard.data || {};
+  const miss = ids.filter(id => !(id in tripBoard.data));
+  try { if (miss.length) Object.assign(tripBoard.data, JSON.parse(await call('getStopBoard', miss.slice(0, 60)))); } catch(e){}
+  const now = Date.now(), opts = [];
+  A.forEach(a => B.forEach(b => {
+    if (a.g === b.g) return;
+    const w1 = walkMin(a.d), w2 = walkMin(b.d);
+    journeyRows(a.g, b.g).filter(r => !r.ghost && r.eff >= now + w1 * 60e3).slice(0, 3).forEach(r => {
+      const arr = probArr(r) + w2 * 60e3;
+      opts.push({ a, b, r, w1, w2, arr, leave: r.eff - w1 * 60e3 });
+    });
+  }));
+  if (!opts.length){ el.innerHTML = '<p class="av-no">😕 Aucun car direct entre ces deux adresses dans les prochaines heures. Essaie Mon trajet avec une correspondance.</p>'; return; }
+  opts.sort((x, y) => x.arr - y.arr);
+  const best = opts[0], alt = opts.find(o => o.r !== best.r && o.arr > best.arr);
+  const step = o => `<ol class="d2d-steps">
+      <li>🚶 <b>${o.w1} min</b> à pied jusqu’à <b>${esc(o.a.g.name)}</b> (${fmtDist(o.a.d)}) · pars à <b>${fmtHM(o.leave)}</b></li>
+      <li>${badge(o.r.route)} départ <b>${fmtHM(o.r.eff)}</b>${o.r.real != null && o.r.real - o.r.sched >= 120e3 ? ` <span class="delay late">+${Math.round((o.r.real - o.r.sched) / 60000)} min</span>` : ''} → <b>${esc(o.b.g.name)}</b> vers ${fmtHM(probArr(o.r))}</li>
+      <li>🚶 <b>${o.w2} min</b> à pied (${fmtDist(o.b.d)}) → arrivée à ton adresse vers <b>${fmtHM(o.arr)}</b></li></ol>`;
+  el.innerHTML = step(best) + `<div class="d2d-acts">${leaveBtn(best.a.g.name, best.b.g.name, best.r, '🔔 Me prévenir quand partir')}
+      <button class="btn small ghost" data-d2duse="${esc(best.a.g.name)}|${esc(best.b.g.name)}">↪️ En faire Mon trajet</button>${calBtn(best.r, best.a.g.name, best.b.g.name)}</div>`
+    + (alt ? `<details class="d2d-alt"><summary>Autre possibilité : ${badge(alt.r.route)} ${fmtHM(alt.r.eff)}, arrivée ~${fmtHM(alt.arr)}</summary>${step(alt)}</details>` : '');
+}
+document.addEventListener('input', e => {
+  if (e.target.id === 'd2dFrom'){ d2d.from = null; banSuggest(e.target, 'from'); }
+  else if (e.target.id === 'd2dTo'){ d2d.to = null; banSuggest(e.target, 'to'); }
+});
+document.addEventListener('click', e => {
+  const li = e.target.closest('[data-ban]');
+  if (li){
+    const ul = $('#d2dSug'), a = ul._list[+li.dataset.ban];
+    d2d[ul.dataset.which] = a; $(ul.dataset.which === 'from' ? '#d2dFrom' : '#d2dTo').value = a.label; ul.hidden = true;
+    saveD2d(); d2dCompute(); return;
+  }
+  if (e.target.closest('#d2dHere')){
+    if (!myPos){ toast('📍 Position introuvable pour le moment.'); return; }
+    d2d.from = { label: '📍 Ma position', lat: myPos.lat, lon: myPos.lon }; $('#d2dFrom').value = d2d.from.label; saveD2d(); d2dCompute(); return;
+  }
+  if (e.target.closest('#d2dSwap')){ [d2d.from, d2d.to] = [d2d.to, d2d.from]; $('#d2dFrom').value = d2d.from ? d2d.from.label : ''; $('#d2dTo').value = d2d.to ? d2d.to.label : ''; saveD2d(); d2dCompute(); return; }
+  const u = e.target.closest('[data-d2duse]');
+  if (u){ const [a, b] = u.dataset.d2duse.split('|'); setTripPair(a, b); toast('↪️ C’est maintenant ton trajet.'); }
+});
+function saveD2d(){ try { localStorage.setItem('cj_d2d', JSON.stringify({ from: d2d.from && d2d.from.label !== '📍 Ma position' ? d2d.from : null, to: d2d.to })); } catch(e){} }
+function renderD2d(){
+  const box = $('#d2dBody'); if (!box || box.dataset.ready) { d2dCompute(); return; }
+  try { const o = JSON.parse(localStorage.getItem('cj_d2d') || '{}'); d2d.from = o.from || null; d2d.to = o.to || null; } catch(e){}
+  box.dataset.ready = '1';
+  box.innerHTML = `<div class="d2d-f"><label>Départ<input class="set-in" id="d2dFrom" autocomplete="off" placeholder="adresse, lieu… ex. 15 rue de Paris Saint-Denis" value="${esc(d2d.from ? d2d.from.label : '')}"></label>
+      <div class="d2d-mid"><button class="btn small ghost" id="d2dHere">📍 ma position</button><button class="round" id="d2dSwap" aria-label="Inverser départ et arrivée">⇅</button></div>
+      <label>Arrivée<input class="set-in" id="d2dTo" autocomplete="off" placeholder="adresse, lieu… ex. Université Moufia" value="${esc(d2d.to ? d2d.to.label : '')}"></label></div>
+    <ul id="d2dSug" class="d2d-sug" hidden></ul><div id="d2dRes"></div>
+    <p class="src-note">Adresses : Base Adresse Nationale (data.gouv.fr) · temps à pied à vol d’oiseau, un peu plus en réalité.</p>`;
+  d2dCompute();
+}
+/** Mettre deux gares dans Mon trajet. */
+function setTripPair(a, b){
+  trip.a = a; trip.b = b; $('#tripA').value = a; $('#tripB').value = b;
+  tripBoard = { key:'', data:null, loading:false }; transfer = { key:'', loading:false, done:false, hubs:[] };
+  savePrefs(); renderTrip(); renderTripFavs();
+}
+
+/* ---------- ⭐ Trajets favoris ---------- */
+let tripFavs = (() => { try { return JSON.parse(localStorage.getItem('cj_tripfavs') || '[]'); } catch(e){ return []; } })();
+const shortStop = n => String(n || '').replace(/^Gare (de |d’|d')/i, '').replace(/^Saint-/, 'St-').replace(/^Sainte-/, 'Ste-');
+function renderTripFavs(){
+  const box = $('#tripFavs'); if (!box) return;
+  const cur = trip.a && trip.b ? trip.a + '|' + trip.b : '';
+  const isFav = tripFavs.some(f => f.a + '|' + f.b === cur || f.b + '|' + f.a === cur);
+  box.innerHTML = tripFavs.map((f, i) => `<button class="chip tf${f.a + '|' + f.b === cur || f.b + '|' + f.a === cur ? ' on' : ''}" data-tf="${i}">⭐ ${esc(f.name || shortStop(f.a) + ' ↔ ' + shortStop(f.b))}</button>`).join('')
+    + (cur && !isFav ? `<button class="chip ghost" data-tfadd>☆ Garder ce trajet</button>` : '')
+    + (tripFavs.length ? `<button class="lnk tf-ed" data-tfedit title="Retirer un trajet favori">${box.dataset.edit ? 'terminé' : 'modifier'}</button>` : '');
+  if (box.dataset.edit) box.querySelectorAll('[data-tf]').forEach(b => b.textContent = '✕ ' + b.textContent.replace(/^⭐ /, ''));
+}
+document.addEventListener('click', e => {
+  const box = $('#tripFavs');
+  const t = e.target.closest('[data-tf]');
+  if (t){
+    const f = tripFavs[+t.dataset.tf];
+    if (box.dataset.edit){ tripFavs.splice(+t.dataset.tf, 1); try { localStorage.setItem('cj_tripfavs', JSON.stringify(tripFavs)); } catch(err){} renderTripFavs(); return; }
+    setTripPair(f.a, f.b); return;
+  }
+  if (e.target.closest('[data-tfadd]')){
+    tripFavs.push({ a: trip.a, b: trip.b }); tripFavs = tripFavs.slice(-6);
+    try { localStorage.setItem('cj_tripfavs', JSON.stringify(tripFavs)); } catch(err){}
+    toast('⭐ Trajet gardé : touche-le pour le retrouver.'); renderTripFavs(); return;
+  }
+  if (e.target.closest('[data-tfedit]')){ if (box.dataset.edit) delete box.dataset.edit; else box.dataset.edit = '1'; renderTripFavs(); }
+});
+
+/* ---------- 📅 Ajouter au calendrier (fichier .ics, rappel 15 min avant) ---------- */
+function calBtn(r, from, to){
+  return `<button class="leave-b" data-cal="${esc(r.route.s)}|${r.eff}|${probArr(r)}|${esc(from)}|${esc(to)}" title="Ajouter ce car à mon calendrier">📅</button>`;
+}
+function icsDate(ms){ return new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+function addToCalendar(line, dep, arr, from, to){
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Car Jaune Live//FR', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
+    'UID:' + line + '-' + dep + '@carjaunelive', 'DTSTAMP:' + icsDate(Date.now()), 'DTSTART:' + icsDate(dep), 'DTEND:' + icsDate(Math.max(arr, dep + 10 * 60e3)),
+    'SUMMARY:🚌 Car jaune ' + line + ' → ' + to, 'LOCATION:' + from, 'DESCRIPTION:Départ ' + from + ' à ' + fmtHM(dep) + '\\, arrivée ' + to + ' vers ' + fmtHM(arr) + ' (Car Jaune Live)',
+    'BEGIN:VALARM', 'TRIGGER:-PT15M', 'ACTION:DISPLAY', 'DESCRIPTION:Ton car jaune ' + line + ' part dans 15 min', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' }), url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `car-${line}-${fmtHM(dep).replace(':', 'h')}.ics`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60e3);
+  toast('📅 Ouvre le fichier pour l’ajouter à ton calendrier (rappel 15 min avant).');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-cal]'); if (!b) return;
+  const [l, dep, arr, from, to] = b.dataset.cal.split('|'); addToCalendar(l, +dep, +arr, from, to);
+});
+
+/* ---------- 🗓️ Horaires d'un autre jour (Horaires) ---------- */
+let otherDay = null;                                       // minuit du jour choisi, ou null = maintenant
+function dayRows(g, day){
+  const data = board.data || {}, act = activeServices(day), rows = [];
+  g.ids.forEach(id => (data[id] || []).forEach(([tid, sec]) => {
+    const ti = S.trips[tid];
+    if (!ti || ti[6] === id || (act && !act.has(ti[7]))) return;
+    const route = S.routes[ti[0]] || { s:'?', c:'F6BE00', t:'222222' };
+    rows.push({ t: day + sec * 1000, route, dest: ti[1] || '' });
+  }));
+  const seen = new Set();
+  return rows.sort((a, b) => a.t - b.t).filter(r => { const k = r.route.s + r.t; if (seen.has(k)) return false; seen.add(k); return true; });
+}
+function renderOtherDay(){
+  const box = $('#odayBox'); if (!box) return;
+  if (!otherDay || !board.group || board.group.urb){ box.innerHTML = ''; return; }
+  const rows = dayRows(board.group, otherDay);
+  const dl = new Date(otherDay + 12 * 3600e3).toLocaleDateString(LANG === 'en' ? 'en-GB' : 'fr-FR', { weekday:'long', day:'numeric', month:'long' });
+  box.innerHTML = `<div class="oday-h">🗓️ ${esc(dl)} · ${rows.length} départ${rows.length > 1 ? 's' : ''} <button class="lnk" data-odayx>revenir à maintenant</button></div>`
+    + (rows.length ? `<table class="board"><thead><tr><th>Heure</th><th>Ligne</th><th>Direction</th></tr></thead><tbody>${rows.map(r => `<tr><td><b>${fmtHM(r.t)}</b></td><td>${badge(r.route)}</td><td class="b-dest">${esc(r.dest)}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="placeholder">Pas de car prévu à cet arrêt ce jour-là (ou horaires pas encore publiés).</div>')
+    + '<p class="src-note">Horaires officiels prévus (GTFS) · le temps réel n’existe que pour aujourd’hui.</p>';
+}
+document.addEventListener('change', e => {
+  if (e.target.id !== 'odayIn') return;
+  const v = e.target.value;
+  otherDay = v ? midnightMs(new Date(v + 'T12:00:00').getTime()) : null;
+  renderOtherDay();
+  const t = $('#boardCard table.board'); if (t) t.closest('#boardCard').classList.toggle('oday-on', !!otherDay);
+});
+document.addEventListener('click', e => { if (e.target.closest('[data-odayx]')){ otherDay = null; const i = $('#odayIn'); if (i) i.value = ''; renderOtherDay(); $('#boardCard').classList.remove('oday-on'); } });
+
+/* ---------- 👥 Fréquentation : « souvent plein » d'après les signalements des voyageurs ---------- */
+let CROWD = {};
+async function crowdLoad(){ try { CROWD = JSON.parse(await call('getCrowd')) || {}; } catch(e){} }
+setTimeout(crowdLoad, 6000); setInterval(crowdLoad, 30 * 60e3);
+setTimeout(() => { try { renderTripFavs(); } catch(e){} }, 0);
+function crowdNote(line, at){
+  const row = CROWD[line]; if (!row) return '';
+  const d = reuDate(at), sl = (d.wd <= 4 ? 'S' : d.wd === 5 ? 'A' : 'D') + d.h, x = row[sl];
+  if (!x || x[0] < 3 || x[0] < x[1] * 2) return '';
+  return `<br><small class="crowd" title="${x[0]} signalements « car bondé »">🧍 souvent plein vers ${d.h} h</small>`;
+}
+
+/* ====================== 💬 Idées / bugs · 📈 Tableau de bord du créateur ======================
+   Tout est anonyme : un numéro tiré au hasard par téléphone (pour compter les utilisateurs du jour),
+   le type de téléphone, la langue. Rien sur la position ni sur les trajets. */
+const DEV_ID = (() => { try { let id = localStorage.getItem('cj_dev'); if (!id){ id = Math.random().toString(36).slice(2, 12); localStorage.setItem('cj_dev', id); } return id; } catch(e){ return ''; } })();
+const DEV_OS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : /Android/i.test(navigator.userAgent) ? 'android' : 'pc';
+setTimeout(() => {
+  if (IN_GAS || !DEV_ID) return;
+  try { const d = new Date().toDateString(); if (localStorage.getItem('cj_ping') === d) return; localStorage.setItem('cj_ping', d); } catch(e){}
+  call('ping', JSON.stringify({ id: DEV_ID, os: DEV_OS, lang: LANG, inst: !!STANDALONE, v: APP_BUILD })).catch(() => {});
+}, 9000);
+// erreurs JavaScript : envoyées au serveur (une fois par heure et par erreur) pour que le créateur les voie
+let errSent = 0;
+window.addEventListener('error', e => {
+  if (IN_GAS || errSent > 5 || !e || !e.message || /ResizeObserver|Script error/.test(e.message)) return;
+  errSent++;
+  call('logError', JSON.stringify({ msg: e.message, where: (e.filename || '').split('/').pop() + ':' + (e.lineno || ''), v: APP_BUILD, os: DEV_OS })).catch(() => {});
+});
+window.addEventListener('unhandledrejection', e => {
+  const m = e && e.reason && (e.reason.message || String(e.reason)); if (IN_GAS || !m || errSent > 5 || /fetch|network|Load failed|abort/i.test(m)) return;
+  errSent++; call('logError', JSON.stringify({ msg: m, where: 'promesse', v: APP_BUILD, os: DEV_OS })).catch(() => {});
+});
+
+/* ---------- 💬 Une idée / un bug ? ---------- */
+async function sendFeedback(){
+  const t = $('#fbText').value.trim(), kind = $('#fbKind').value;
+  if (t.length < 3){ toast('✍️ Écris d’abord ton message.'); return; }
+  try {
+    await call('feedback', JSON.stringify({ text: t, kind, v: APP_BUILD, os: DEV_OS + (STANDALONE ? '/appli' : ''), lang: LANG }));
+    $('#fbText').value = ''; toast('💬 Merci ! Ton message est bien arrivé.');
+  } catch(e){ toast('📡 Message non envoyé : réessaie quand tu as du réseau.'); }
+}
+document.addEventListener('click', e => { if (e.target.closest('#fbSend')) sendFeedback(); });
+
+/* ---------- 📈 Tableau de bord (mode créateur) ---------- */
+async function renderCreatorStats(){
+  const box = $('#crStats'); if (!box) return;
+  box.innerHTML = '<p class="muted">Chargement…</p>';
+  let st;
+  try { st = JSON.parse(await call('getCreatorStats')); } catch(e){ box.innerHTML = '<p class="muted">Serveur pas encore à jour (il se met à jour tout seul à la prochaine publication).</p>'; return; }
+  const days = Object.keys(st.usage || {}).sort().slice(-14);
+  const max = Math.max(1, ...days.map(d => st.usage[d].n));
+  const tot = days.reduce((a, d) => { const u = st.usage[d]; a.n += u.n; a.ios += u.ios; a.and += u.and; a.pc += u.pc; a.en += u.en; a.inst += u.inst; return a; }, { n:0, ios:0, and:0, pc:0, en:0, inst:0 });
+  const pct = x => tot.n ? Math.round(x * 100 / tot.n) + ' %' : '—';
+  const today = days.length ? st.usage[days[days.length - 1]].n : 0;
+  const rt = typeof feedTime !== 'undefined' && feedTime ? Math.round((Date.now() - feedTime) / 60000) : null;
+  box.innerHTML = `<div class="bl-grid">
+      <div class="bl-k"><b>${today}</b><span>utilisateurs aujourd’hui</span></div>
+      <div class="bl-k"><b>${tot.n}</b><span>ouvertures (14 j)</span></div>
+      <div class="bl-k"><b>${pct(tot.inst)}</b><span>appli installée</span></div>
+      <div class="bl-k ${rt != null && rt > 5 ? 'bad' : 'ok'}"><b>${rt == null ? '—' : rt + ' min'}</b><span>âge du temps réel</span></div></div>
+    <div class="cr-bars" aria-label="Utilisateurs par jour">${days.map(d => `<div class="cr-b" title="${d.slice(6)}/${d.slice(4, 6)} : ${st.usage[d].n}"><i style="height:${Math.round(st.usage[d].n * 100 / max)}%"></i><span>${d.slice(6)}</span></div>`).join('') || '<p class="muted">Pas encore de données : elles arrivent dès que des téléphones ouvrent la nouvelle version.</p>'}</div>
+    <p class="bl-l">📱 iPhone ${pct(tot.ios)} · Android ${pct(tot.and)} · ordinateur ${pct(tot.pc)} · 🇬🇧 anglais ${pct(tot.en)} · serveur ${esc(st.server || '?')}</p>
+    <h4>💬 Idées et bugs (${(st.feedback || []).length})</h4>
+    ${(st.feedback || []).slice().reverse().map(f => `<div class="cr-it"><b>${f.kind === 'bug' ? '🐞' : '💡'}</b> ${esc(f.text)}<small>${fmtDayHM(f.at)} · ${esc(f.os)} · v${esc(f.v)}</small></div>`).join('') || '<p class="muted">Aucun message pour l’instant.</p>'}
+    <h4>⚠️ Erreurs (${(st.errors || []).length})</h4>
+    ${(st.errors || []).slice().reverse().slice(0, 15).map(x => `<div class="cr-it err">${esc(x.msg)}<small>${fmtDayHM(x.at)} · ${esc(x.where)} · ${esc(x.os)} · v${esc(x.v)}</small></div>`).join('') || '<p class="muted">Aucune erreur 👏</p>'}`;
+}
+document.addEventListener('toggle', e => { if (e.target.id === 'crSec' && e.target.open) renderCreatorStats(); }, true);
+document.addEventListener('click', e => { if (e.target.closest('#crRefresh')) renderCreatorStats(); });
 
 /* ====================== 🌀 Vigilance météo et alerte cyclonique (Météo-France) ======================
    Le serveur lit le flux officiel « Vigilance Outre-Mer » toutes les 10 min. Ici : bandeau en haut de la carte
@@ -6820,7 +7310,7 @@ function descTick(){
   // 1. « prépare-toi » : 2 arrêts avant, ou 5 min avant
   if (!descRun.prep && !descRun.now && ((ds.left >= 1 && ds.left <= 2) || (left != null && left <= 5 * 60e3 && ds.left >= 1))){
     descRun.prep = true;
-    notify('🛎️ Prépare-toi à descendre', `${ds.name} dans ${ds.left} arrêt${ds.left > 1 ? 's' : ''}${ds.eta ? ' (~' + fmtHM(ds.eta) + ')' : ''}${ds.prev ? ` : juste après ${ds.prev}` : ''}.`, 'bus', { force: true });
+    notify('🛎️ Prépare-toi à descendre', `${ds.name} dans ${ds.left} arrêt${ds.left > 1 ? 's' : ''}${ds.eta ? ' (~' + fmtHM(ds.eta) + ')' : ''}${ds.prev ? ` : juste après ${ds.prev}` : ''}. Le car ne s’arrête que si tu appuies sur le bouton d’arrêt.`, 'bus', { force: true });
   }
   // 2. « descends au prochain arrêt » : c'est le prochain arrêt, et le car en approche
   if (!descRun.now && ds.left === 0 && (ds.dist < 1500 || (left != null && left <= 2.5 * 60e3))){
@@ -7008,6 +7498,8 @@ function smsTextFr(ev){
   if (ev.k === 'depart')
     return `🚌 Je suis dans le car${ev.l ? ' ' + ev.l : ''}${ev.d ? ' → ' + ev.d : ''}, monté${ev.stop ? ' à ' + ev.stop : ''} à ${fmtHM(ev.at)}.`
       + (ev.to && ev.eta ? ` Arrivée prévue à ${ev.to} vers ${fmtHM(ev.eta)}${late}.` : late ? ` Le car a${late.replace(/[()]/g, '')}.` : '') + link;
+  if (ev.k === 'check')
+    return `ℹ️ Petit retard sur mon trajet${ev.l ? ' (car ' + ev.l + ')' : ''} : je devais arriver à ${ev.to} vers ${fmtHM(ev.eta)}. Voici où je suis.` + link;
   if (ev.k === 'late')
     return `⏱️ J’ai raté ma correspondance${ev.stop ? ' à ' + ev.stop : ''} (car en retard). Je prends le ${ev.l || 'suivant'}, arrivée à ${ev.to} vers ${fmtHM(ev.eta)}.` + link;
   return `🚶 Je suis descendu${ev.l ? ' du ' + ev.l : ' du car'}${ev.stop ? ' à ' + ev.stop : ''} à ${fmtHM(ev.at)}. Je ne suis plus dans le car.`;
@@ -7026,7 +7518,7 @@ function renderSmsSheet(){
   document.body.classList.toggle('sms-on', on);
   if (!on){ el.hidden = true; smsPending = smsPending && Date.now() <= smsPending.until ? smsPending : null; return; }
   const txt = smsText(smsPending.ev), n = smsNums().length;
-  $('#smsTitle').textContent = smsPending.ev.k === 'depart' ? '📱 Prévenir tes proches que tu es dans le car' : smsPending.ev.k === 'late' ? '📱 Prévenir tes proches de ton retard' : '📱 Prévenir tes proches que tu es descendu';
+  $('#smsTitle').textContent = smsPending.ev.k === 'check' ? '📱 Rassurer tes proches' : smsPending.ev.k === 'depart' ? '📱 Prévenir tes proches que tu es dans le car' : smsPending.ev.k === 'late' ? '📱 Prévenir tes proches de ton retard' : '📱 Prévenir tes proches que tu es descendu';
   $('#smsPrev').textContent = txt;
   // un SMS séparé par proche (pas de conversation de groupe) : un bouton chacun
   const nums = smsNums(), next = nums.find(x => !smsPending.done[x]);

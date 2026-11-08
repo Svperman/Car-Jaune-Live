@@ -1,0 +1,52 @@
+# 🚨 Surveillance : toutes les 30 min, on vérifie que le serveur Apps Script répond et que le temps réel
+# Car Jaune arrive. Si quelque chose est en panne, ce contrôle échoue et GitHub t'envoie un e-mail
+# (réglage par défaut de GitHub : « notifications pour les workflows qui échouent »).
+name: Surveillance du serveur
+
+on:
+  schedule:
+    - cron: '13,43 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      DEPLOYMENT_ID: AKfycbxb8N-ilmQrYtY4D7vY0TSPUYB_CnQfsbXgKDVwRw48ZzWbiMk5lJ4ULQU-lczHal53
+    steps:
+      - name: Serveur Apps Script
+        run: |
+          base="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          ok=""
+          for i in 1 2 3; do
+            v=$(curl -sL --max-time 60 "$base?action=getVersion" || true)
+            if echo "$v" | grep -q '"version"\|20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]'; then ok=1; break; fi
+            echo "Tentative $i : réponse inattendue : ${v:0:200}"; sleep 20
+          done
+          [ -n "$ok" ] || { echo "::error::Le serveur Apps Script ne répond pas"; exit 1; }
+          echo "✅ Serveur : ${v:0:200}"
+
+      - name: Temps réel Car Jaune
+        run: |
+          base="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          ok=""
+          for i in 1 2 3; do
+            r=$(curl -sL --max-time 90 "$base?action=getRealtime" || true)
+            if echo "$r" | grep -q '"b64"'; then ok=1; break; fi
+            echo "Tentative $i : ${r:0:200}"; sleep 30
+          done
+          [ -n "$ok" ] || { echo "::error::Le flux temps réel Car Jaune est injoignable"; exit 1; }
+          at=$(echo "$r" | grep -o '"fetchedAt":[0-9]*' | grep -o '[0-9]*$')
+          age=$(( ( $(date +%s%3N) - ${at:-0} ) / 60000 ))
+          echo "✅ Temps réel lu il y a $age min"
+          [ "$age" -lt 30 ] || { echo "::error::Le temps réel n'a pas été mis à jour depuis $age min"; exit 1; }
+
+      - name: Appli publiée
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://svperman.github.io/Car-Jaune-Live/)
+          [ "$code" = "200" ] || { echo "::error::L'appli ne s'ouvre plus (HTTP $code)"; exit 1; }
+          echo "✅ Appli en ligne"

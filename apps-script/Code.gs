@@ -95,6 +95,11 @@ const API_ = {
   getStats:          function () { return getStats(); },
   report:            function (json) { return report(json); },
   getReports:        function () { return getReports(); },
+  getCrowd:          function () { return getCrowd(); },
+  ping:              function (json) { return ping(json); },
+  logError:          function (json) { return logError(json); },
+  feedback:          function (json) { return feedback(json); },
+  getCreatorStats:   function () { return getCreatorStats(); },
   getVigilance:      function () { return getVigilance(); }
 };
 
@@ -1053,7 +1058,7 @@ function weight_(row) { return (row || []).reduce(function (a, c) { return a + (
 /* ------------------------------------------------------------------ */
 /*  Version du serveur (l'appli affiche un voyant « à jour »)          */
 /* ------------------------------------------------------------------ */
-const SERVER_VERSION = '2026-11-08.2';
+const SERVER_VERSION = '2026-11-08.3';
 function getVersion() {
   let trigger = false;
   try { trigger = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'pushTick'; }); } catch (e) {}
@@ -1112,6 +1117,96 @@ function report(json) {
     const list = JSON.parse(cache.get('reports_v1') || '[]').filter(function (x) { return x.at > lim; });
     list.push(clean);
     cache.put('reports_v1', JSON.stringify(list.slice(-300)), 3 * 3600);
+    if (clean.kind === 'full' || clean.kind === 'ok') crowdCount_(clean);
   } finally { lock.releaseLock(); }
   return '1';
+}
+
+/* ------------------------------------------------------------------ */
+/*  👥 Fréquentation : « car bondé » / « il reste de la place », par ligne,  */
+/*  type de jour (semaine, samedi, dimanche) et tranche de 1 h — gardé 8 semaines */
+/* ------------------------------------------------------------------ */
+function crowdSlot_(ms) {
+  const d = new Date(ms + 4 * 3600e3);                    // heure de La Réunion
+  const wd = (d.getUTCDay() + 6) % 7;
+  return (wd <= 4 ? 'S' : wd === 5 ? 'A' : 'D') + d.getUTCHours();
+}
+function crowdCount_(r) {
+  if (!r.line) return;
+  const props = PropertiesService.getScriptProperties();
+  let c = {};
+  try { c = JSON.parse(props.getProperty('crowd_v1') || '{}'); } catch (e) {}
+  const week = Math.floor(Date.now() / (7 * 864e5));
+  if (c._w && week - c._w >= 8) c = {};                    // on repart de zéro toutes les 8 semaines
+  c._w = c._w || week;
+  const sl = crowdSlot_(r.sched || r.at), row = c[r.line] || (c[r.line] = {}), x = row[sl] || [0, 0];
+  if (r.kind === 'full') x[0]++; else x[1]++;
+  row[sl] = x;
+  const txt = JSON.stringify(c);
+  if (txt.length < 8500) props.setProperty('crowd_v1', txt);
+}
+function getCrowd() {
+  return PropertiesService.getScriptProperties().getProperty('crowd_v1') || '{}';
+}
+
+/* ------------------------------------------------------------------ */
+/*  🛠️ Pour le créateur : utilisation (anonyme), erreurs, idées / bugs     */
+/* ------------------------------------------------------------------ */
+function statsDay_() { return Utilities.formatDate(new Date(), 'Indian/Reunion', 'yyyyMMdd'); }
+/** Une ouverture d'appli par jour et par téléphone (identifiant tiré au hasard, sans rien de personnel). */
+function ping(json) {
+  const p = typeof json === 'string' ? JSON.parse(json) : (json || {});
+  const id = String(p.id || '').replace(/[^a-z0-9]/gi, '').slice(0, 16);
+  if (!id) return '0';
+  const cache = CacheService.getScriptCache(), day = statsDay_(), ck = 'seen_' + day + '_' + id;
+  if (cache.get(ck)) return '1';
+  cache.put(ck, '1', 6 * 3600);
+  const lock = LockService.getScriptLock(); lock.waitLock(5000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    let st = {};
+    try { st = JSON.parse(props.getProperty('usage_v1') || '{}'); } catch (e) {}
+    const d = st[day] || (st[day] = { n: 0, ios: 0, and: 0, pc: 0, en: 0, inst: 0 });
+    d.n++;
+    const os = String(p.os || '');
+    if (os === 'ios') d.ios++; else if (os === 'android') d.and++; else d.pc++;
+    if (p.lang === 'en') d.en++;
+    if (p.inst) d.inst++;
+    Object.keys(st).sort().slice(0, -45).forEach(function (k) { delete st[k]; });   // 45 jours
+    props.setProperty('usage_v1', JSON.stringify(st));
+  } finally { lock.releaseLock(); }
+  return '1';
+}
+function pushCapped_(key, item, max) {
+  const lock = LockService.getScriptLock(); lock.waitLock(5000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    let list = [];
+    try { list = JSON.parse(props.getProperty(key) || '[]'); } catch (e) {}
+    list.push(item);
+    while (list.length > max || JSON.stringify(list).length > 8500) list.shift();
+    props.setProperty(key, JSON.stringify(list));
+  } finally { lock.releaseLock(); }
+}
+function logError(json) {
+  const p = typeof json === 'string' ? JSON.parse(json) : (json || {});
+  const msg = String(p.msg || '').slice(0, 160);
+  if (!msg) return '0';
+  const cache = CacheService.getScriptCache(), ck = 'err_' + Utilities.base64Encode(msg).slice(0, 60);
+  if (cache.get(ck)) return '1';                              // même erreur : une fois par heure
+  cache.put(ck, '1', 3600);
+  pushCapped_('errors_v1', { at: Date.now(), msg: msg, where: String(p.where || '').slice(0, 60), v: String(p.v || '').slice(0, 10), os: String(p.os || '').slice(0, 10) }, 40);
+  return '1';
+}
+function feedback(json) {
+  const p = typeof json === 'string' ? JSON.parse(json) : (json || {});
+  const text = String(p.text || '').trim().slice(0, 600);
+  if (text.length < 3) throw new Error('message vide');
+  pushCapped_('feedback_v1', { at: Date.now(), text: text, kind: String(p.kind || 'idee').slice(0, 10), v: String(p.v || '').slice(0, 10), os: String(p.os || '').slice(0, 10), lang: String(p.lang || '').slice(0, 3) }, 30);
+  return '1';
+}
+function getCreatorStats() {
+  const props = PropertiesService.getScriptProperties();
+  const get = function (k, d) { try { return JSON.parse(props.getProperty(k) || d); } catch (e) { return JSON.parse(d); } };
+  return JSON.stringify({ usage: get('usage_v1', '{}'), errors: get('errors_v1', '[]'), feedback: get('feedback_v1', '[]'), server: SERVER_VERSION, at: Date.now() });
 }
