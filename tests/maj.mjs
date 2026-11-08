@@ -73,6 +73,20 @@ await t('même version : rien ne se passe', async () => {
   await ctx.close();
   return !r || 'rechargée sans raison';
 });
+await t('1re ouverture d’une nouvelle version : icône grise rejouée puis « à jour »', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: 'block' });
+  await ctx.addInitScript(() => { try { if (!sessionStorage.getItem('x')){ localStorage.setItem('cj_build', 'ANCIENNE'); sessionStorage.setItem('x', '1'); } } catch(e){} });
+  const page = await ctx.newPage();
+  await page.route(/\?maj=/, r => r.fulfill({ status: 200, contentType: 'text/html', body: page0 }));
+  await page.goto(BASE + '/_maj.html'); await page.waitForTimeout(1000);
+  const during = await page.evaluate("!document.querySelector('#majOv').hidden");
+  await page.waitForTimeout(2600);
+  const r = await page.evaluate("[document.querySelector('#majOv').hidden, document.querySelector('#toast').innerText, localStorage.getItem('cj_build')]");
+  await page.reload(); await page.waitForTimeout(1500);
+  const again = await page.evaluate("!document.querySelector('#majOv').hidden");
+  await ctx.close();
+  return (during && r[0] && /à jour/.test(r[1]) && r[2] === 'A' && !again) || JSON.stringify([during, r, again]);
+});
 await browser.close();
 try { unlinkSync('_maj.html'); } catch(e){}
 if (fails.length){ console.log(`✗ ${fails.length} problème(s)`); process.exit(1); }

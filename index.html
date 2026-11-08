@@ -803,6 +803,7 @@
   .maj-t{font-weight:700;font-size:16px;color:var(--texte)}
   .maj-s{font-size:12.5px;color:var(--gris);margin-top:-6px}
   @keyframes majIn{from{opacity:0}to{opacity:1}}
+  #majOv.out{opacity:0;transition:opacity .35s}
   #toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);background:var(--titre);color:#fff;padding:9px 16px;
          border-radius:18px;font-size:13px;line-height:1.35;z-index:9999;width:max-content;max-width:min(460px, calc(100vw - 32px));box-shadow:0 4px 18px rgba(0,0,0,.3);
          display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer;text-align:center}
@@ -1494,19 +1495,23 @@ function updApply(){
   majShow();
 }
 /** Icône grise + cercle qui se remplit (comme une appli qui se met à jour sur l'iPhone), puis rechargement. */
-function majShow(){
+function majShow(installed){
   const ov = $('#majOv'), ring = $('#majRing');
   if (!ov || !ov.hidden) return;
   ov.hidden = false;
-  let p = 0, done = false;
+  let p = 0, done = !!installed;
   // on télécharge la nouvelle page pendant que le cercle avance
-  fetch('./?maj=' + Date.now(), { cache:'no-store' }).catch(() => {}).finally(() => { done = true; });
+  if (!installed) fetch('./?maj=' + Date.now(), { cache:'no-store' }).catch(() => {}).finally(() => { done = true; });
   const t0 = performance.now();
   const step = () => {
     const el = performance.now() - t0;
     p = Math.min(el / 16, done ? 100 : 85 * (1 - Math.exp(-el / 900)));      // au moins ~1,6 s pour qu'on le voie
     ring.style.setProperty('--p', p.toFixed(1));
-    if (p >= 100 || el > 8000) setTimeout(() => location.reload(), 180);
+    if (p >= 100 || el > 8000) setTimeout(() => {
+      if (!installed) return location.reload();
+      ov.classList.add('out'); setTimeout(() => { ov.hidden = true; ov.classList.remove('out'); ring.style.setProperty('--p', 0); }, 350);
+      toast('✅ Car Jaune Live est à jour');
+    }, 250);
     else requestAnimationFrame(step);
   };
   requestAnimationFrame(step);
@@ -1537,7 +1542,14 @@ window.addEventListener('online', () => checkUpdate(true));
 setInterval(() => checkUpdate(), 10 * 60e3);
 setTimeout(() => checkUpdate(true), 4000);                                     // ouverte depuis la mémoire du téléphone (réseau lent) : on rattrape la dernière version
 setInterval(() => { if (updReady) updApply(); }, 15e3);                            // mise à jour en attente : dès que c'est calme
-try { if (sessionStorage.getItem('cj_maj')){ sessionStorage.removeItem('cj_maj'); setTimeout(() => toast('✅ Car Jaune Live est à jour'), 1500); } } catch(e){}
+/* Première ouverture d'une nouvelle version (le téléphone l'a déjà téléchargée en ouvrant l'appli) :
+   on montre quand même l'icône grise qui se remplit, comme une appli de l'App Store qui vient de se mettre à jour. */
+try {
+  const last = localStorage.getItem('cj_build');
+  if (sessionStorage.getItem('cj_maj')){ sessionStorage.removeItem('cj_maj'); setTimeout(() => toast('✅ Car Jaune Live est à jour'), 1500); }
+  else if (last && last !== APP_BUILD && !APP_BUILD.startsWith('__') && !IN_GAS) setTimeout(() => majShow(true), 300);
+  if (!APP_BUILD.startsWith('__')) localStorage.setItem('cj_build', APP_BUILD);
+} catch(e){}
 {
 }
 window.addEventListener('beforeinstallprompt', e => {
