@@ -1,5 +1,5 @@
 /* Car Jaune Live — service worker : appli utilisable hors ligne (coquille), données toujours fraîches */
-const VERSION = 'cj-v38';
+const VERSION = 'cj-v40';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png',
@@ -44,13 +44,21 @@ self.addEventListener('fetch', e => {
   if (/script\.google|googleusercontent|ntfy\.sh|tomtom\.com|geo\.api\.gouv/.test(url.host)) return;
 
   if (url.searchParams.has('maj')) return;               // vérification de mise à jour : toujours le réseau
-  // page : réseau d'abord (pour recevoir les mises à jour), cache si hors ligne
+  // page : réseau d'abord (pour recevoir les mises à jour). Si le réseau traîne (Hauts, zone blanche),
+  // on ouvre tout de suite la version gardée sur le téléphone au bout de 3 s ; la nouvelle arrive
+  // en arrière-plan et l'appli se met à jour toute seule juste après (icône grise).
   if (req.mode === 'navigate'){
-    // cache:'no-store' : on passe outre le cache de 10 min de GitHub, la dernière version arrive tout de suite
-    e.respondWith(fetch(req.url, { cache:'no-store', credentials:'same-origin' }).then(r => {
-      const copy = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy));
-      return r;
-    }).catch(() => caches.match('./index.html')));
+    e.respondWith((async () => {
+      const net = fetch(req.url, { cache:'no-store', credentials:'same-origin' }).then(r => {
+        if (r.ok){ const copy = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', copy)); }
+        return r;
+      });
+      e.waitUntil(net.catch(() => {}));
+      const cached = await caches.match('./index.html');
+      if (!cached) return net;
+      const slow = new Promise(res => setTimeout(() => res(cached), 3000));
+      return Promise.race([net.catch(() => cached), slow]);
+    })());
     return;
   }
   // fichiers fixes (icônes, bibliothèques, polices) : cache d'abord, mis à jour en arrière-plan
