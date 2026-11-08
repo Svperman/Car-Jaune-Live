@@ -1144,7 +1144,7 @@
 <div id="smsSheet" hidden role="dialog" aria-labelledby="smsTitle"><div class="sms-h"><b id="smsTitle"></b><button id="smsLater" aria-label="Plus tard">✕</button></div>
   <div class="sms-prev" id="smsPrev"></div><div class="sms-list" id="smsList"></div></div>
 <div id="focusBar" hidden></div>
-<button id="vigiBar" hidden></button>
+<button id="vigiBar" hidden aria-label="Vigilance météo : voir le détail"></button>
 <div id="descChip" hidden role="status" aria-live="polite"></div>
 <button id="signBtn" hidden data-sign title="Faire signe au car" aria-label="Faire signe au car">🔦<span>Faire signe</span></button>
 <div id="descAlarm" hidden role="alertdialog" aria-modal="true" aria-labelledby="descAlT"><div class="da-box">
@@ -6186,6 +6186,7 @@ function renderVigi(){
     document.body.classList.toggle('vigi-on', show);
     if (show){
       bar.style.background = w.c; bar.style.color = w.fg;
+      bar.setAttribute('aria-label', `${w.t} : ${w.m} Toucher pour le détail.`);
       bar.innerHTML = `<span class="vg-i" aria-hidden="true">🌀</span><span class="vg-tx"><b>${esc(w.t)}</b><small>${esc(w.m)}</small></span><span class="vg-x" data-vigix role="button" aria-label="Masquer" title="Masquer">✕</span>`;
     }
   }
