@@ -131,15 +131,31 @@ function getRealtime() {
 /* ------------------------------------------------------------------ */
 /*  🌀 Vigilance météo et alerte cyclonique (Météo-France, La Réunion)  */
 /* ------------------------------------------------------------------ */
-// Source officielle et gratuite : le fichier « Vigilance Outre-Mer » de Météo-France, mis à jour chaque minute
-// (descriptif technique Météo-France, avril 2025). Si tu ajoutes une clé gratuite du portail API Météo-France
-// dans les propriétés du script (MF_API_KEY), le service officiel de l'API est essayé en premier.
-const VIGI_URLS = [
-  'https://vigilance.meteofrance.com/data/vigilance_OM.zip',
-  'http://vigilance.meteofrance.com/data/vigilance_OM.zip'
-];
+// Source officielle et gratuite : l'API « Vigilance » du portail Météo-France (portail-api.meteofrance.fr),
+// service « vigilanceom/flux/dernier » (outre-mer, dont La Réunion). Il faut une clé gratuite (compte, sans carte) :
+// Apps Script → ⚙️ Paramètres du projet → Propriétés du script → MF_API_KEY = la clé (ou MF_APP_ID = l'« application id »).
+// (L'ancien fichier vigilance.meteofrance.com/data/vigilance_OM.zip n'existe plus.)
 const VIGI_API = 'https://public-api.meteofrance.fr/public/DPVigilance/v1/vigilanceom/flux/dernier';
 const VIGI_PHEN = { 1: 'Vent violent', 9: 'Vagues-submersion', 10: 'Cyclone', 12: 'Fortes pluies et orages' };
+
+/** En-têtes d'accès au portail Météo-France : clé API, ou jeton obtenu avec l'« application id » (valable 1 h). */
+function mfHeaders_() {
+  const props = PropertiesService.getScriptProperties();
+  const key = (props.getProperty('MF_API_KEY') || '').trim();
+  if (key) return { apikey: key };
+  const app = (props.getProperty('MF_APP_ID') || '').trim();
+  if (!app) return null;
+  const cache = CacheService.getScriptCache();
+  let tok = cache.get('mf_token');
+  if (!tok) {
+    const r = UrlFetchApp.fetch('https://portail-api.meteofrance.fr/token', { method: 'post', muteHttpExceptions: true,
+      headers: { Authorization: 'Basic ' + app }, payload: { grant_type: 'client_credentials' } });
+    if (r.getResponseCode() !== 200) throw new Error('jeton Météo-France refusé (' + r.getResponseCode() + ')');
+    tok = JSON.parse(r.getContentText()).access_token;
+    cache.put('mf_token', tok, 3000);                    // 50 min
+  }
+  return { Authorization: 'Bearer ' + tok };
+}
 
 function getVigilance() {
   const cache = CacheService.getScriptCache();
@@ -160,12 +176,13 @@ function getVigilance() {
 function readVigilance_() {
   const docs = [];
   const errors = [];
-  const key = PropertiesService.getScriptProperties().getProperty('MF_API_KEY');
-  const tries = (key ? [{ url: VIGI_API, headers: { apikey: key } }] : []).concat(VIGI_URLS.map(function (u) { return { url: u }; }));
+  const headers = mfHeaders_();
+  if (!headers) throw new Error('clé Météo-France manquante (propriété du script MF_API_KEY)');
+  const tries = [{ url: VIGI_API, headers: headers }];
   for (let i = 0; i < tries.length && !docs.length; i++) {
     try {
       const r = UrlFetchApp.fetch(tries[i].url, { muteHttpExceptions: true, followRedirects: true, headers: tries[i].headers || {} });
-      if (r.getResponseCode() !== 200) { errors.push(tries[i].url.split('/')[2] + ' ' + r.getResponseCode()); continue; }
+      if (r.getResponseCode() !== 200) { errors.push('Météo-France ' + r.getResponseCode() + ' ' + r.getContentText().slice(0, 120)); continue; }
       const blob = r.getBlob(), bytes = blob.getBytes();
       if (bytes.length > 1 && bytes[0] === 0x50 && bytes[1] === 0x4B) {          // « PK » : fichier zip
         blob.setContentType('application/zip');
@@ -199,7 +216,7 @@ function readVigilance_() {
       if (!end && o.end_validity_time) end = o.end_validity_time;
     });
   });
-  if (!dom) throw new Error('La Réunion absente du flux');
+  if (!dom) throw new Error('La Réunion absente du flux (' + docs.map(function (d) { return d.name + ':' + JSON.stringify(d.json).slice(0, 160); }).join(' | ') + ')');
   const phen = (dom.phenomenon_items || []).map(function (p) {
     const id = +p.phenomenon_id;
     return { id: id, name: VIGI_PHEN[id] || ('Phénomène ' + id), c: +(p.phenomenon_max_color_id != null ? p.phenomenon_max_color_id : p.color_id) };
@@ -1036,7 +1053,7 @@ function weight_(row) { return (row || []).reduce(function (a, c) { return a + (
 /* ------------------------------------------------------------------ */
 /*  Version du serveur (l'appli affiche un voyant « à jour »)          */
 /* ------------------------------------------------------------------ */
-const SERVER_VERSION = '2026-11-08.1';
+const SERVER_VERSION = '2026-11-08.2';
 function getVersion() {
   let trigger = false;
   try { trigger = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'pushTick'; }); } catch (e) {}
