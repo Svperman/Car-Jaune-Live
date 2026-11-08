@@ -12,7 +12,7 @@ const browser = await chromium.launch();
 const open = async (locale, q = '') => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale });
   const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(e.message));
-  await page.goto(BASE + '/_test.html' + q); await page.waitForTimeout(2500);
+  await page.goto(BASE + '/_test.html' + (q ? q + '&' : '?') + 'lang=auto'); await page.waitForTimeout(2500);
   return { ctx, page, errs };
 };
 await t('téléphone en anglais : onglets et titres en anglais', async () => {

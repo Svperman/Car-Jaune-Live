@@ -1,3 +1,5 @@
+// tests en français par défaut (le navigateur de test est en anglais) ; ?lang=auto pour tester la langue du téléphone
+try { if (!/[?&]lang=auto/.test(location.search) && !localStorage.getItem('cj_lang')) localStorage.setItem('cj_lang', 'fr'); } catch(e){}
 /* Faux serveur Apps Script pour les tests automatiques (remplace google.script.run) */
 /* tests en mode créateur (tous les réglages), sauf ?user=1 (vue simplifiée des utilisateurs) */
 try { if (!/user=1/.test(location.search)) localStorage.setItem('cj_creator', '1'); else localStorage.removeItem('cj_creator'); } catch(e){}
