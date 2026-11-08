@@ -1126,6 +1126,7 @@
       <div class="set-row"><div class="set-l"><b>Trafic sur la carte</b><small>routes colorées et bouchons repérés par les cars</small></div><label class="switch"><input type="checkbox" id="tfOn" checked><span></span></label></div>
       <div class="set-row col adv" id="tfKeyRow"><div class="set-l"><b>Clé TomTom</b><small id="tfKeyTxt"></small></div>
         <div class="tf-key" id="tfKeyEdit"><input class="set-in" id="tfKey" placeholder="colle ta clé gratuite (developer.tomtom.com)" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div></div>
+      <div class="set-row"><div class="set-l"><b>Langue · Language</b><small>auto : celle du téléphone</small></div><select class="set-sel" id="langSel" aria-label="Langue · Language"><option value="auto">Auto</option><option value="fr">Français</option><option value="en">English</option></select></div>
       <div class="set-row"><div class="set-l"><b>Thème</b><small id="themeTxt"></small></div><select class="set-sel" id="themeSel" aria-label="Thème"><option value="auto">auto</option><option value="light">clair</option><option value="dark">sombre</option></select></div>
       <div class="set-row"><div class="set-l"><b>Taille du texte</b></div><select class="set-sel" id="textSel" aria-label="Taille du texte"><option value="">normale</option><option value="big">grande</option><option value="huge">très grande</option></select></div>
       <div class="set-row adv"><div class="set-l"><b>Économie de batterie</b><small id="ecoTxt"></small></div><label class="switch"><input type="checkbox" id="ecoOn" checked><span></span></label></div>
@@ -1271,6 +1272,227 @@ let FICHE_DATA = {}, ficheJob = { total:0, done:0, running:false, error:'' }, se
 const markers = new Map();
 
 const $ = s => document.querySelector(s);
+/* ====================== 🇬🇧 English version ======================
+   Si le téléphone est réglé en anglais (ou ⚙️ → Langue → English), l'appli s'affiche en anglais :
+   chaque texte affiché passe par un dictionnaire (phrases entières, morceaux de phrases, nombres).
+   Les noms d'arrêts et de lignes restent tels quels. */
+const LANG = (() => {
+  let l = 'auto';
+  try { l = localStorage.getItem('cj_lang') || 'auto'; } catch(e){}
+  if (l === 'fr' || l === 'en') return l;
+  const nav = (navigator.languages && navigator.languages[0]) || navigator.language || 'fr';
+  return /^en/i.test(nav) ? 'en' : 'fr';
+})();
+// texte entier d'un élément (mots courts : seulement quand ils sont seuls)
+const I18N_EXACT = {
+  'Carte':'Map','Trajet':'Trip','trajet':'trip','Mon':'My','Horaires':'Times','horaires':'times','Fiches':'Timetables','Trafic':'Traffic','trafic':'traffic',
+  'Infos':'Info','Aller':'Outbound','Retour':'Return','aller':'outbound','retour':'return','Lignes':'Lines','Ligne':'Line','Code':'Code','Prénom':'First name',
+  'Envoyer':'Send','Fermer':'Close','Copier':'Copy','Ajouter':'Add','Vider':'Clear','Pause':'Pause','Son':'Sound','Vibration':'Vibration','Thème':'Theme',
+  'Marge':'Margin','Délai':'Notice','Serveur':'Server','Secteur':'Area','Signaler':'Report','Alertes':'Alerts','Notifications':'Notifications','Tracés':'Routes',
+  'Application':'App','Automatique':'Automatic','Autoriser':'Allow','Actualiser':'Refresh','Dépannage':'Troubleshooting','Mois':'Month','Année':'Year','Trimestre':'Quarter',
+  'clair':'light','sombre':'dark','auto':'auto','normale':'normal','grande':'large','très grande':'extra large','fluide':'free-flowing','ralenti':'slow','bouchon':'jam','bloqué':'blocked',
+  'cars':'buses','car':'bus','en direct':'live','à l\'arrêt':'at the stop','ma ville':'my town','Départ':'Departure','Direction':'Destination','Horaire':'Scheduled','Info':'Info',
+  'Durée':'Duration','Arrivée':'Arrival','début':'start','fin':'end','min':'min','Lun':'Mon','Mar':'Tue','Mer':'Wed','Jeu':'Thu','Ven':'Fri','Sam':'Sat','Dim':'Sun',
+  'Théorique':'Scheduled','Fiche horaire':'Timetable','Horaire théorique':'Scheduled time','À quai':'Now','À l’heure':'On time','temps réel':'real time',
+  'aujourd’hui':'today','demain':'tomorrow','Aujourd’hui':'Today','Demain':'Tomorrow','hier':'yesterday','Pas de réseau':'No signal','Réseau lent':'Slow network',
+  'Bon réseau':'Good signal','Très bon réseau':'Very good signal','Réseau très lent':'Very slow network','OK':'OK','STOP':'STOP','Sens :':'Direction:','er':'st'
+};
+// morceaux de phrases (remplacés à l'intérieur des textes, les plus longs d'abord)
+const I18N_FRAG = {
+  // en-tête, onglets, titres
+  'Suivi en temps réel · non officiel':'Real-time tracking · unofficial','Carte en direct':'Live map','Mon trajet':'My trip','Horaires à l\'arrêt':'Stop departures',
+  'Horaires à l’arrêt':'Stop departures','Fiches horaires':'Timetables','Infos trafic':'Traffic info','Paramètres':'Settings','Réglages':'Settings','Plus d’options':'More options',
+  'Application personnelle, non affiliée à Car Jaune':'Personal app, not affiliated with Car Jaune','application personnelle, non affiliée à Car Jaune':'personal app, not affiliated with Car Jaune',
+  'Données : Région Réunion · réseau Car Jaune (Licence Ouverte)':'Data: Région Réunion · Car Jaune network (Open Licence)',
+  'Prochains passages en temps réel, mis à jour automatiquement.':'Next departures in real time, updated automatically.',
+  'Les fiches PDF officielles de chaque ligne, récupérées automatiquement sur carjaune.re.':'The official PDF timetable of every line, fetched automatically from carjaune.re.',
+  'Perturbations publiées dans le flux temps réel du réseau. Les embouteillages s’affichent directement sur la carte.':'Disruptions published in the network’s live feed. Traffic jams are shown directly on the map.',
+  'Ton aller et ton retour en car jaune : le sens est détecté automatiquement selon ta position.':'Your outbound and return trips by Car Jaune: the direction is detected automatically from your location.',
+  'Aller : je pars de':'Outbound: I leave from','Aller : j’arrive à':'Outbound: I arrive at','Inverser départ et arrivée':'Swap departure and arrival',
+  'Arrêt, gare… (ex. Gare de St-Denis)':'Stop, station… (e.g. Gare de St-Denis)','Ligne, destination, arrêt…':'Line, destination, stop…','Nom de l\'arrêt':'Stop name',
+  '— choisis un arrêt —':'— choose a stop —','Choisis un arrêt pour voir ses prochains départs.':'Choose a stop to see its next departures.',
+  'Choisis un arrêt (recherche ou boutons par ligne) pour voir ses prochains départs.':'Choose a stop (search or line buttons) to see its next departures.',
+  'Ajouter aux favoris':'Add to favourites','Retirer des favoris':'Remove from favourites','Arrêt surveillé :':'Watched stop:','Arrêt suivi :':'Followed stop:',
+  'Tous les arrêts par ligne':'All stops by line','Voir tous les horaires':'See all times','Chargement…':'Loading…','Chargement des passages…':'Loading departures…',
+  'Chargement des départs…':'Loading departures…','Chargement des lignes…':'Loading lines…','Téléchargement des horaires…':'Downloading timetables…',
+  'Recherche des cars entre ces deux gares…':'Looking for buses between these two stations…','Recherche des cars…':'Looking for buses…',
+  'Recherche de trajets avec correspondance…':'Looking for trips with a connection…','Recherche de ta position…':'Finding your location…','Suivi de ta position…':'Following your location…',
+  // tableaux
+  'Part de':'Leaves','Arrive à':'Arrives at','Prochain arrêt :':'Next stop:','prochain arrêt':'next stop','Prochain arrêt':'Next stop','Parti à':'Left at',
+  'Réseau fermé · horaires théoriques':'Network closed · scheduled times','actualisation auto':'auto refresh','Temps réel à':'Real time at','Temps réel':'Real time',
+  'Pas vu en circulation':'Not seen running','peut-être supprimé':'maybe cancelled','estimé (position GPS)':'estimated (GPS position)','Pas d’info retard':'No delay info',
+  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.',
+  'Plus de départ prévu aujourd’hui.':'No more departures today.','Aucun car direct de':'No direct bus from','dans les prochaines 24 h':'in the next 24 h',
+  'Plus rapide avec une correspondance':'Faster with a connection','Avec une correspondance':'With a connection','changement à':'change at','d’attente':'wait',
+  'à pied':'on foot','départ':'departure','Voir le car':'See the bus','📍 Voir le car':'📍 See the bus','Dernier car':'Last bus','dernier car':'last bus',
+  'Ponctualité observée':'Observed punctuality','à l’heure':'on time','retard moyen':'average delay','à cette heure':'at this time','sur la journée':'over the day',
+  'en réalité':'in practice','d’habitude':'usually','en semaine':'on weekdays','le samedi':'on Saturdays','le dimanche':'on Sundays',
+  'quand partir ?':'when to leave?','rappel actif':'reminder on','Me prévenir quand partir':'Tell me when to leave','pars maintenant':'leave now','pars dans':'leave in',
+  'Indique ta gare de départ et ta gare d’arrivée pour l’aller.':'Enter your departure and arrival stations for the outbound trip.',
+  'Le retour est calculé automatiquement dans l’autre sens.':'The return trip is worked out automatically the other way.',
+  // cartes de Mon trajet
+  'Quand partir · mes horaires de cours':'When to leave · my class times','indique tes heures de cours : je te dis quel car prendre':'enter your class times: I’ll tell you which bus to take',
+  'Me prévenir':'Notify me','le matin pour arriver à l’heure, et avant la fin des cours pour le retour':'in the morning to arrive on time, and before classes end for the return',
+  'temps pour rejoindre l’arrêt / arriver avant le cours':'time to reach the stop / arrive before class',
+  'Prendre l’avion à Roland-Garros':'Flying from Roland-Garros','ton vol → le car jaune à prendre':'your flight → the bus to take','Je prends l’avion':'I’m flying out',
+  'J’atterris':'I’m landing','Heure de décollage':'Take-off time','Heure d’atterrissage':'Landing time','N° de vol (facultatif)':'Flight no. (optional)','Je pars de':'I leave from',
+  'Je vais à':'I’m going to','Être à l’aéroport':'Be at the airport','Temps pour sortir':'Time to get out','2 h avant':'2 h before','3 h avant':'3 h before','1 h 30 avant':'1 h 30 before',
+  '45 min (bagages)':'45 min (luggage)','Indique l’heure de ton vol.':'Enter your flight time.','Plus prudent : le':'Safer: the','Sinon : le':'Otherwise: the',
+  'avant le décollage':'before take-off','à l’aéroport':'at the airport','retard habituel compris':'usual delay included','Ce vol est passé.':'This flight has gone.',
+  'Ton vol est dans plus de 24 h : reviens ici la veille, je calcule avec les horaires du jour (et le retard habituel des lignes).':'Your flight is more than 24 h away: come back the day before and I’ll work it out from that day’s times (and the lines’ usual delay).',
+  'Prévois un taxi ou qu’on t’amène.':'Plan a taxi or a lift.','Aucun car jaune direct ne convient entre':'No direct bus works between',
+  'Je ne trouve pas l’arrêt de l’aéroport dans les lignes Car Jaune.':'I can’t find the airport stop on the Car Jaune lines.','Choisis ta gare.':'Choose your station.',
+  'Mon bilan':'My summary','tes trajets en car jaune, notés tout seuls':'your bus trips, logged automatically','trajets':'trips','trajet':'trip','dans le car':'on the bus',
+  'parcourus':'travelled','CO₂ évité*':'CO₂ saved*','en retard':'late','perdues au total':'lost in total','Aucun retard de plus de 2 min':'No delay over 2 min','Tes lignes :':'Your lines:',
+  'par rapport au même trajet seul en voiture':'compared with the same trip alone by car','en voiture':'by car','en autocar':'by coach','Données gardées sur ton téléphone.':'Data kept on your phone.',
+  'Effacer mon bilan':'Clear my summary','Aucun trajet':'No trips','pour l’instant ce mois-ci':'yet this month','ce mois-là':'that month',
+  'Chaque fois que l’appli te reconnaît dans un car jaune, le trajet est noté ici (sur ton téléphone seulement).':'Every time the app recognises you on a bus, the trip is logged here (on your phone only).',
+  // alertes et messages
+  'Prépare-toi à descendre':'Get ready to get off','Descends au prochain arrêt !':'Get off at the next stop!','Descends au prochain arrêt':'Get off at the next stop',
+  'appuie sur le bouton d’arrêt du car.':'press the bus stop button.','Appuie sur le bouton d’arrêt du car':'Press the bus stop button','OK, je descends':'OK, getting off',
+  'réveil dès que tu montes':'alarm as soon as you board','Me prévenir avant de descendre à':'Remind me before getting off at','Je te préviens avant':'I’ll remind you before',
+  'Ne plus me prévenir':'Stop reminding me','juste après':'right after','arrêts':'stops','arrêt':'stop',
+  'Correspondance ratée à':'Missed connection at','Correspondance serrée à':'Tight connection at','sera parti':'will have left','Prochain :':'Next:','descends vite !':'get off quickly!',
+  'Pas d’autre car dans l’heure : prévois un autre moyen.':'No other bus within the hour: plan another way.','Tu arrives vers':'You arrive around','tu arrives vers':'you arrive around',
+  'Faire signe au car':'Wave down the bus','Faire signe':'Wave down','Ton car arrive : fais signe !':'Your bus is coming: wave it down!','Lampe':'Torch',
+  'Tends le bras, l’écran tourné vers le chauffeur':'Hold out your arm, screen facing the driver','Tends le bras, l’écran vers le chauffeur':'Hold out your arm, screen towards the driver',
+  'Touche 🔦 pour éclairer l’écran.':'Tap 🔦 to light up the screen.','Lampe non disponible : l’écran clignotant suffit.':'Torch unavailable: the flashing screen is enough.',
+  'Pars maintenant':'Leave now','Prépare-toi : tu pars dans 5 min':'Get ready: you leave in 5 min','Ton car arrive':'Your bus is coming','tu as':'you have','passe à':'stops at',
+  'Plus de rappel pour ce car.':'No more reminder for this bus.','Je te dis quand partir pour le':'I’ll tell you when to leave for the','de retard compris':'delay included',
+  'Tu es dans le':'You’re on the','Prépare-toi à faire signe 🔦.':'Get ready to wave 🔦.','arrive bientôt à':'arriving soon at','arrivée prévue':'expected arrival',
+  'Arrivée prévue à':'Expected arrival at','Notifications activées':'Notifications on','Notifications coupées':'Notifications off','Notifications actives':'Notifications on',
+  '✅ Car Jaune Live est à jour':'✅ Car Jaune Live is up to date','Mise à jour…':'Updating…',
+  'Pas de réseau : l’appli continue avec les horaires gardés sur ton téléphone.':'No signal: the app keeps going with the timetables saved on your phone.',
+  'Réseau retrouvé : temps réel en cours…':'Back online: loading real time…','Hors ligne':'Offline','Hors ligne · horaires gardés':'Offline · times saved',
+  'Aucun car jaune en circulation pour le moment.':'No Car Jaune bus running right now.','Aucune alerte pour l’instant.':'No alerts yet.',
+  'Pas d’embouteillage signalé sur l’île en ce moment.':'No traffic jam reported on the island right now.','Aucune perturbation signalée en ce moment.':'No disruption reported right now.',
+  'Le réseau est fermé : les perturbations s’afficheront dès la reprise du service.':'The network is closed: disruptions will show when service resumes.',
+  // météo
+  'Pas de vigilance particulière':'No weather warning','Météo-France ne signale pas de danger à La Réunion.':'Météo-France reports no danger in La Réunion.',
+  'Alerte rouge cyclonique':'Cyclone red alert','Alerte orange cyclonique':'Cyclone orange alert','Alerte violette cyclonique':'Cyclone purple alert','Pré-alerte cyclonique':'Cyclone pre-alert',
+  'Phase de sauvegarde':'Recovery phase','Vigilance orange':'Orange warning','Vigilance rouge':'Red warning','Vigilance jaune':'Yellow warning','fortes pluies et orages':'heavy rain and storms',
+  'vent violent':'strong wind','vagues-submersion':'waves and flooding','Bulletin de Météo-France':'Météo-France bulletin','voir la carte de vigilance':'see the warning map',
+  'Interdiction de circuler : les cars jaunes ne roulent pas. Reste à l’abri.':'Driving is banned: Car Jaune buses are not running. Stay indoors.',
+  'Confinement strict : aucun car. Reste à l’abri.':'Strict lockdown: no buses. Stay indoors.',
+  'Danger dans les 24 h : écoles fermées, cars jaunes perturbés puis arrêtés. Rentre chez toi tant qu’ils roulent.':'Danger within 24 h: schools closed, buses disrupted then stopped. Head home while they still run.',
+  'Un cyclone peut menacer l’île : prépare-toi. Les cars jaunes risquent de s’arrêter dans les prochains jours.':'A cyclone may threaten the island: get ready. Buses may stop in the coming days.',
+  'Le danger s’éloigne mais reste prudent : les cars jaunes reprennent peu à peu. Regarde Infos trafic avant de partir.':'The danger is moving away but stay careful: buses are gradually resuming. Check Traffic info before leaving.',
+  'Prudence : radiers submergés et routes coupées possibles, retards ou détours des cars jaunes.':'Be careful: flooded fords and closed roads possible, bus delays or detours.',
+  'Évite de te déplacer : routes et radiers peuvent être coupés, les cars jaunes très perturbés.':'Avoid travelling: roads and fords may be closed, buses heavily disrupted.',
+  'Toucher pour le détail.':'Tap for details.','Vigilance météo : voir le détail':'Weather warning: see details',
+  // réglages
+  'Carte et affichage':'Map and display','Taille du texte':'Text size','Économie de batterie':'Battery saver','Carte hors ligne':'Offline map','Horaires sans réseau':'Offline timetables',
+  'Trafic sur la carte':'Traffic on the map','routes colorées et bouchons repérés par les cars':'coloured roads and jams spotted by buses','Clé TomTom':'TomTom key',
+  'colle ta clé gratuite (developer.tomtom.com)':'paste your free key (developer.tomtom.com)','Arrivée à quai':'Bus at the stop','quand le car arrive à l’arrêt':'when the bus reaches the stop',
+  'Avance / retard':'Early / late','si le retard change de 2 min ou plus':'if the delay changes by 2 min or more','Aucun car dans l’heure':'No bus within the hour',
+  '30 min puis 10 min avant le dernier car du jour':'30 min then 10 min before the last bus of the day','Arrêt le plus proche':'Nearest stop','choisi tout seul selon ta position':'picked automatically from your location',
+  'Avant de descendre':'Before getting off','Correspondance':'Connection','Garder l’écran allumé':'Keep the screen on','pendant les alertes':'during alerts','Même appli fermée':'Even with the app closed',
+  'Ligne pour les alertes':'Line for alerts','toutes les lignes':'all lines','avant chaque car':'before each bus','Mes proches':'My family','Messages à mes proches':'Messages to my family',
+  'Mon prénom':'My first name','tes proches te retrouvent avec lui':'your family find you with it','Mon code secret':'My secret code','avec ton prénom, il protège ta position':'with your first name, it protects your location',
+  'Partager tout le temps':'Share all the time','même hors des cars, appli ouverte':'even off the bus, app open','Automatique dans les cars jaunes':'Automatic on Car Jaune buses',
+  'dès que tu montes, jusqu’à 10 min après ta descente':'as soon as you board, until 10 min after you get off','Suivre un proche':'Follow a family member',
+  'son prénom et son code (ou ouvre le lien qu’il t’a envoyé)':'their first name and code (or open the link they sent you)','Envoyer le lien à mes proches':'Send the link to my family',
+  'Prévenir mes proches par SMS':'Text my family','Me montrer aux autres voyageurs':'Show me to other passengers','Voir les autres voyageurs':'See other passengers',
+  'Cars dans ma ville':'Buses in my town','M’annoncer les cars autour de moi':'Tell me about buses around me','Localisation':'Location','Autoriser la localisation':'Allow location',
+  'pour te repérer sur la carte, trouver les arrêts proches et prévenir tes proches':'to show you on the map, find nearby stops and notify your family',
+  'Notifications du téléphone :':'Phone notifications:','Installer l’appli':'Install the app','sur l’écran d’accueil':'on the home screen','Recharger l’appli':'Reload the app',
+  'si quelque chose semble bloqué':'if something seems stuck','Journal de trajet':'Trip log','Tarifs et titres de transport':'Fares and tickets','Calendrier scolaire · La Réunion':'School calendar · La Réunion',
+  'Langue':'Language','Plein écran':'Full screen','Quitter le plein écran':'Exit full screen','Remettre le nord en haut':'Put north back up','Zoom arrière':'Zoom out',
+  'Mon prochain car':'My next bus','Arrêts autour de moi':'Stops around me','Départ = arrêt le plus proche':'Departure = nearest stop','Activer les alertes':'Turn on alerts',
+  'Réglages des notifications':'Notification settings','Jusqu’à demain':'Until tomorrow','Coupe-les un moment, elles reviennent toutes seules.':'Mute them for a while, they come back on their own.',
+  'Reprendre':'Resume','Tout effacer':'Clear all','Plus tard':'Later','Installer':'Install','Activer':'Turn on','Tester':'Test','Effacer':'Delete','Créer':'Create',
+  'Signaler':'Report','Car bondé':'Bus full','Car pas passé':'Bus didn’t come','Passé en avance':'Came early','Arrêt déplacé / travaux':'Stop moved / roadworks','Tout va bien':'All fine',
+  'Gratuit (avec une carte Car Jaune)':'Free (with a Car Jaune card)','Ticket à l’unité':'Single ticket','Abonnements':'Passes','Étudiants':'Students','Moins de 26 ans':'Under 26','26 ans et plus':'26 and over',
+  'Où faire sa carte':'Where to get your card','Prix et validité :':'Price and validity:',
+  'Toujours actives, même après avoir fermé l’appli.':'Always on, even after closing the app.','Bouchons et accidents':'Jams and accidents',
+  'sur ton trajet et devant ton car':'on your trip and ahead of your bus','pas encore réglé':'not set yet','Personne pour l’instant.':'No one yet.','désactivée':'off','désactivé':'off',
+  'point anonyme (sans nom) sur leur carte, seulement quand tu es dans un car · ils peuvent te poser des questions toutes faites':'an anonymous dot (no name) on their map, only when you’re on a bus · they can send you ready-made questions',
+  'thème auto':'auto theme','sans trafic':'no traffic','économie de batterie':'battery saver','ceux qui ont accepté d’apparaître (anonymes) et tes proches':'those who agreed to appear (anonymous) and your family',
+  'auto : celle du téléphone':'auto: the phone’s language',
+  'Ton serveur surveille ton car et t’envoie la notification par l’appli ntfy, téléphone verrouillé.':'Your server watches your bus and sends the notification through the ntfy app, even with the phone locked.',
+  'et abonne-toi à ce nom':'and subscribe to this name','installe l’appli gratuite':'install the free app',
+  'dans le car : rappel 2 arrêts avant, puis « descends au prochain arrêt » (arrivée de Mon trajet, ou l’arrêt choisi en touchant le car)':'on the bus: reminder 2 stops before, then “get off at the next stop” (arrival of My trip, or the stop chosen by tapping the bus)',
+  'si le retard te fait rater ton 2e car : le suivant tout de suite':'if a delay makes you miss your 2nd bus: the next one straight away',
+  'quand tu montes dans un car et quand tu descends, un message tout prêt : tu n’as qu’à appuyer sur Envoyer':'when you board and get off, a ready-made message: just press Send',
+  'même hors des cars, tant que l’appli est ouverte':'even off the bus, while the app is open','Arrivée en gare':'Arriving at the station','Départ de la gare':'Leaving the station',
+  'Entre dans le secteur':'Enters the area','Quitte le secteur':'Leaves the area','aucune cochée = toutes':'none ticked = all','Voir le secteur sur la carte':'See the area on the map',
+  'facultative : ajoute toutes les routes de l’île (gratuite, sans carte bancaire)':'optional: adds every road on the island (free, no credit card)',
+  'GPS approximatif quand tu ne bouges pas, précis dès que tu roules':'approximate GPS when you’re still, precise as soon as you move',
+  'les horaires de tous les arrêts seront gardés sur ton téléphone dès qu’il y a du réseau':'the times of every stop will be saved on your phone as soon as there’s signal',
+  'les horaires de tous les arrêts sont gardés sur ton téléphone':'the times of every stop are saved on your phone','Mettre à jour':'Update',
+  'les zones que tu regardes resteront visibles sans réseau':'the areas you look at will stay visible offline','les zones que tu as déjà regardées restent visibles sans réseau':'the areas you’ve already viewed stay visible offline',
+  'position partagée même appli fermée':'location shared even with the app closed','Vérifier':'Check','Envoyer le journal':'Send the log','Recharger':'Reload',
+  'Enregistre ce que l’appli détecte (position, car repéré, retards, alertes) pour corriger les erreurs. Rien n’est envoyé.':'Records what the app detects (location, bus spotted, delays, alerts) to fix errors. Nothing is sent.',
+  'enregistre ce que l’appli détecte pendant un trajet (rien n’est envoyé)':'records what the app detects during a trip (nothing is sent)',
+  'Dans Apps Script, les notifications du téléphone ne sont pas possibles : utilise l’appli installée':'Phone notifications aren’t possible inside Apps Script: use the installed app',
+  'en service jusqu’à':'running until','Arrivée':'Arrival','du … au …':'from … to …','Gares principales :':'Main stations:','Aller / retour':'Out / return','Par heure':'By time','aller':'outbound','retour':'return','Aller':'Outbound','Retour':'Return','dernier':'last','Période scolaire':'School term','période scolaire':'school term','Horaires période scolaire':'School-term times','Horaires de période scolaire':'School-term times',
+  'Horaires de jour férié':'Public-holiday times','Dimanches et jours fériés':'Sundays and public holidays','Jour férié :':'Public holiday:','vacances scolaires':'school holidays',
+  'Vacances scolaires':'School holidays','Vacances d\'Été austral':'Southern summer holidays','Vacances après 3ème période':'Holidays after term 3','Vacances après 4ème période':'Holidays after term 4','Vacances après 1ère période':'Holidays after term 1','Vacances après 2ème période':'Holidays after term 2','Vacances':'Holidays','Données Région Réunion (Licence Ouverte)':'Data Région Réunion (Open Licence)','prochaines vacances le':'next holidays on','vacances le':'holidays on','Prochains jours fériés':'Upcoming public holidays',
+  'Aujourd’hui :':'Today:','Actualisation dans':'Refresh in','dès le':'from','Toute l’île':'Whole island','prévu':'scheduled','temps réel':'real time','Horaires du jour':'Today’s times',
+  'Remplis d’abord ton aller ci-dessus (ex. chez toi → université).':'First fill in your outbound trip above (e.g. home → university).',
+  'Horaires lus dans les fiches carjaune.re, tableau choisi automatiquement selon le jour':'Times read from the carjaune.re timetables, table picked automatically by day',
+  'temps réel du flux Car Jaune':'real time from the Car Jaune feed','Alertes d\'arrivée en gare':'Station arrival alerts','Couper les notifications':'Mute notifications',
+  'Alertes actives pour':'Alerts on for','Les alertes marchent tant que l’appli est ouverte.':'Alerts work while the app is open.','elles partent aussi sur ntfy':'they also go to ntfy',
+  'gratuit pour les étudiants · abonnements dès 15 €/mois':'free for students · passes from €15/month','Source :':'Source:','Sources :':'Sources:','mis à jour à':'updated at',
+  'relues le':'read on','mise à jour automatique toutes les 24 h':'updated automatically every 24 h','Actualisation':'Refresh','Express':'Express','par Route des Tamarins':'via Route des Tamarins',
+  'Achat dans le car, ou sur ton téléphone avec l’appli':'Buy on the bus, or on your phone with the app','Certains pass gratuits ne valent pas sur les lignes':'Some free passes are not valid on lines',
+  'Dans l’un des':'At one of the','points Info / Vente':'Info / Sales points','de l’île (avec une pièce d’identité). Recharge ensuite en ligne sur':'on the island (with ID). Then top up online at',
+  'vérifie sur carjaune.re si l’offre est prolongée. Ton employeur peut payer jusqu’à 75 % (Prime transport).':'check carjaune.re whether the offer is extended. Your employer can pay up to 75% (transport allowance).',
+  'demandeurs d’emploi':'jobseekers','plus de 65 ans':'over 65','personnes en situation de handicap':'people with disabilities','et leur accompagnant':'and their companion',
+  'stagiaires de la formation':'vocational trainees','Abonnements à':'Passes at','moitié prix du 1':'half price from 1','mai au 31 octobre 2026':'May to 31 October 2026',
+  'Réseau fermé':'Network closed','Ouvert':'Open','Prochain départ':'Next departure','Premier départ prévu à':'First departure scheduled at','Aucun arrêt trouvé.':'No stop found.',
+  'Pas encore d’info d’avance ou de retard':'No early/late info yet','Horaire prévu (pas de suivi en direct)':'Scheduled time (no live tracking)',
+  'Suivi en direct (heure estimée d’après la position du car)':'Live tracking (time estimated from the bus position)','Temps réel : heure donnée par le car':'Real time: time given by the bus',
+  'Il reste de la place':'There’s room left','Ton car est plein ?':'Is your bus full?','Il est à quel arrêt ?':'Which stop is it at?','Lui poser une question':'Ask a question'
+};
+// tournures avec des nombres
+const I18N_RE = [
+  [/\bRetard (\d+) min\b/g, '$1 min late'], [/\bAvance (\d+) min\b/g, '$1 min early'], [/\bdans (\d+) (min|stops?|h)\b/g, 'in $1 $2'], [/\bil y a (\d+) min\b/g, '$1 min ago'],
+  [/\b(\d+) arrêts\b/g, '$1 stops'], [/\b(\d+) arrêt\b/g, '$1 stop'], [/\b(\d+) trajets?\b/g, (m, n) => n + (n === '1' ? ' trip' : ' trips')],
+  [/\b(\d+) min à pied\b/g, '$1 min walk'], [/\bretard de (\d+) min\b/g, '$1 min delay'], [/\b(\d+) min de retard\b/g, '$1 min late'], [/\b(\d+) min d’avance\b/g, '$1 min early'],
+  [/\bd’habitude \+(\d+) min\b/g, 'usually +$1 min'], [/\(retard (\d+) min\)/g, '($1 min late)'], [/\bex\. /g, 'e.g. '], [/\(avance (\d+) min\)/g, '($1 min early)'], [/, à (\d{1,2}:\d{2})/g, ', at $1'], [/\bà (\d{1,2}:\d{2})/g, 'at $1'], [/\b(\d+) % à l’heure\b/g, '$1% on time'], [/\bvers (\d+) h\b/g, 'around $1:00'], [/\b(\d+) h (\d+)\b/g, '$1 h $2']
+];
+let I18N_BIG = null;
+/** Traduit un texte français en anglais (sans rien changer si l'appli est en français). */
+function tr(s){
+  if (LANG !== 'en' || !s || typeof s !== 'string') return s;
+  const t = s.trim();
+  if (I18N_EXACT[t] != null) return s.replace(t, I18N_EXACT[t]);
+  if (!I18N_BIG){
+    const keys = Object.keys(I18N_FRAG).filter(k => k.length > 3 || /\s/.test(k)).sort((a, b) => b.length - a.length);
+    const alt = keys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    // mots entiers seulement (« vers » ne doit pas changer « Inverser ») ; vieux iPhone sans « lookbehind » : sans limites
+    try { I18N_BIG = new RegExp('(?<![A-Za-zÀ-ÿ’\'])(?:' + alt + ')(?![A-Za-zÀ-ÿ])', 'g'); } catch(e){ I18N_BIG = new RegExp(alt, 'g'); }
+  }
+  let out = s;
+  out = out.replace(I18N_BIG, m => I18N_FRAG[m]);           // phrases connues d'abord (les plus longues gagnent)
+  I18N_RE.forEach(([re, rep]) => { out = out.replace(re, rep); });
+  return out;
+}
+function i18nNode(n){
+  if (n.nodeType === 3){
+    const v = n.nodeValue; if (!v || !/[A-Za-zÀ-ÿ]/.test(v)) return;
+    const p = n.parentNode; if (p && /^(SCRIPT|STYLE|TEXTAREA)$/.test(p.nodeName)) return;
+    const t = tr(v); if (t !== v) n.nodeValue = t;
+    return;
+  }
+  if (n.nodeType !== 1 || /^(SCRIPT|STYLE)$/.test(n.nodeName)) return;
+  ['placeholder', 'title', 'aria-label'].forEach(a => { const v = n.getAttribute && n.getAttribute(a); if (v){ const t = tr(v); if (t !== v) n.setAttribute(a, t); } });
+  if (n.nodeName === 'INPUT' && /^(button|submit)$/.test(n.type) && n.value){ const t = tr(n.value); if (t !== n.value) n.value = t; }
+  n.childNodes.forEach(i18nNode);
+}
+if (LANG === 'en'){
+  document.documentElement.lang = 'en';
+  const TABS_EN = { map:'Map<span class="lg"> · live</span>', trip:'<span class="lg">My </span>Trip', board:'Times<span class="lg"> at stop</span>', fiches:'Timetables', trafic:'Traffic<span class="lg"> info</span>' };
+  document.querySelectorAll('.tab[data-view]').forEach(b => { const tl = b.querySelector('.tl'); if (tl && TABS_EN[b.dataset.view]) tl.innerHTML = TABS_EN[b.dataset.view]; });
+  try { document.title = 'Car Jaune Live'; } catch(e){}
+  i18nNode(document.body);
+  new MutationObserver(list => list.forEach(m => {
+    if (m.type === 'characterData') i18nNode(m.target);
+    else if (m.type === 'attributes') i18nNode(m.target);
+    else m.addedNodes.forEach(i18nNode);
+  })).observe(document.body, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['placeholder', 'title', 'aria-label'] });
+}
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const errMsg = e => (e && (e.message || e)) + '';
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/saint/g, 'st').replace(/[^a-z0-9]+/g, ' ').trim();
@@ -3081,6 +3303,7 @@ const inbox = (() => { try { return JSON.parse(localStorage.getItem('cj_inbox') 
 let unread = 0;
 function saveInbox(){ try { localStorage.setItem('cj_inbox', JSON.stringify(inbox.slice(0, 30))); } catch(e){} }
 function notify(title, body, kind, opt = {}){
+  title = tr(title); body = tr(body);
   if (isMuted() && !opt.force) return;                    // en pause : rien du tout
   const lvl = kind === 'warn' ? 'warn' : kind === 'none' ? 'info' : 'bus';
   const visible = document.visibilityState === 'visible';
@@ -3698,6 +3921,7 @@ function renderNotif(){
   try { renderSummaries(); } catch(e){}
 }
 async function showPhoneNotif(title, body){
+  title = tr(title); body = tr(body);
   if (LNOTIF){
     try { await LNOTIF.schedule({ notifications:[{ id: Math.floor(Math.random() * 2e9), title, body, smallIcon:'ic_launcher' }] }); return true; }
     catch(e){ return false; }
@@ -6317,7 +6541,7 @@ function renderBilan(){
   const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); d.setMonth(d.getMonth() + bilanMonth);
   const end = new Date(d); end.setMonth(end.getMonth() + 1);
   const list = rides.filter(r => r.t0 >= d.getTime() && r.t0 < end.getTime());
-  const mois = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const mois = d.toLocaleDateString(LANG === 'en' ? 'en-GB' : 'fr-FR', { month: 'long', year: 'numeric' });
   const nav = `<div class="bl-nav"><button class="round" data-blm="-1" aria-label="Mois précédent">‹</button><b>${esc(mois)}</b><button class="round" data-blm="1" aria-label="Mois suivant"${bilanMonth >= 0 ? ' disabled' : ''}>›</button></div>`;
   $('#bilanSum').textContent = rides.length ? `${list.length} trajet${list.length > 1 ? 's' : ''} en ${mois}` : 'tes trajets en car jaune, notés tout seuls';
   if (!list.length){
@@ -6519,6 +6743,11 @@ setTimeout(vigiLoad, 2500);
 setInterval(() => { if (!document.hidden) vigiLoad(); }, 10 * 60e3);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && (!vigi || Date.now() - (vigi.at || 0) > 10 * 60e3)) vigiLoad(); });
 
+(() => {
+  const sel = $('#langSel'); if (!sel) return;
+  try { sel.value = localStorage.getItem('cj_lang') || 'auto'; } catch(e){}
+  sel.addEventListener('change', () => { try { localStorage.setItem('cj_lang', sel.value); } catch(e){} location.reload(); });
+})();
 /* ====================== 🛎️ Descente · 🔁 Correspondance · 🔦 Faire signe ====================== */
 
 /* ---------- 🛎️ « Descends au prochain arrêt » ----------
@@ -6772,7 +7001,8 @@ function smsHref(nums, body){
   if (IOS) return nums.length > 1 ? `sms:/open?addresses=${nums.join(',')}&body=${b}` : `sms:${nums[0]}&body=${b}`;
   return `sms:${nums.join(',')}?body=${b}`;
 }
-function smsText(ev){
+function smsText(ev){ return tr(smsTextFr(ev)); }
+function smsTextFr(ev){
   const late = ev.dl != null && Math.abs(ev.dl) >= 60 ? ` (${ev.dl > 0 ? 'retard' : 'avance'} ${Math.round(Math.abs(ev.dl) / 60)} min)` : '';
   const link = shareCfg.code ? `\nMa position en direct : ${shareLink()}` : '';
   if (ev.k === 'depart')
