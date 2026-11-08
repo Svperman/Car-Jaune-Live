@@ -675,6 +675,27 @@
   #signTorch.on{background:#1A1A1A;color:#fff}
   .sg-tip{font-size:13px;margin-top:18px;opacity:.75}
   .sign-b{margin:-2px 0 10px}
+  .habit{color:#b45309;font-size:11.5px}
+  .leave-b{margin-top:4px;font:inherit;font-size:11.5px;font-weight:700;border:1px solid var(--ligne);background:var(--carte);color:var(--texte);border-radius:12px;padding:3px 8px;cursor:pointer;white-space:nowrap}
+  .leave-b.on{background:var(--jaune);border-color:var(--jaune);color:#1A1A1A}
+  .bl-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .bl-nav b{text-transform:capitalize}
+  .bl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+  @media (min-width:600px){ .bl-grid{grid-template-columns:repeat(4,1fr)} }
+  .bl-k{background:var(--fond);border-radius:10px;padding:10px;text-align:center}
+  .bl-k b{display:block;font-size:20px}
+  .bl-k span{font-size:12px;color:var(--gris)}
+  .bl-k.ok b{color:#2e9e5b}
+  .bl-l{margin:6px 0}
+  .lnk{background:none;border:0;padding:0;color:inherit;text-decoration:underline;font:inherit;cursor:pointer}
+  .av-mode{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+  .av-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media (max-width:420px){ .av-form{grid-template-columns:1fr} }
+  .av-form label{font-size:12px;font-weight:600;display:flex;flex-direction:column;gap:3px}
+  .av-res{margin-top:12px;padding:12px;border-radius:10px;background:var(--fond);display:flex;flex-direction:column;gap:5px}
+  .av-big{font-size:17px}
+  .av-no{margin-top:12px}
+  html.dark .habit{color:#fbbf24}
   .desc-sel{display:block;margin-top:9px;font-size:12.5px;font-weight:600}
   .desc-sel select{display:block;width:100%;margin-top:4px;font:inherit;font-weight:400;padding:6px 8px;border-radius:8px;border:1px solid var(--ligne)}
   #offBar{position:fixed;left:56px;top:calc(env(safe-area-inset-top,0px) + 66px);z-index:1200;max-width:calc(100% - 182px);
@@ -927,6 +948,14 @@
             <select class="set-sel" id="clsWalk"><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
           <div id="clsToday"></div>
         </div>
+      </details>
+      <details class="card cls-card" id="avionCard" style="margin-top:16px">
+        <summary><span class="sa-i">✈️</span><span class="sa-t"><b>Prendre l’avion à Roland-Garros</b><small id="avionSum">ton vol → le car jaune à prendre</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+        <div class="cls-body" id="avionBody"></div>
+      </details>
+      <details class="card cls-card" id="bilanCard" style="margin-top:16px">
+        <summary><span class="sa-i">📊</span><span class="sa-t"><b>Mon bilan</b><small id="bilanSum">tes trajets en car jaune, notés tout seuls</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+        <div class="cls-body" id="bilanBody"></div>
       </details>
     </div>
   </section>
@@ -2387,8 +2416,9 @@ function classAdvice(dayMs){
   const A = findGroup(trip.a), B = findGroup(trip.b), margin = (+cls.walk || 5) * 60e3, out = {};
   if (c.s){
     const S = hmToMs(dayMs, c.s);
-    const opts = journeyRows(A, B).filter(r => midnightMs(r.sched) === dayMs && !r.ghost && (r.rarr != null ? r.rarr : r.arr) <= S - margin);
-    const r = opts.sort((x, y) => (y.rarr || y.arr) - (x.rarr || x.arr))[0];
+    // 📈 arrivée réaliste : temps réel, sinon horaire + retard habituel de la ligne à cette heure-là
+    const opts = journeyRows(A, B).filter(r => midnightMs(r.sched) === dayMs && !r.ghost && probArr(r) <= S - margin);
+    const r = opts.sort((x, y) => probArr(y) - probArr(x))[0];
     if (r) out.aller = { r, leave: r.eff - margin, S };
   }
   if (c.e){
@@ -2442,7 +2472,7 @@ function checkClasses(){
       st.sent = 1; saveSent();
       const m = Math.max(0, Math.round((x.leave - now) / 60000));
       notify(k === 'aller' ? `🎓 Cours à ${fmtHM(x.S)} : prends le ${x.r.route.s} de ${fmtHM(x.r.eff)}` : `🎓 Fin de cours : ${x.r.route.s} à ${fmtHM(x.r.eff)}`,
-        k === 'aller' ? `Depuis ${A.name}, arrivée ${fmtHM(x.r.rarr != null ? x.r.rarr : x.r.arr)}. Pars ${m ? 'dans ' + m + ' min' : 'maintenant'}.`
+        k === 'aller' ? `Depuis ${A.name}, arrivée ${x.r.rarr == null && probArr(x.r) > x.r.arr + 60e3 ? 'vers ' + fmtHM(probArr(x.r)) + ' (retard habituel compris)' : fmtHM(x.r.rarr != null ? x.r.rarr : x.r.arr)}. Pars ${m ? 'dans ' + m + ' min' : 'maintenant'}.`
                       : `Depuis ${B.name} vers ${A.name}${x.r.real != null ? ' (' + delayChip(x.r.real - x.r.sched, x.r.approx).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() + ')' : ''}. Pars à ${fmtHM(x.leave)}.`);
     }
   });
@@ -2552,10 +2582,11 @@ function renderTrip(){
       const late = walk != null && walk > 1 && mins < walk;
       const leave = walk != null && walk > 1 && !late && mins - walk <= 30
         ? `<br><span class="walk${mins - walk > 5 ? ' ok' : ''}">🚶 pars ${mins - walk <= 0 ? 'maintenant' : 'dans ' + (mins - walk) + ' min'}</span>` : '';
-      t += `<tr class="${late ? 'toolate' : ''}${r.ghost ? ' ghost' : ''}"><td>${when}${leave}${r.last ? '<br>' + LAST_TAG : ''}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched, r.approx)}</td>
-        <td class="arr">${fmtTime(r.rarr, r.arr, r.rarr != null && r.real != null)}</td>
+      const arm = !late && !r.ghost && mins >= 2 && mins <= 120 ? '<br>' + leaveBtn(from.name, to.name, r) : '';
+      t += `<tr class="${late ? 'toolate' : ''}${r.ghost ? ' ghost' : ''}"><td>${when}${leave}${arm}${r.last ? '<br>' + LAST_TAG : ''}</td><td>${badge(r.route)}</td><td>${fmtTime(r.real, r.sched, r.approx)}</td>
+        <td class="arr">${fmtTime(r.rarr, r.arr, r.rarr != null && r.real != null)}${r.real == null && probArr(r) - r.arr >= 120e3 ? `<br><small class="habit">≈ ${fmtHM(probArr(r))} en réalité</small>` : ''}</td>
         <td><span class="dur">${Math.round((arrEff - r.eff) / 60000)} min</span></td>
-        <td>${r.ghost ? '<span class="dchip ghost">🚫 Pas vu en circulation</span>' : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>`}
+        <td>${r.ghost ? '<span class="dchip ghost">🚫 Pas vu en circulation</span>' : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${r.fiche ? 'Fiche horaire' : 'Théorique'}</span>${habitHtml(r)}`}
           ${r.veh ? `<br><button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}</td></tr>`;
     });
     html += `<table class="board jt"><thead><tr><th>Départ</th><th>Ligne</th><th>Part de ${esc(from.name)}</th><th>Arrive à ${esc(to.name)}</th><th>Durée</th><th>Info</th></tr></thead><tbody>${t}</tbody></table>`;
@@ -4197,6 +4228,32 @@ function stopPmr(g){ return g.wb === '1' ? ' <span class="pmr" title="Arrêt acc
 let STATS = {}, statsDirty = {}, statsT = null;
 const statSeen = {};
 idb.get('stats').then(v => { if (v && typeof v === 'object') STATS = Object.assign(v, STATS); });
+/* 📈 habitudes par ligne, type de jour (semaine / samedi / dimanche) et tranche de 3 h : [mesures, somme des retards (s)].
+   Sert à annoncer une arrivée réaliste quand le car n'est pas encore suivi en direct. */
+let STATSW = {}, statsWT = null;
+idb.get('statsw').then(v => { if (v && typeof v === 'object') STATSW = Object.assign(v, STATSW); });
+const DAYTYPE = ['en semaine', 'le samedi', 'le dimanche'];
+function wSlot(ms){ const d = reuDate(ms); return (d.wd <= 4 ? 0 : d.wd === 5 ? 1 : 2) * 8 + Math.floor(d.h / 3); }
+/** Retard habituel (s) de cette ligne à ce moment-là, s'il y a assez de mesures. */
+function habitDelay(line, at){
+  const sl = wSlot(at), row = STATSW[line], c = row && row[sl];
+  const lbl = `${DAYTYPE[Math.floor(sl / 8)]} vers ${(sl % 8) * 3} h`;
+  if (c && c[0] >= 6) return { s: c[1] / c[0], n: c[0], when: lbl };
+  const o = STATS[line] && STATS[line][hourSlot(at)];            // sinon : la même tranche horaire, tous jours confondus
+  if (o && o[0] >= 8) return { s: o[3] / o[0], n: o[0], when: `vers ${(sl % 8) * 3} h` };
+  return null;
+}
+/** Arrivée la plus probable : le temps réel s'il existe, sinon l'horaire + le retard habituel. */
+function probArr(r){
+  if (r.rarr != null) return r.rarr;
+  const h = r.route && habitDelay(r.route.s, r.sched);
+  return r.arr + (h && h.s >= 60 ? h.s * 1000 : 0);
+}
+function habitHtml(r){
+  if (r.real != null || r.ghost || !r.route) return '';
+  const h = habitDelay(r.route.s, r.sched); if (!h || h.s < 120) return '';
+  return `<br><small class="habit" title="Mesuré sur ${h.n} passages">📈 d’habitude +${Math.round(h.s / 60)} min ${esc(h.when)}</small>`;
+}
 function recordStats(){
   const now = Date.now(), slot = hourSlot(now);
   vehicles.forEach(v => {
@@ -4209,10 +4266,13 @@ function recordStats(){
     const d = v.delay;
     c[0]++; if (d >= -60 && d <= 180) c[1]++; else if (d > 180) c[2]++;
     c[3] += Math.max(0, d);
+    const wrow = STATSW[line] || (STATSW[line] = []), ws = wSlot(now), w = wrow[ws] || [0, 0];
+    w[0]++; w[1] += Math.max(0, d); if (w[0] > 300){ w[0] = Math.round(w[0] / 2); w[1] = Math.round(w[1] / 2); }
+    wrow[ws] = w;
     if (c[0] > 400){ c.forEach((x, i) => c[i] = Math.round(x / 2)); }  // on garde surtout le récent
     row[slot] = c; statsDirty[line] = row;
   });
-  clearTimeout(statsT); statsT = setTimeout(() => idb.set('stats', STATS), 5000);
+  clearTimeout(statsT); statsT = setTimeout(() => { idb.set('stats', STATS); idb.set('statsw', STATSW); }, 5000);
 }
 /** « 78 % à l'heure · retard moyen 4 min » pour une ligne, au moment de la journée (ou toute la journée). */
 function lineReliability(line, at){
@@ -5109,7 +5169,7 @@ function renderBoard(){
                  : `<span class="when">${fmtHM(r.eff)}</span>`;
       const whenL = when + liveIco(r);
       const status = r.ghost ? `<span class="dchip ghost">🚫 Pas vu en circulation</span><br><small class="muted">peut-être supprimé</small>`
-        : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>`;
+        : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>${habitHtml(r)}`;
       const sensTag = boardGroupBy === 'heure' && r.sens ? `<span class="tag ${r.sens === 'aller' ? 'tag-s' : 'tag-v'}">${r.sens}</span>` : '';
       html += `<tr class="${r.ghost ? 'ghost' : ''}">
         <td>${whenL}</td>
@@ -6129,8 +6189,10 @@ function rideTick(){
       const from = waitOk ? ride.stop : (nearStop(400) || {}).name || '';
       const info = rideInfo(v);
       ride = { phase:'ride', stop: from, since: now, sent:{}, veh: v.id, info };
+      try { bilanStart(v, from); } catch(e){}
       shareEvent({ k:'depart', stop: from, l: v.route.s, d: v.headsign, to: info.to, eta: info.until, dl: v.delay });
     } else {
+      try { bilanTick(v); } catch(e){}
       ride.info = rideInfo(v);
       const left = ride.info.until ? ride.info.until - now : null;
       if (left != null && left > 0 && left <= 6 * 60e3 && !ride.sent.soon){
@@ -6142,6 +6204,7 @@ function rideTick(){
   }
   if (ride.phase === 'ride'){                                // descendu du car
     const g = nearStop(500), last = ride.info || {};
+    try { bilanEnd(g ? g.name : ''); } catch(e){}
     shareEvent({ k:'arrive', stop: g ? g.name : '', l: (vehicles.find(x => x.id === ride.veh) || { route:{} }).route.s || '', dl: last.dl });
     ride = { phase:'idle', stop:'', since: now, sent:{}, veh:'', info:null };
     return;
@@ -6162,6 +6225,231 @@ function rideTick(){
     }
   } else if (ride.phase === 'wait' && sp > 2 && !(nearStop(250))) ride = { phase:'idle', stop:'', since: now, sent:{}, veh:'', info:null };
 }
+
+/* ====================== 🚶 Pars maintenant · 📊 Mon bilan · ✈️ Prendre l'avion ====================== */
+
+/* ---------- 🚶 « Pars maintenant » ----------
+   Tu choisis un car (bouton 🔔 « préviens-moi quand partir » dans Mon trajet, ou un car pour l'avion) :
+   l'appli recalcule sans cesse le moment de partir avec ta position (temps de marche) et le retard réel du car. */
+let leaveArm = (() => { try { const a = JSON.parse(localStorage.getItem('cj_leave') || 'null'); return a && a.sched > Date.now() - 30 * 60e3 ? a : null; } catch(e){ return null; } })();
+function saveLeave(){ try { if (leaveArm) localStorage.setItem('cj_leave', JSON.stringify(leaveArm)); else localStorage.removeItem('cj_leave'); } catch(e){} }
+function armLeave(from, to, line, sched, why){
+  if (leaveArm && leaveArm.line === line && leaveArm.sched === sched){ leaveArm = null; saveLeave(); toast('🔕 Plus de rappel pour ce car.'); }
+  else {
+    leaveArm = { from, to, line, sched, why: why || '', sent:{} }; saveLeave();
+    if (!alertCfg.on) setAlertsOn(true, true);
+    toast(`🔔 Je te dis quand partir pour le ${line} de ${fmtHM(sched)}.`);
+  }
+  try { if (view === 'trip') renderTrip(); } catch(e){}
+  leaveTick();
+}
+/** La ligne du tableau qui correspond au car choisi (heure prévue identique), avec son temps réel. */
+function leaveRow(){
+  if (!leaveArm) return null;
+  const A = findGroup(leaveArm.from), B = findGroup(leaveArm.to);
+  if (!A || !B || !tripBoard.data) return null;
+  const r = journeyRows(A, B).find(x => x.route.s === leaveArm.line && Math.abs(x.sched - leaveArm.sched) < 60e3);
+  return r ? { r, A } : null;
+}
+function leaveTick(){
+  if (!leaveArm) return;
+  const now = Date.now();
+  if (now > leaveArm.sched + 30 * 60e3){ leaveArm = null; saveLeave(); return; }
+  if (!tripBoard.data){ try { loadTripBoard(); } catch(e){} return; }
+  const lr = leaveRow(); if (!lr) return;
+  const { r, A } = lr;
+  if (onBus || r.eff < now - 60e3){ leaveArm = null; saveLeave(); return; }       // déjà parti / déjà dans un car
+  const d = myPos && isFinite(A.lat) ? distM(myPos.lat, myPos.lon, A.lat, A.lon) : null;
+  const walk = d != null ? (d < 80 ? 0 : walkMin(d)) : (+cls.walk || 5);
+  const leaveAt = r.eff - (walk + 1) * 60e3;                                         // 1 min de marge
+  const busIn = Math.max(0, Math.round((r.eff - now) / 60000));
+  const dl = r.real != null ? Math.round((r.real - r.sched) / 60000) : 0;
+  const dlTxt = dl >= 2 ? ` (${dl} min de retard compris)` : dl <= -2 ? ` (${-dl} min d’avance !)` : '';
+  const s = leaveArm.sent || (leaveArm.sent = {});
+  if (!s.pre && now >= leaveAt - 5 * 60e3 && now < leaveAt - 60e3 && walk > 0){
+    s.pre = 1; saveLeave();
+    notify(`🚶 Prépare-toi : tu pars dans 5 min`, `Pour le ${r.route.s} de ${fmtHM(r.eff)} à ${A.name}${dlTxt}.`, 'none', { show: true });
+  }
+  if (!s.go && now >= leaveAt){
+    s.go = 1; saveLeave();
+    notify(walk > 0 ? `🚶 Pars maintenant${leaveArm.why ? ' ' + leaveArm.why : ''}` : `🚏 Ton car arrive`,
+      walk > 0 ? `Le ${r.route.s} passe à ${A.name} dans ${busIn} min${dlTxt}, et tu as ${walk} min à pied.`
+               : `Le ${r.route.s} passe dans ${busIn} min${dlTxt}. Prépare-toi à faire signe 🔦.`, 'bus');
+  }
+}
+setInterval(() => { try { leaveTick(); } catch(e){} }, 20000);
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-leave]'); if (!b) return;
+  const [from, to, line, sched] = b.dataset.leave.split('|');
+  armLeave(from, to, line, +sched);
+});
+const leaveBtn = (from, to, r, label) => {
+  const on = leaveArm && leaveArm.line === r.route.s && Math.abs(leaveArm.sched - r.sched) < 60e3;
+  return `<button class="leave-b${on ? ' on' : ''}" data-leave="${esc(from)}|${esc(to)}|${esc(r.route.s)}|${r.sched}" title="${on ? 'Annuler le rappel' : 'Préviens-moi quand partir'}">${on ? '🔔 rappel actif' : label || '🔔 quand partir ?'}</button>`;
+};
+
+/* ---------- 📊 Mon bilan ----------
+   Chaque trajet reconnu (montée → descente) est noté sur ton téléphone seulement : ligne, durée, distance, retard. */
+const CO2_CAR = 0.218, CO2_COACH = 0.0295;          // kg CO₂e par km et par personne (ADEME, Impact CO₂) : voiture thermique / autocar
+let rides = (() => { try { return JSON.parse(localStorage.getItem('cj_rides') || '[]'); } catch(e){ return []; } })();
+let rideRec = null;
+function saveRides(){ try { localStorage.setItem('cj_rides', JSON.stringify(rides.slice(-600))); } catch(e){} }
+function bilanStart(v, from){
+  rideRec = { t0: Date.now(), l: v.route.s, from: from || '', km: 0, last: myPos ? { lat: myPos.lat, lon: myPos.lon } : null, dl: v.delay || 0 };
+}
+function bilanTick(v){
+  if (!rideRec || !myPos) return;
+  if (rideRec.last){ const d = distM(rideRec.last.lat, rideRec.last.lon, myPos.lat, myPos.lon); if (d > 30 && d < 3000) rideRec.km += d / 1000; }
+  rideRec.last = { lat: myPos.lat, lon: myPos.lon };
+  if (v && v.delay != null) rideRec.dl = v.delay;
+}
+function bilanEnd(to){
+  if (!rideRec) return;
+  const r = rideRec; rideRec = null;
+  const min = (Date.now() - r.t0) / 60000;
+  if (min < 2 || r.km < 0.5) return;                       // trop court : sûrement une fausse détection
+  rides.push({ t0: r.t0, t1: Date.now(), l: r.l, from: r.from, to: to || '', km: Math.round(r.km * 10) / 10, dl: Math.round(r.dl) });
+  saveRides(); try { renderBilan(); } catch(e){}
+}
+let bilanMonth = 0;                                         // 0 = ce mois-ci, -1 = le mois dernier…
+function renderBilan(){
+  const box = $('#bilanBody'); if (!box) return;
+  const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0); d.setMonth(d.getMonth() + bilanMonth);
+  const end = new Date(d); end.setMonth(end.getMonth() + 1);
+  const list = rides.filter(r => r.t0 >= d.getTime() && r.t0 < end.getTime());
+  const mois = d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const nav = `<div class="bl-nav"><button class="round" data-blm="-1" aria-label="Mois précédent">‹</button><b>${esc(mois)}</b><button class="round" data-blm="1" aria-label="Mois suivant"${bilanMonth >= 0 ? ' disabled' : ''}>›</button></div>`;
+  $('#bilanSum').textContent = rides.length ? `${list.length} trajet${list.length > 1 ? 's' : ''} en ${mois}` : 'tes trajets en car jaune, notés tout seuls';
+  if (!list.length){
+    box.innerHTML = nav + `<p class="muted">Aucun trajet ${bilanMonth ? 'ce mois-là' : 'pour l’instant ce mois-ci'}. Chaque fois que l’appli te reconnaît dans un car jaune, le trajet est noté ici (sur ton téléphone seulement).</p>`;
+    return;
+  }
+  const mins = list.reduce((a, r) => a + (r.t1 - r.t0) / 60000, 0), km = list.reduce((a, r) => a + r.km, 0);
+  const late = list.filter(r => r.dl >= 120), lateMin = late.reduce((a, r) => a + r.dl / 60, 0);
+  const byLine = {}; list.forEach(r => byLine[r.l] = (byLine[r.l] || 0) + 1);
+  const top = Object.entries(byLine).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const co2 = km * (CO2_CAR - CO2_COACH);
+  const h = Math.floor(mins / 60), m = Math.round(mins % 60);
+  box.innerHTML = nav + `<div class="bl-grid">
+      <div class="bl-k"><b>${list.length}</b><span>trajet${list.length > 1 ? 's' : ''}</span></div>
+      <div class="bl-k"><b>${h ? h + ' h ' + String(m).padStart(2, '0') : m + ' min'}</b><span>dans le car</span></div>
+      <div class="bl-k"><b>${Math.round(km)} km</b><span>parcourus</span></div>
+      <div class="bl-k ok"><b>${co2 >= 10 ? Math.round(co2) : co2.toFixed(1).replace('.', ',')} kg</b><span>CO₂ évité*</span></div>
+    </div>
+    <p class="bl-l">⏱️ ${late.length ? `<b>${late.length}</b> trajet${late.length > 1 ? 's' : ''} en retard, <b>${Math.round(lateMin)} min</b> perdues au total` : 'Aucun retard de plus de 2 min 👏'}</p>
+    <p class="bl-l">🚌 Tes lignes : ${top.map(([l, n]) => `${badge(routeByShort(l))} ×${n}`).join(' ')}</p>
+    <p class="src-note">* par rapport au même trajet seul en voiture (ADEME : ${String(CO2_CAR * 1000).replace('.', ',')} g/km en voiture, ${String(CO2_COACH * 1000).replace('.', ',')} g/km en autocar). Données gardées sur ton téléphone. <button class="lnk" data-blreset>Effacer mon bilan</button></p>`;
+}
+document.addEventListener('click', e => {
+  const m = e.target.closest('[data-blm]'); if (m){ bilanMonth = Math.min(0, bilanMonth + +m.dataset.blm); renderBilan(); return; }
+  if (e.target.closest('[data-blreset]') && confirmInline(e.target, 'Effacer ?')){ rides = []; saveRides(); renderBilan(); }
+});
+/** Confirmation sans boîte de dialogue : 1re touche « Effacer ? », 2e touche dans les 4 s = oui. */
+function confirmInline(el, txt){
+  if (el.dataset.sure && Date.now() - +el.dataset.sure < 4000) return true;
+  el.dataset.sure = Date.now(); const t = el.textContent; el.textContent = txt;
+  setTimeout(() => { el.textContent = t; delete el.dataset.sure; }, 4000);
+  return false;
+}
+
+/* ---------- ✈️ Prendre l'avion à Roland-Garros ----------
+   Tu indiques l'heure de ton vol : l'appli cherche le car jaune pour arriver à l'aéroport à temps (ou celui à prendre
+   en sortant de l'avion), avec l'arrivée réaliste (📈), et te prévient quand partir. Un lien
+   …/?vol=UU975&depart=2026-11-10T15:30 (ou &arrivee=…) ouvre directement le calcul : prévu pour Roland Garros Live. */
+const AIR_RE = /a[ée]roport|roland[ -]?garros/i;
+let avion = (() => { try { return JSON.parse(localStorage.getItem('cj_avion') || 'null'); } catch(e){ return null; } })();
+function saveAvion(){ try { if (avion) localStorage.setItem('cj_avion', JSON.stringify(avion)); else localStorage.removeItem('cj_avion'); } catch(e){} }
+const airportGroup = () => stopGroups.find(g => AIR_RE.test(g.name)) || null;
+function avionAdvice(){
+  if (!avion || !avion.at) return null;
+  const P = airportGroup(); if (!P) return { err: 'Je ne trouve pas l’arrêt de l’aéroport dans les lignes Car Jaune.' };
+  const me = findGroup(avion.me || trip.a); if (!me) return { err: 'Choisis ta gare.' };
+  const now = Date.now();
+  if (avion.at < now - 3 * 3600e3) return { err: 'Ce vol est passé.' };
+  if (avion.at - now > 26 * 3600e3) return { later: true, P, me };
+  if (!tripBoard.data || !me.ids.concat(P.ids).every(id => id in tripBoard.data)) return { loading: true };
+  if (avion.mode === 'dep'){
+    const lead = (+avion.lead || 120) * 60e3;
+    const rows = journeyRows(me, P).filter(r => !r.ghost && probArr(r) <= avion.at - lead && r.eff > now - 60e3);
+    const r = rows.sort((a, b) => probArr(b) - probArr(a))[0];
+    const safer = r && rows.filter(x => x.eff < r.eff).sort((a, b) => b.eff - a.eff)[0];
+    return { P, me, r, safer, from: me, to: P };
+  }
+  const rows = journeyRows(P, me).filter(r => !r.ghost && r.eff >= avion.at + (+avion.lead || 30) * 60e3);
+  return { P, me, r: rows[0], next: rows[1], from: P, to: me };
+}
+function renderAvion(){
+  const box = $('#avionBody'); if (!box) return;
+  const a = avion || { mode: 'dep', lead: 120 };
+  const local = ms => { if (!ms) return ''; const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60e3); return d.toISOString().slice(0, 16); };
+  const names = stopGroups.map(g => g.name);
+  box.innerHTML = `<div class="av-mode"><button class="chip${a.mode === 'dep' ? ' on' : ''}" data-avmode="dep">🛫 Je prends l’avion</button><button class="chip${a.mode === 'arr' ? ' on' : ''}" data-avmode="arr">🛬 J’atterris</button></div>
+    <div class="av-form">
+      <label>${a.mode === 'dep' ? 'Heure de décollage' : 'Heure d’atterrissage'}<input type="datetime-local" class="set-in" id="avAt" value="${local(a.at)}"></label>
+      <label>N° de vol (facultatif)<input class="set-in" id="avVol" maxlength="8" placeholder="ex. UU975" value="${esc(a.vol || '')}"></label>
+      <label>${a.mode === 'dep' ? 'Je pars de' : 'Je vais à'}<input class="set-in" id="avMe" list="stopList" placeholder="ta gare" value="${esc(a.me || trip.a || '')}"></label>
+      <label>${a.mode === 'dep' ? 'Être à l’aéroport' : 'Temps pour sortir'}<select class="set-sel" id="avLead">${(a.mode === 'dep' ? [[90, '1 h 30 avant'], [120, '2 h avant'], [180, '3 h avant']] : [[20, '20 min'], [30, '30 min'], [45, '45 min (bagages)']]).map(([v, t]) => `<option value="${v}"${+a.lead === v ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+    </div><div id="avRes"></div>`;
+  renderAvionRes();
+}
+function renderAvionRes(){
+  const el = $('#avRes'); if (!el) return;
+  $('#avionSum').textContent = avion && avion.at ? `${avion.mode === 'dep' ? '🛫 vol' : '🛬 arrivée'} ${avion.vol ? avion.vol + ' ' : ''}${fmtDayHM(avion.at)}` : 'ton vol → le car jaune à prendre';
+  if (!avion || !avion.at){ el.innerHTML = '<p class="muted">Indique l’heure de ton vol.</p>'; return; }
+  const x = avionAdvice();
+  if (!x) return;
+  if (x.err){ el.innerHTML = `<p class="muted">${esc(x.err)}</p>`; return; }
+  if (x.later){ el.innerHTML = `<p class="muted">Ton vol est dans plus de 24 h : reviens ici la veille, je calcule avec les horaires du jour (et le retard habituel des lignes).</p>`; return; }
+  if (x.loading){ el.innerHTML = '<p class="muted">Recherche des cars…</p>'; loadAvionBoard(); return; }
+  if (!x.r){ el.innerHTML = `<p class="av-no">😕 Aucun car jaune direct ne convient entre ${esc(x.from.name)} et ${esc(x.to.name)}. Prévois un taxi ou qu’on t’amène.</p>`; return; }
+  const r = x.r, arr = probArr(r);
+  el.innerHTML = `<div class="av-res">
+      <div class="av-big">${badge(r.route)} <b>${fmtHM(r.eff)}</b> à ${esc(x.from.name)}</div>
+      <div>Arrivée ${x.to === x.P ? 'à l’aéroport' : 'à ' + esc(x.to.name)} vers <b>${fmtHM(arr)}</b>${r.rarr == null && arr > r.arr + 60e3 ? ' <small class="habit">(retard habituel compris)</small>' : ''}${avion.mode === 'dep' ? ` · ${Math.round((avion.at - arr) / 60000)} min avant le décollage` : ''}</div>
+      ${x.safer ? `<div class="muted">Plus prudent : le ${esc(x.safer.route.s)} de ${fmtHM(x.safer.eff)} (arrivée ~${fmtHM(probArr(x.safer))}).</div>` : ''}
+      ${x.next ? `<div class="muted">Sinon : le ${esc(x.next.route.s)} de ${fmtHM(x.next.eff)}.</div>` : ''}
+      ${leaveBtn(x.from.name, x.to.name, r, '🔔 Me prévenir quand partir')}
+    </div>`;
+}
+let avionLoading = false;
+async function loadAvionBoard(){
+  const x = avion && airportGroup(), me = avion && findGroup(avion.me || trip.a);
+  if (!x || !me || avionLoading) return;
+  avionLoading = true;
+  try {
+    tripBoard.data = tripBoard.data || {};
+    const ids = me.ids.concat(x.ids).filter(id => !(id in tripBoard.data));
+    if (ids.length) Object.assign(tripBoard.data, JSON.parse(await call('getStopBoard', ids.slice(0, 60))));
+  } catch(e){}
+  avionLoading = false; renderAvionRes();
+}
+function avionFromForm(){
+  const at = $('#avAt').value ? new Date($('#avAt').value).getTime() : null;
+  avion = Object.assign({}, avion || { mode: 'dep', lead: 120 }, { at, vol: $('#avVol').value.trim().toUpperCase(), me: $('#avMe').value.trim(), lead: +$('#avLead').value });
+  saveAvion(); renderAvionRes();
+}
+document.addEventListener('change', e => { if (e.target.closest('#avionBody') && e.target.matches('input,select')) avionFromForm(); });
+document.addEventListener('click', e => {
+  const m = e.target.closest('[data-avmode]'); if (!m) return;
+  avion = Object.assign({}, avion || {}, { mode: m.dataset.avmode, lead: m.dataset.avmode === 'dep' ? 120 : 30 }); saveAvion(); renderAvion();
+});
+document.addEventListener('toggle', e => {
+  if (e.target.id === 'avionCard' && e.target.open) renderAvion();
+  if (e.target.id === 'bilanCard' && e.target.open) renderBilan();
+}, true);
+// lien venant de Roland Garros Live : ?vol=UU975&depart=2026-11-10T15:30 ou &arrivee=…
+(() => {
+  try {
+    const q = new URLSearchParams(location.search), dep = q.get('depart'), arr = q.get('arrivee');
+    if (!dep && !arr) return;
+    const at = new Date(dep || arr).getTime(); if (!isFinite(at)) return;
+    avion = { mode: dep ? 'dep' : 'arr', at, vol: (q.get('vol') || '').toUpperCase().slice(0, 8), me: (avion && avion.me) || '', lead: dep ? 120 : 30 };
+    saveAvion();
+    history.replaceState(history.state, '', location.pathname);
+    setTimeout(() => { setView('trip'); const c = $('#avionCard'); if (c){ c.open = true; renderAvion(); c.scrollIntoView({ block: 'start' }); } }, 800);
+  } catch(e){}
+})();
+setTimeout(() => { try { renderBilan(); if (avion) renderAvionRes(); } catch(e){} }, 1500);
 
 /* ====================== 🌀 Vigilance météo et alerte cyclonique (Météo-France) ======================
    Le serveur lit le flux officiel « Vigilance Outre-Mer » toutes les 10 min. Ici : bandeau en haut de la carte
