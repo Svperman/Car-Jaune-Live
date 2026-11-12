@@ -1,0 +1,40 @@
+# Diagnostic ponctuel : arrêts Car Jaune autour de points GPS (pour analyser un journal de trajet).
+name: Diagnostic arrêts
+on:
+  workflow_dispatch:
+    inputs:
+      points:
+        description: 'lat,lon;lat,lon'
+        required: true
+permissions:
+  contents: read
+jobs:
+  arrets:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -sL --max-time 120 -o g.zip https://pysae.com/api/v2/groups/car-jaune/gtfs/pub || curl -sL -o g.zip https://transport.data.gouv.fr/resources/80934/download
+          unzip -o -q g.zip stops.txt routes.txt trips.txt stop_times.txt
+          python3 - "${{ github.event.inputs.points }}" <<'P'
+          import csv, math, sys, collections
+          pts = [tuple(map(float, p.split(','))) for p in sys.argv[1].split(';')]
+          stops = list(csv.DictReader(open('stops.txt', encoding='utf-8-sig')))
+          def d(a, b, c, e): return 6371000 * math.hypot(math.radians(c - a), math.radians(e - b) * math.cos(math.radians(a)))
+          for la, lo in pts:
+              near = sorted(((d(la, lo, float(s['stop_lat']), float(s['stop_lon'])), s) for s in stops), key=lambda x: x[0])[:6]
+              print(f'== {la},{lo}')
+              for dist, s in near: print(f"  {dist:6.0f} m  {s['stop_id']}  {s['stop_name']}  ({s['stop_lat']},{s['stop_lon']})")
+          print('== arrêts « Campus »')
+          for s in stops:
+              if 'ampus' in s['stop_name'] or 'Moufia' in s['stop_name'] or 'niversit' in s['stop_name']: print('  ', s['stop_id'], s['stop_name'], s['stop_lat'], s['stop_lon'])
+          routes = {r['route_id']: r['route_short_name'] for r in csv.DictReader(open('routes.txt', encoding='utf-8-sig'))}
+          trips = {t['trip_id']: (routes.get(t['route_id']), t.get('trip_headsign', '')) for t in csv.DictReader(open('trips.txt', encoding='utf-8-sig'))}
+          last = {}
+          for st in csv.DictReader(open('stop_times.txt', encoding='utf-8-sig')):
+              k = st['trip_id']; seq = int(st['stop_sequence'])
+              if k not in last or seq > last[k][0]: last[k] = (seq, st['stop_id'])
+          sid = {s['stop_id']: s['stop_name'] for s in stops}
+          c = collections.Counter((trips[k][0], trips[k][1], sid.get(v[1])) for k, v in last.items() if trips.get(k, ('',))[0] in ('O1X', 'O3', 'O2'))
+          print('== terminus O1X / O2 / O3')
+          for (l, h, s), n in sorted(c.items()): print(f'  {l} → {h} : dernier arrêt {s} ({n} courses)')
+          P
