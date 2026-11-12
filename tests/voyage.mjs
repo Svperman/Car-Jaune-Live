@@ -44,7 +44,7 @@ await t('🛎️ rappel 2 arrêts avant (« prépare-toi »)', async () => {
 });
 await t('🛎️ « descends au prochain arrêt » : écran jaune + son, une seule fois', async () => {
   const r = await page.evaluate(`(() => { __notes.length = 0;
-    const v = vehicles.find(x => x.id === 'bus1'); v.est.next = 2; v.lat = -21.03; v.lon = 55.70;   // à ~1 km de St-Benoît
+    const v = vehicles.find(x => x.id === 'bus1'); v.est.next = 2; v.lat = -21.031; v.lon = 55.708;   // à ~450 m de St-Benoît
     descTick(); descTick();
     return [__notes.filter(n => /Descends au prochain arrêt/.test(n)).length, !document.querySelector('#descAlarm').hidden, document.querySelector('#descAlName').textContent]; })()`);
   await page.click('#descAlOk');
@@ -96,14 +96,21 @@ await t('🔁 correspondance ratée (+4 min) : le suivant tout de suite', async 
 await t('🔦 à l’arrêt, un car arrive : le bouton apparaît et pulse', async () => {
   const r = await page.evaluate(`(() => { __notes.length = 0; onBus = null;
     const st = (id, sec) => ({ id, sec, lat: S.stops[id][1], lon: S.stops[id][2] });
-    tripGeomCache['T1'] = { stops: [st('P', 0), st('A', 60 * 60), st('B', 75 * 60)] };
+    tripGeomCache['T1'] = { stops: [st('P', 0), st('A', 60 * 60), st('B', 75 * 60)] }; window.__G = tripGeomCache['T1'];
     const v = vehicles.find(x => x.id === 'bus1'); v.est = { next: 1, base: Date.now() - 58 * 60e3, delay: 0 };
-    v.lat = -20.882; v.lon = 55.452;                       // ~500 m de la gare
-    ride = { phase:'wait', stop:'Gare de St-Denis', since: Date.now(), sent:{}, veh:'', info:null };
+    v.est = { next: 2, base: Date.now() - 73 * 60e3, delay: 0 }; v.lat = -20.896; v.lon = 55.526;   // ~600 m de Ste-Marie Duparc (arrêt simple)
+    ride = { phase:'wait', stop:'Sainte-Marie Duparc', since: Date.now(), sent:{}, veh:'', info:null };
     signNotif = {}; signTick();
     const b = document.querySelector('#signBtn');
     return [!b.hidden, b.classList.contains('pulse'), __notes.filter(n => /fais signe/.test(n)).length]; })()`);
   return (r[0] && r[1] && r[2] === 1) || JSON.stringify(r);
+});
+await t('🔦 dans une gare : pas d’alerte « fais signe » (tous les cars s’y arrêtent)', async () => {
+  const r = await page.evaluate(`(() => { __notes.length = 0; signNotif = {}; const v = vehicles.find(x => x.id === 'bus1');
+    v.est = { next: 1, base: Date.now() - 58 * 60e3, delay: 0 }; v.lat = -20.882; v.lon = 55.452;
+    ride = { phase:'wait', stop:'Gare de St-Denis', since: Date.now(), sent:{}, veh:'', info:null }; signTick();
+    const b = document.querySelector('#signBtn'); return [b.classList.contains('pulse'), __notes.filter(n => /fais signe/.test(n)).length]; })()`);
+  return (r[0] === false && r[1] === 0) || JSON.stringify(r);
 });
 await t('🔦 écran clignotant avec la ligne, puis Fermer', async () => {
   await page.evaluate("document.querySelector('#signBtn').click(); 1");

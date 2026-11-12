@@ -3197,9 +3197,12 @@ function busTol(v, sp){
   return 120 + Math.max(sp, 8) * lag + Math.min(myPos.acc || 0, 100);
 }
 const angDiff = (a, b) => { const d = Math.abs(((a - b) % 360 + 540) % 360 - 180); return d; };
+let gpsStartAt = 0, gpsLastAt = 0;
 function detectMyBus(){
   if (!myPos || (myPos.acc || 0) > 200) return;
   const sp = myPos.speed || 0, now = Date.now();
+  if (!gpsLastAt || now - gpsLastAt > 3 * 60e3) gpsStartAt = now;           // reprise du GPS après un trou : « je viens d'ouvrir l'appli »
+  gpsLastAt = now;
   // mon sens de déplacement (sur au moins 40 m)
   if (!headFrom) headFrom = { lat: myPos.lat, lon: myPos.lon };
   else if (distM(headFrom.lat, headFrom.lon, myPos.lat, myPos.lon) > 40){
@@ -3220,7 +3223,14 @@ function detectMyBus(){
 
   if (onBus){
     const dCur = cur ? distM(myPos.lat, myPos.lon, cur.lat, cur.lon) : null;
-    const curOk = cur && (sp <= 3 ? dCur < busTol(cur, 3) + 150 : match(cur) != null);
+    let atEnd = false;
+    try { const G = cur && cur.tripId ? tripGeom(cur.tripId, cur.routeId) : null; const L = G && G.stops[G.stops.length - 1]; atEnd = !!(L && distM(cur.lat, cur.lon, L.lat, L.lon) < 150); } catch(e){}
+    if (cur) lastRideVeh = cur;
+    if (sp <= 3 && !alightPos) alightPos = { lat: myPos.lat, lon: myPos.lon };
+    if (sp > 6) alightPos = null;
+    // au terminus le car reste garé : à plus de 50 m de lui, je suis descendu
+    const curOk = cur && (sp <= 3 ? dCur < (atEnd ? 50 + Math.min(40, myPos.acc || 0) : busTol(cur, 3) + 150) : match(cur) != null);
+    if (cur && atEnd && sp <= 3 && !curOk){ onBus = null; busCand = null; render(); return renderRide(); }
     if (curOk){ busLastOk = now; busCand = null; return renderRide(); }
     // un autre car colle mieux : il faut 30 s de preuves (et le mien ne doit plus coller)
     if (best && best.v.id !== onBus){
@@ -3246,7 +3256,10 @@ function detectMyBus(){
       busCand = { id: best.v.id, n: 1, since: now, lastOk: now, fromWait: w < busTol(best.v, 8) + 150 };
     } else { busCand.n++; busCand.lastOk = now; }
     const dur = now - busCand.since;
-    if ((busCand.fromWait && busCand.n >= 3 && dur >= 25e3) || (busCand.n >= 8 && dur >= 6 * 60e3)){
+    busCand.minD = Math.min(busCand.minD == null ? Infinity : busCand.minD, best.d);
+    // appli ouverte dans le car (journal du 10/11 : O3 suivi 2 min à 80 km/h sans être reconnu) : aucune position avant ce car
+    const joined = gpsStartAt && busCand.since - gpsStartAt < 90e3;
+    if ((busCand.fromWait && busCand.n >= 3 && dur >= 25e3) || (joined && busCand.n >= 8 && dur >= 2 * 60e3 && busCand.minD < 60 && sp > 4) || (busCand.n >= 8 && dur >= 6 * 60e3)){
       onBus = best.v.id; busCand = null; busLastOk = now; announceBus(best.v); render();
     }
   } else if (busCand && now - busCand.lastOk > 25e3) busCand = null;            // plus de car à côté : on oublie
@@ -3530,6 +3543,8 @@ function checkAlerts(){
   if (alertCfg.journey && tripReady() && !tripBoard.data){ loadTripBoard(); return; }
   const ctx = alertContext();
   if (!ctx.stop) return;
+  // dans un car, loin de l'arrêt surveillé (journal du 09/11 : alertes « Gare de St-Paul » en roulant vers le Campus) : on se tait
+  if (onBus && myPos){ const sg = findGroup(ctx.stop); if (sg && isFinite(sg.lat) && distM(myPos.lat, myPos.lon, sg.lat, sg.lon) > 3000) return; }
   const now = Date.now(), stop = ctx.stop, lead = alertCfg.lead, rows = ctx.rows;
   rows.forEach(r => {
     const key = stop + '|' + r.route.s + '|' + r.dest + '|' + r.sched;
@@ -6468,6 +6483,21 @@ function rideInfo(v){
   }
   return { id: v.id, to, until: plausibleEta(until), dl: v.delay };
 }
+/** Arrêt où je viens de descendre : le plus proche parmi les arrêts de la course du car (même « Campus »). */
+function alightStop(){
+  try {
+    const v = vehicles.find(x => x.id === ride.veh) || lastRideVeh;
+    const G = v && v.tripId ? tripGeom(v.tripId, v.routeId) : null;
+    const p = alightPos || myPos;
+    if (!G || !p) return null;
+    let best = null;
+    G.stops.forEach(st => { const d = distM(p.lat, p.lon, st.lat, st.lon); if (d < 400 && (!best || d < best.d)) best = { d, id: st.id }; });
+    if (!best) return null;
+    const n = (S.stops[best.id] || [])[0];
+    return n ? (stopGroups.find(g => g.name === n || g.ids.includes(best.id)) || { name: n }) : null;
+  } catch(e){ return null; }
+}
+let alightPos = null, lastRideVeh = null;
 function nearStop(maxM){
   if (!myPos) return null;
   const n = nearbyStops(myPos.lat, myPos.lon, 3).find(x => x.d <= (isGare(x.g) ? maxM * 1.7 : maxM));
@@ -6526,8 +6556,9 @@ function rideTick(){
     return;
   }
   if (ride.phase === 'ride'){                                // descendu du car
-    const g = nearStop(500), last = ride.info || {};
+    const g = alightStop() || nearStop(500), last = ride.info || {};
     try { bilanEnd(g ? g.name : ''); } catch(e){}
+    alightPos = null;
     shareEvent({ k:'arrive', stop: g ? g.name : '', l: (vehicles.find(x => x.id === ride.veh) || { route:{} }).route.s || '', dl: last.dl });
     ride = { phase:'idle', stop:'', since: now, sent:{}, veh:'', info:null };
     return;
@@ -7261,10 +7292,26 @@ function descTargetName(){
   }
   return null;
 }
+/** Arrêts où je pourrais descendre, dans l'ordre : mon choix, l'arrivée de Mon trajet, mon arrêt habituel sur cette ligne. */
+function descCandidates(v){
+  const out = [], t = descTargetName();
+  if (t) out.push(t);
+  try { if (t && t.manual && typeof tripReady === 'function' && tripReady()){ const s = detectSens(); const to = s.sens === 'aller' ? s.B : s.A; if (to) out.push({ name: to.name, manual: false }); } } catch(e){}
+  try {
+    const c = {}; (typeof rides !== 'undefined' ? rides : []).slice(-60).forEach(r => { if (r.l === v.route.s && r.to) c[r.to] = (c[r.to] || 0) + 1; });
+    Object.keys(c).filter(k => c[k] >= 2).sort((a, b) => c[b] - c[a]).forEach(n => out.push({ name: n, manual: false, habit: true }));
+  } catch(e){}
+  return out;
+}
 /** Où en est ce car par rapport à l'arrêt visé : arrêts restants, heure, distance. */
 function descState(v){
-  const t = descTargetName(); if (!t || !v || !v.tripId) return null;
-  const g = findGroup(t.name); if (!g || !g.ids.length) return null;
+  if (!v || !v.tripId) return null;
+  for (const t of descCandidates(v)){ const r = descStateFor(v, t); if (r) return r; }
+  return null;
+}
+function descStateFor(v, t){
+  const g = findGroup(t.name) || (() => { const ids = Object.keys(S.stops).filter(id => S.stops[id][0] === t.name); return ids.length ? { name: t.name, ids } : null; })();
+  if (!g || !g.ids.length) return null;
   const G = tripGeom(v.tripId, v.routeId); if (!G) return null;
   let from = v.est ? v.est.next : -1;
   if (from < 0){        // pas encore d'estimation : arrêt le plus proche du car, puis le suivant
@@ -7277,7 +7324,7 @@ function descState(v){
   const base = v.est ? v.est.base : serviceDayMs(v.startDate, G.stops[0].sec);
   const eta = plausibleEta(base + G.stops[k].sec * 1000 + Math.max(0, v.delay || 0) * 1000);
   const st = G.stops[k];
-  return { name: g.name, manual: t.manual, left: k - from, eta, dist: distM(v.lat, v.lon, st.lat, st.lon), prev: k > 0 ? (S.stops[G.stops[k - 1].id] || [])[0] || '' : '', veh: v.id };
+  return { name: g.name, manual: t.manual, habit: !!t.habit, left: k - from, eta, dist: distM(v.lat, v.lon, st.lat, st.lon), prev: k > 0 ? (S.stops[G.stops[k - 1].id] || [])[0] || '' : '', veh: v.id };
 }
 let descAlarmT = null;
 function descAlarm(ds){
@@ -7308,12 +7355,13 @@ function descTick(){
   if (descRun.key !== key){ descRun = { key, prep:false, now:false, ntfy:false }; descWake(true); }
   const left = ds.eta ? ds.eta - Date.now() : null;
   // 1. « prépare-toi » : 2 arrêts avant, ou 5 min avant
-  if (!descRun.prep && !descRun.now && ((ds.left >= 1 && ds.left <= 2) || (left != null && left <= 5 * 60e3 && ds.left >= 1))){
+  if (!descRun.prep && !descRun.now && ((ds.left >= 1 && ds.left <= 2) || (left != null && left <= 5 * 60e3) || (ds.left === 0 && ds.dist > 700))){
     descRun.prep = true;
-    notify('🛎️ Prépare-toi à descendre', `${ds.name} dans ${ds.left} arrêt${ds.left > 1 ? 's' : ''}${ds.eta ? ' (~' + fmtHM(ds.eta) + ')' : ''}${ds.prev ? ` : juste après ${ds.prev}` : ''}. Le car ne s’arrête que si tu appuies sur le bouton d’arrêt.`, 'bus', { force: true });
+    notify('🛎️ Prépare-toi à descendre', `${ds.left === 0 ? ds.name + ' est le prochain arrêt' : ds.name + ' dans ' + ds.left + ' arrêt' + (ds.left > 1 ? 's' : '')}${ds.eta ? ' (~' + fmtHM(ds.eta) + ')' : ''}${ds.prev ? ` : juste après ${ds.prev}` : ''}. Le car ne s’arrête que si tu appuies sur le bouton d’arrêt.`, 'bus', { force: true });
   }
   // 2. « descends au prochain arrêt » : c'est le prochain arrêt, et le car en approche
-  if (!descRun.now && ds.left === 0 && (ds.dist < 1500 || (left != null && left <= 2.5 * 60e3))){
+  // l'alarme : à moins de 700 m, ou 90 s avant (journal du 09/11 : 1,5 km, c'était 4 min trop tôt sur l'express)
+  if (!descRun.now && ds.left === 0 && (ds.dist < 700 || (left != null && left <= 90e3 && ds.dist < 1500))){
     descRun.now = descRun.prep = true;
     notify('🛎️ Descends au prochain arrêt !', `${ds.name} : appuie sur le bouton d’arrêt du car.`, 'warn', { force: true });
     if (!document.hidden) descAlarm(ds);
@@ -7341,7 +7389,7 @@ function renderDescChip(ds){
   if ((!ds && !pick) || view !== 'map'){ el.hidden = true; return; }
   el.hidden = false;
   el.innerHTML = ds
-    ? `<i aria-hidden="true">🛎️</i><div class="tx"><b>${esc(ds.name)}</b><span>${ds.left === 0 ? 'prochain arrêt' : 'dans ' + ds.left + ' arrêt' + (ds.left > 1 ? 's' : '')}${ds.eta ? ' · vers ' + fmtHM(ds.eta) : ''}</span></div>${ds.manual ? '<button data-descoff title="Ne plus me prévenir" aria-label="Ne plus me prévenir">✕</button>' : ''}`
+    ? `<i aria-hidden="true">🛎️</i><div class="tx"><b>${esc(ds.name)}${ds.habit ? ' <small>(habituel)</small>' : ''}</b><span>${ds.left === 0 ? 'prochain arrêt' : 'dans ' + ds.left + ' arrêt' + (ds.left > 1 ? 's' : '')}${ds.eta ? ' · vers ' + fmtHM(ds.eta) : ''}</span></div>${ds.manual ? '<button data-descoff title="Ne plus me prévenir" aria-label="Ne plus me prévenir">✕</button>' : ''}`
     : `<i aria-hidden="true">🛎️</i><div class="tx"><b>${esc(pick.name)}</b><span>réveil dès que tu montes</span></div><button data-descoff title="Ne plus me prévenir" aria-label="Ne plus me prévenir">✕</button>`;
 }
 document.addEventListener('click', e => {
@@ -7474,6 +7522,7 @@ function signTick(){
   if (!waiting || view !== 'map'){ b.hidden = true; b.classList.remove('pulse'); return; }
   const g = findGroup(ride.stop), near = g ? signApproaching(g) : [];
   b.hidden = false;
+  if (g && isGare(g)){ b.classList.remove('pulse'); return; }        // dans une gare, tous les cars s'arrêtent : pas besoin de faire signe
   const close = near.find(x => x.d < 1200 || x.min < 3);
   b.classList.toggle('pulse', !!close);
   if (close && !signNotif[close.v.id] && alertCfg.on){

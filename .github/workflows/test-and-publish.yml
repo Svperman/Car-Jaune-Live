@@ -60,6 +60,7 @@ jobs:
           node tests/plus.mjs
           node tests/anglais.mjs
           node tests/tout.mjs
+          node tests/journaux.mjs
       - name: Préparer la version publiée (compressée, plus rapide à ouvrir)
         run: |
           mkdir -p _site
