@@ -3219,7 +3219,7 @@ function busTol(v, sp){
   return 120 + Math.max(sp, 8) * lag + Math.min(myPos.acc || 0, 100);
 }
 const angDiff = (a, b) => { const d = Math.abs(((a - b) % 360 + 540) % 360 - 180); return d; };
-let gpsStartAt = 0, gpsLastAt = 0, manualBus = null, busNo = {};
+let gpsStartAt = 0, gpsLastAt = 0, manualBus = null, busNo = {}, askSeen = {};
 /** « Je suis dans ce car » : confirmé par moi (popup du car ou question en bas de la carte). */
 function confirmBus(id){
   const v = vehicles.find(x => x.id === id); if (!v) return;
@@ -3232,14 +3232,16 @@ document.addEventListener('click', e => {
   const a = e.target.closest('[data-imin]'); if (a){ confirmBus(a.dataset.imin); return; }
   if (e.target.closest('[data-imout]')){ leftBus(); return; }
   if (e.target.closest('#busAskYes')){ confirmBus($('#busAsk').dataset.id); return; }
-  if (e.target.closest('#busAskNo')){ busNo[$('#busAsk').dataset.id] = Date.now(); busCand = null; $('#busAsk').hidden = true; }
+  if (e.target.closest('#busAskNo')){ const id = $('#busAsk').dataset.id; busNo[id] = Date.now(); askSeen[id] = 0; if (busCand && busCand.id === id) busCand = null; $('#busAsk').hidden = true; }
 });
 /** Question « Tu es dans le O1X ? » dès que je roule 20 s collé au même car (sans attendre la preuve automatique). */
 function busAskTick(sp){
   const el = $('#busAsk'); if (!el) return;
-  const v = busCand && !onBus && sp > 4 ? vehicles.find(x => x.id === busCand.id) : null;
-  const ok = v && busCand.n >= 6 && Date.now() - busCand.since >= 20e3 && (busCand.minD == null || busCand.minD < 250) && !(busNo[v.id] && Date.now() - busNo[v.id] < 15 * 60e3);
-  if (!ok){ if (!el.hidden && (!busCand || onBus)) el.hidden = true; return; }
+  const no = id => busNo[id] && Date.now() - busNo[id] < 15 * 60e3;
+  const top = !onBus && sp > 3 ? Object.keys(askSeen).filter(id => askSeen[id] >= 15 && !no(id)).sort((a, b) => askSeen[b] - askSeen[a])[0] : null;
+  const v = top ? vehicles.find(x => x.id === top) : null;
+  const ok = !!v;
+  if (!ok){ if (!el.hidden && (onBus || !el.dataset.id || !(askSeen[el.dataset.id] > 5))) el.hidden = true; return; }
   if (!el.hidden && el.dataset.id === v.id) return;
   el.dataset.id = v.id;
   el.innerHTML = `<span>🚌 Tu es dans le ${badge(v.route)} → ${esc(v.headsign || '?')} ?</span><button class="btn small" id="busAskYes">Oui</button><button class="btn small ghost" id="busAskNo">Non</button>`;
@@ -3265,6 +3267,15 @@ function detectMyBus(){
   };
   let best = null;
   if (sp > 3) vehicles.forEach(v => { const d = match(v); if (d != null && (!best || d < best.d)) best = { v, d }; });
+  // pour la question « Tu es dans le … ? » : chaque car qui me colle (et dont je suis sur le tracé) marque des points,
+  // même s'il n'est pas le plus proche (en ville, plusieurs cars se croisent : journal du 14/11 dans l'E2)
+  if (!onBus && sp > 3){
+    vehicles.forEach(v => {
+      let ok = match(v) != null;
+      if (ok && v.tripId){ try { const G = tripGeom(v.tripId, v.routeId); if (G && G.line) ok = projectOn(G.line, myPos.lat, myPos.lon).d < 90; } catch(e){} }
+      askSeen[v.id] = ok ? (askSeen[v.id] || 0) + 1 : Math.max(0, (askSeen[v.id] || 0) - 0.5);
+    });
+  } else if (onBus) askSeen = {};
   const cur = onBus ? vehicles.find(v => v.id === onBus) : null;
   // appli rouverte en plein trajet (journal du 14/11 : O2 oublié à la réouverture) : on reprend le car d'avant
   // s'il était confirmé il y a moins de 10 min et qu'il colle encore à ma position

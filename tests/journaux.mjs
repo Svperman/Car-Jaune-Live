@@ -101,7 +101,7 @@ await t('🛎️ arrêt habituel : sans choix ni Mon trajet, l’appli reprend l
 await t('14/11 · « Tu es dans le … ? » après 20 s collé au car, « Oui » → le car se met sur ma position', async () => {
   const r = await pg.evaluate(`(async () => {
     let T = Date.now() + 9000e3; const real = Date.now; Date.now = () => T;
-    onBus = null; busCand = null; lastWait = null; manualBus = null; busNo = {}; document.querySelector('#busAsk').hidden = true;
+    onBus = null; busCand = null; lastWait = null; manualBus = null; busNo = {}; askSeen = {}; document.querySelector('#busAsk').hidden = true;
     gpsLastAt = T - 1000; gpsStartAt = T - 20 * 60e3;
     const v = Object.assign({}, vehicles[0], { id:'O1X', route:{ s:'O1X', c:'F6BE00', t:'222222' }, headsign:'St-Denis Express', bearing: 90, est:null, times:null, tripId:null });
     let asked = -1;
@@ -125,7 +125,26 @@ await t('14/11 · « Tu es dans le … ? » après 20 s collé au car, « Oui »
     const d = ll ? Math.round(distM(ll.lat, ll.lng, myPos.lat, myPos.lon)) : null;
     onBus = null; manualBus = null;
     return [asked, ok, kept, d, dbg]; })()`);
-  return (r[0] >= 18 && r[0] <= 25 && r[1] && r[2] && r[3] != null && r[3] < 15) || JSON.stringify(r);
+  return (r[0] >= 12 && r[0] <= 25 && r[1] && r[2] && r[3] != null && r[3] < 15) || JSON.stringify(r);
+});
+await t('14/11 · dans l’E2 en ville, un autre car plus proche qui passe : la question porte quand même sur l’E2', async () => {
+  const r = await pg.evaluate(`(() => {
+    let T = Date.now() + 12000e3; const real = Date.now; Date.now = () => T;
+    onBus = null; busCand = null; manualBus = null; busNo = {}; askSeen = {}; document.querySelector('#busAsk').hidden = true;
+    gpsLastAt = T - 1000; gpsStartAt = T - 20 * 60e3;
+    const mk = (id, s) => Object.assign({}, vehicles[0], { id, route:{ s, c:'F6BE00', t:'222222' }, headsign:'St-Benoît', bearing: 90, est:null, times:null, tripId:null });
+    const e2 = mk('E2', 'E2'), o3 = mk('O3x', 'O3');
+    let asked = '';
+    for (let s = 0; s < 40; s++){
+      T += 1000; const lat = -20.8916, lon = 55.4755 + s * 10 / 104000;
+      myPos = { lat, lon, acc: 8, speed: 10 }; myFixAt = T;
+      Object.assign(e2, { lat, lon: lon - 350 / 104000, age: 30e3 });                       // mon E2, 350 m derrière (retard du flux)
+      Object.assign(o3, { lat: lat + 0.0003, lon: lon + (s % 10 < 5 ? 40 : 900) / 104000, age: 10e3 });   // un autre car qui passe et repasse
+      vehicles = [e2, o3]; detectMyBus();
+      if (!document.querySelector('#busAsk').hidden) asked = document.querySelector('#busAsk').dataset.id;
+    }
+    Date.now = real; document.querySelector('#busAsk').hidden = true; return asked; })()`);
+  return r === 'E2' || 'question sur : ' + r;
 });
 await t('14/11 · appli rouverte en plein trajet dans le O2 : le car est repris tout de suite', async () => {
   const r = await pg.evaluate(`(() => {
