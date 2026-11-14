@@ -3226,7 +3226,7 @@ function confirmBus(id){
   $('#busAsk').hidden = true; announceBus(v); render();
   try { map.closePopup(); } catch(e){}
 }
-function leftBus(){ onBus = null; busCand = null; manualBus = null; render(); toast('🚶 Noté : tu es descendu.'); try { map.closePopup(); } catch(e){} }
+function leftBus(){ try { localStorage.removeItem('cj_ride'); } catch(e){} onBus = null; busCand = null; manualBus = null; render(); toast('🚶 Noté : tu es descendu.'); try { map.closePopup(); } catch(e){} }
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-imin]'); if (a){ confirmBus(a.dataset.imin); return; }
   if (e.target.closest('[data-imout]')){ leftBus(); return; }
@@ -3265,6 +3265,17 @@ function detectMyBus(){
   let best = null;
   if (sp > 3) vehicles.forEach(v => { const d = match(v); if (d != null && (!best || d < best.d)) best = { v, d }; });
   const cur = onBus ? vehicles.find(v => v.id === onBus) : null;
+  // appli rouverte en plein trajet (journal du 14/11 : O2 oublié à la réouverture) : on reprend le car d'avant
+  // s'il était confirmé il y a moins de 10 min et qu'il colle encore à ma position
+  if (!onBus && sp > 3){
+    let r = null; try { r = JSON.parse(localStorage.getItem('cj_ride') || 'null'); } catch(e){}
+    const v = r && now - r.t < 10 * 60e3 ? vehicles.find(x => x.id === r.id) : null;
+    if (v && match(v) != null){ onBus = v.id; busCand = null; busLastOk = now; if (r.manual) manualBus = { id: v.id, at: now }; render(); }
+  }
+  if (onBus && now - (detectMyBus.saved || 0) > 10e3){
+    detectMyBus.saved = now;
+    try { localStorage.setItem('cj_ride', JSON.stringify({ id: onBus, t: busLastOk || now, manual: !!(manualBus && manualBus.id === onBus) })); } catch(e){}
+  }
   if (sp > 3 || onBus) diag('car', { vitesse: Math.round(sp * 3.6), proche: best ? best.v.route.s + ' ' + best.v.id + ' à ' + Math.round(best.d) + ' m' : 'aucun', dedans: onBus || '', candidat: busCand ? busCand.id + '×' + busCand.n : '' });
 
   if (onBus){
@@ -3278,7 +3289,7 @@ function detectMyBus(){
     // car choisi à la main (« 🙋 Je suis dans ce car ») : on le garde tant que je roule, même si sa position dans le flux est en retard
     const manual = manualBus && manualBus.id === onBus;
     const curOk = cur && (manual && sp > 3 ? dCur < 2000 : sp <= 3 ? dCur < (atEnd ? 50 + Math.min(40, myPos.acc || 0) : busTol(cur, 3) + 150) : match(cur) != null);
-    if (cur && atEnd && sp <= 3 && !curOk){ onBus = null; busCand = null; render(); return renderRide(); }
+    if (cur && atEnd && sp <= 3 && !curOk){ try { localStorage.removeItem('cj_ride'); } catch(e){} onBus = null; busCand = null; render(); return renderRide(); }
     if (curOk){ busLastOk = now; busCand = null; return renderRide(); }
     // un autre car colle mieux : il faut 30 s de preuves (et le mien ne doit plus coller)
     if (best && best.v.id !== onBus){
@@ -3291,7 +3302,7 @@ function detectMyBus(){
     }
     // descendu : 90 s sans mon car, et je marche (ou il est loin alors que sa position est fraîche)
     const fresh = cur && (cur.age == null || cur.age < 60e3);
-    if (now - busLastOk > 90e3 && (sp < 2.5 || (!cur && !manual) || (fresh && dCur > (manual ? 2000 : 600)))){ onBus = null; busCand = null; manualBus = null; render(); }
+    if (now - busLastOk > 90e3 && (sp < 2.5 || (!cur && !manual) || (fresh && dCur > (manual ? 2000 : 600)))){ try { localStorage.removeItem('cj_ride'); } catch(e){} onBus = null; busCand = null; manualBus = null; render(); }
     return renderRide();
   }
   // Montée : rouler à côté d'un car ne suffit pas (une voiture derrière un car sur la RN, c'est pareil).
@@ -4938,35 +4949,33 @@ function updateMotion(v){
     const dt = (st.t0 - prev.t0) / 1000;
     if (dt > 3) sp = st.line && prev.line === st.line ? Math.abs(st.s0 - prev.s0) / dt : distM(prev.lat, prev.lon, v.lat, v.lon) / dt;
   }
+  // vitesse moyenne depuis la position précédente : un car qui ralentit dans un rond-point en ressort aussitôt
+  if (prev && st.t0 > prev.t0 && st.line && prev.line === st.line){
+    const dt = (st.t0 - prev.t0) / 1000, avg = Math.abs(st.s0 - prev.s0) / dt;
+    if (dt > 3 && dt < 120 && avg > 3) sp = Math.max(sp || 0, Math.min(avg, (sp || 0) + 8));
+  }
   if (sp == null && prev) sp = prev.speed;
-  st.speed = Math.max(0, Math.min(sp || 0, 25));                    // 90 km/h maxi
+  st.speed =Math.max(0, Math.min(sp || 0, 25));                    // 90 km/h maxi
   if (v.age != null && v.age > STALE_MS) st.speed = 0;               // position trop ancienne : on ne devine pas
   st.corrFrom = st.disp ? st.disp.slice() : null;                    // recalage en douceur depuis la position affichée
   st.corrAt = now;
   motion[v.id] = st;
 }
-/** Distance (m) avant le premier virage serré ou rond-point devant le car (le car y ralentit : on ne le devine pas au-delà). */
-function turnAhead(line, s0, dir){
-  const c0 = pointAt(line, s0)[2];
-  for (let d = 10; d <= 300; d += 10){
-    const s = s0 + dir * d;
-    if (s <= 0 || s >= line.len) return d;                           // terminus
-    if (angleGap(pointAt(line, s)[2], c0) > 50) return Math.max(0, d - 15);
-  }
-  return 300;
-}
-const AHEAD_MAX = 120;                                               // jamais plus de 120 m devant la dernière position reçue
-/** Où devrait être le car maintenant (extrapolation prudente). */
+/* Journal du 14/11 (dans le O2, Le Port → St-Paul) : la position envoyée par le car a 5 à 30 s de retard,
+   soit jusqu'à 480 m à 70 km/h. Un car croisé apparaissait « encore dans le rond-point » alors qu'il était passé :
+   il y avait ralenti, et l'appli le faisait repartir à cette vitesse de rond-point. On rattrape donc le retard
+   avec sa vitesse moyenne récente (pas sa vitesse au moment précis du rond-point), sur 45 s et 600 m au plus. */
+const AHEAD_MAX = 600;
+/** Où devrait être le car maintenant (rattrape le retard de sa position). */
 function predictedPos(st, now){
   const el0 = Math.max(0, (now - st.t0) / 1000);
-  const el = 20 * (1 - Math.exp(-el0 / 20));                         // avance de moins en moins vite, 20 s maxi
+  const el = 45 * (1 - Math.exp(-el0 / 45));                         // avance de moins en moins vite, 45 s maxi
   if (st.line && st.speed > 0){
-    if (st.ahead == null) st.ahead = Math.min(AHEAD_MAX, turnAhead(st.line, st.s0, st.dir));
-    const p = pointAt(st.line, st.s0 + st.dir * Math.min(st.speed * el, st.ahead));
+    const p = pointAt(st.line, st.s0 + st.dir * Math.min(st.speed * el, AHEAD_MAX));
     return [p[0], p[1], st.dir > 0 ? p[2] : (p[2] + 180) % 360];
   }
   if (st.speed > 0 && st.bearing != null){                           // hors tracé : tout droit, peu de temps
-    const d = Math.min(st.speed * Math.min(el, 10), 60), b = st.bearing * Math.PI / 180;
+    const d = st.speed * Math.min(el, 20), b = st.bearing * Math.PI / 180;
     return [st.lat + d * Math.cos(b) / 110540, st.lon + d * Math.sin(b) / (111320 * Math.cos(st.lat * Math.PI / 180)), st.bearing];
   }
   return [st.lat, st.lon, st.bearing];

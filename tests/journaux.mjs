@@ -127,6 +127,42 @@ await t('14/11 · « Tu es dans le … ? » après 20 s collé au car, « Oui »
     return [asked, ok, kept, d, dbg]; })()`);
   return (r[0] >= 18 && r[0] <= 25 && r[1] && r[2] && r[3] != null && r[3] < 15) || JSON.stringify(r);
 });
+await t('14/11 · appli rouverte en plein trajet dans le O2 : le car est repris tout de suite', async () => {
+  const r = await pg.evaluate(`(() => {
+    let T = Date.now() + 12000e3; const real = Date.now; Date.now = () => T;
+    const v = Object.assign({}, vehicles[0], { id:'O2a', route:{ s:'O2', c:'F6BE00', t:'222222' }, headsign:'St-Paul', bearing: 180, est:null, times:null, tripId:null });
+    // avant la fermeture : dans le O2
+    onBus = 'O2a'; busLastOk = T; manualBus = null; detectMyBus.saved = 0;
+    myPos = { lat: -20.945, lon: 55.294, acc: 6, speed: 18 }; myFixAt = T; Object.assign(v, { lat: -20.944, lon: 55.294, age: 10e3 }); vehicles = [v];
+    detectMyBus();
+    // réouverture 3 min plus tard : tout est oublié en mémoire, sauf ce que l'appli a gardé
+    T += 3 * 60e3; onBus = null; busCand = null; gpsLastAt = 0; gpsStartAt = 0;
+    myPos = { lat: -20.953, lon: 55.2943, acc: 9, speed: 8 }; myFixAt = T; Object.assign(v, { lat: -20.9519, lon: 55.2943, age: 20e3 });
+    detectMyBus(); const back = onBus;
+    // un autre jour (plus de 10 min) : on ne reprend pas un vieux car
+    T += 30 * 60e3; onBus = null; detectMyBus(); const old = onBus;
+    Date.now = real; onBus = null; try { localStorage.removeItem('cj_ride'); } catch(e){}
+    return [back, old]; })()`);
+  return (r[0] === 'O2a' && r[1] === null) || JSON.stringify(r);
+});
+await t('14/11 · car croisé sorti d’un rond-point : il n’y reste pas affiché (retard du flux rattrapé)', async () => {
+  const r = await pg.evaluate(`(() => {
+    const la = -20.95, lo = 55.29, k = 1 / 111000;
+    const pts = []; for (let i = 0; i <= 20; i++) pts.push([la - i * 100 * k, lo]);    // 2 km tout droit vers le sud
+    const cum = pts.map((p, i) => i * 100 * 111000 / 110540);
+    const line = { pts, cum, len: cum[cum.length - 1] };
+    const rl = routeLines; routeLines = () => [line];
+    const T = Date.now();
+    // position précédente 20 s avant, 300 m plus haut ; puis le car signale 2 m/s (il est dans le rond-point)
+    delete motion['X']; updateMotion({ id:'X', routeId:'R', lat: la - 200 * k, lon: lo, ts: T - 40e3, age: 40e3, speed: 15, bearing: 180 });
+    updateMotion({ id:'X', routeId:'R', lat: la - 500 * k, lon: lo, ts: T - 20e3, age: 20e3, speed: 2, bearing: 180 });
+    routeLines = rl;
+    const p = predictedPos(motion['X'], T);
+    const ahead = Math.round(distM(la - 500 * k, lo, p[0], p[1]));
+    delete motion['X']; return ahead; })()`);
+  // 20 s de retard : il est ressorti du rond-point depuis longtemps → au moins 150 m plus loin (avant : ~35 m)
+  return (r >= 150 && r <= 600) || 'avance affichée : ' + r + ' m';
+});
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await b.close();
 if (fails.length){ console.log(`✗ ${fails.length} problème(s)`); process.exit(1); }
