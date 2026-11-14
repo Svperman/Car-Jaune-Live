@@ -753,6 +753,7 @@
   @media (max-width:420px){ .av-form{grid-template-columns:1fr} }
   .av-form label{font-size:12px;font-weight:600;display:flex;flex-direction:column;gap:3px}
   .av-res{margin-top:12px;padding:12px;border-radius:10px;background:var(--fond);display:flex;flex-direction:column;gap:5px}
+  .av-rgl{display:block;margin-top:12px;text-align:center;text-decoration:none}
   .av-big{font-size:17px}
   .av-no{margin-top:12px}
   html.dark .habit{color:#fbbf24}
@@ -1429,7 +1430,7 @@ const I18N_FRAG = {
   'Me prévenir':'Notify me','le matin pour arriver à l’heure, et avant la fin des cours pour le retour':'in the morning to arrive on time, and before classes end for the return',
   'temps pour rejoindre l’arrêt / arriver avant le cours':'time to reach the stop / arrive before class',
   'Prendre l’avion à Roland-Garros':'Flying from Roland-Garros','ton vol → le car jaune à prendre':'your flight → the bus to take','Je prends l’avion':'I’m flying out',
-  'J’atterris':'I’m landing','Heure de décollage':'Take-off time','Heure d’atterrissage':'Landing time','N° de vol (facultatif)':'Flight no. (optional)','Je pars de':'I leave from',
+  'J’atterris':'I’m landing','🛫 Vols en direct · Roland Garros Live':'🛫 Live flights · Roland Garros Live','Heure de décollage':'Take-off time','Heure d’atterrissage':'Landing time','N° de vol (facultatif)':'Flight no. (optional)','Je pars de':'I leave from',
   'Je vais à':'I’m going to','Être à l’aéroport':'Be at the airport','Temps pour sortir':'Time to get out','2 h avant':'2 h before','3 h avant':'3 h before','1 h 30 avant':'1 h 30 before',
   '45 min (bagages)':'45 min (luggage)','Indique l’heure de ton vol.':'Enter your flight time.','Plus prudent : le':'Safer: the','Sinon : le':'Otherwise: the',
   'avant le décollage':'before take-off','à l’aéroport':'at the airport','retard habituel compris':'usual delay included','Ce vol est passé.':'This flight has gone.',
@@ -6781,6 +6782,7 @@ function confirmInline(el, txt){
    Tu indiques l'heure de ton vol : l'appli cherche le car jaune pour arriver à l'aéroport à temps (ou celui à prendre
    en sortant de l'avion), avec l'arrivée réaliste (📈), et te prévient quand partir. Un lien
    …/?vol=UU975&depart=2026-11-10T15:30 (ou &arrivee=…) ouvre directement le calcul : prévu pour Roland Garros Live. */
+const RGL_URL = 'https://script.google.com/macros/s/AKfycbxAbAzR-jX7m6emGEcwbGX7_hPZzHtNx8wY34S4p5nnuB6Wp2AB-yMhCznwk_asSULY_Q/exec';   // mon appli Roland Garros Live
 const AIR_RE = /a[ée]roport|roland[ -]?garros/i;
 let avion = (() => { try { return JSON.parse(localStorage.getItem('cj_avion') || 'null'); } catch(e){ return null; } })();
 function saveAvion(){ try { if (avion) localStorage.setItem('cj_avion', JSON.stringify(avion)); else localStorage.removeItem('cj_avion'); } catch(e){} }
@@ -6814,7 +6816,8 @@ function renderAvion(){
       <label>N° de vol (facultatif)<input class="set-in" id="avVol" maxlength="8" placeholder="ex. UU975" value="${esc(a.vol || '')}"></label>
       <label>${a.mode === 'dep' ? 'Je pars de' : 'Je vais à'}<input class="set-in" id="avMe" list="stopList" placeholder="ta gare" value="${esc(a.me || trip.a || '')}"></label>
       <label>${a.mode === 'dep' ? 'Être à l’aéroport' : 'Temps pour sortir'}<select class="set-sel" id="avLead">${(a.mode === 'dep' ? [[90, '1 h 30 avant'], [120, '2 h avant'], [180, '3 h avant']] : [[20, '20 min'], [30, '30 min'], [45, '45 min (bagages)']]).map(([v, t]) => `<option value="${v}"${+a.lead === v ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
-    </div><div id="avRes"></div>`;
+    </div><div id="avRes"></div>
+    <a class="btn ghost av-rgl" href="${RGL_URL}" target="_blank" rel="noopener">🛫 Vols en direct · Roland Garros Live</a>`;
   renderAvionRes();
 }
 function renderAvionRes(){
