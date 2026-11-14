@@ -96,6 +96,8 @@
   .mark svg{width:24px;height:24px}
   .brand b{display:block;font-size:19px;font-weight:800;color:var(--titre);line-height:1.05}
   .brand small{display:block;font-size:11px;color:var(--gris)}
+  .clock{font-variant-numeric:tabular-nums;font-weight:800;color:var(--titre);font-size:13px;letter-spacing:.02em}
+  .clock .sec{font-weight:600;font-size:.82em;color:var(--gris)}
   .tabs{display:flex;align-items:stretch;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
   .tabs::-webkit-scrollbar{display:none}
   .tab{border:none;background:transparent;color:var(--titre);font-size:14px;font-weight:700;padding:0 18px;cursor:pointer;
@@ -157,7 +159,7 @@
   /* téléphone à l'horizontale : boutons en ligne, la carte garde sa hauteur */
   @media (max-height:520px) and (orientation:landscape){ .map-ctl{flex-direction:row} }
   /* ordinateur et tablette à l'horizontale : en-tête qui tient sur une ligne */
-  @media (min-width:861px) and (max-width:1600px) and (min-height:501px), (min-width:1001px) and (max-width:1600px){ .tab .lg{display:none} .brand small{display:none} }
+  @media (min-width:861px) and (max-width:1600px) and (min-height:501px), (min-width:1001px) and (max-width:1600px){ .tab .lg{display:none} .brand small .sub{display:none} }
   @media (min-width:861px) and (max-width:1250px) and (min-height:501px), (min-width:1001px) and (max-width:1250px){ #periodPill{display:none} .top-in{gap:10px;padding:0 12px} .tab{padding:0 11px} }
   /* très petit téléphone : logo seul */
   @media (max-width:350px){ .brand>div{display:none} }
@@ -893,7 +895,7 @@
     /* en-tête compact sur une ligne (+ encoche de l'iPhone) */
     .top-in{flex-wrap:nowrap;align-items:center;padding:calc(6px + env(safe-area-inset-top)) 12px 6px;gap:8px;min-height:52px}
     .brand{order:1;min-width:0;flex:1}
-    .brand small{display:none}
+    .brand small .sub{display:none}
     .brand b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .mark{width:34px;height:34px}
     .live{order:2;margin-left:auto;gap:6px}
@@ -948,7 +950,7 @@
   <div class="top-in">
     <div class="brand">
       <div class="mark"><svg viewBox="0 0 24 24" fill="#222"><path d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-1 1.7V20a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 3 16V5a2 2 0 0 1 2-2Zm0 3v5h14V6H5Zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm10 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg></div>
-      <div><b>Car Jaune Live</b><small>Suivi en temps réel · non officiel</small></div>
+      <div><b>Car Jaune Live</b><small><time class="clock" id="clock" aria-label="Heure"></time><span class="sub"> · Suivi en temps réel · non officiel</span></small></div>
     </div>
     <nav class="tabs" aria-label="Sections">
       <button class="tab" data-view="map"><span class="ti" aria-hidden="true">🗺️</span><span class="tl">Carte<span class="lg"> en direct</span></span></button>
@@ -1350,6 +1352,20 @@ let FICHE_DATA = {}, ficheJob = { total:0, done:0, running:false, error:'' }, se
 const markers = new Map();
 
 const $ = s => document.querySelector(s);
+/* 🕒 heure numérique en haut (heure de La Réunion, comme les horaires des cars) */
+(function clockTick(){
+  const el = document.getElementById('clock');
+  if (el){
+    const p = new Intl.DateTimeFormat('fr-FR', { timeZone:'Indian/Reunion', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }).formatToParts(new Date());
+    const g = t => (p.find(x => x.type === t) || {}).value || '00';
+    const hm = g('hour') + ':' + g('minute');
+    if (!el.firstChild){ el.appendChild(document.createTextNode('')); const sp = document.createElement('span'); sp.className = 'sec'; sp.appendChild(document.createTextNode('')); el.appendChild(sp); }
+    // on ne change que le texte (pas de nouveaux éléments chaque seconde)
+    if (el.firstChild.nodeValue !== hm){ el.firstChild.nodeValue = hm; el.setAttribute('datetime', hm); el.setAttribute('aria-label', 'Il est ' + hm); }
+    el.lastChild.firstChild.nodeValue = ':' + g('second');
+  }
+  setTimeout(clockTick, 1000 - (Date.now() % 1000) + 5);
+})();
 /* ====================== 🇬🇧 English version ======================
    Si le téléphone est réglé en anglais (ou ⚙️ → Langue → English), l'appli s'affiche en anglais :
    chaque texte affiché passe par un dictionnaire (phrases entières, morceaux de phrases, nombres).
