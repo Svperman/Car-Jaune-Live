@@ -753,7 +753,8 @@
   @media (max-width:420px){ .av-form{grid-template-columns:1fr} }
   .av-form label{font-size:12px;font-weight:600;display:flex;flex-direction:column;gap:3px}
   .av-res{margin-top:12px;padding:12px;border-radius:10px;background:var(--fond);display:flex;flex-direction:column;gap:5px}
-  .av-rgl{display:block;margin-top:12px;text-align:center;text-decoration:none}
+  .av-rgl{display:block;width:fit-content;max-width:100%;margin:8px 0 12px;text-align:center;text-decoration:none}
+  #avionBody .av-rgl{width:auto}
   .av-big{font-size:17px}
   .av-no{margin-top:12px}
   html.dark .habit{color:#fbbf24}
@@ -1354,6 +1355,7 @@ const markers = new Map();
 
 const $ = s => document.querySelector(s);
 /* 🕒 heure numérique en haut (heure de La Réunion, comme les horaires des cars) */
+const RGL_URL = 'https://script.google.com/macros/s/AKfycbxAbAzR-jX7m6emGEcwbGX7_hPZzHtNx8wY34S4p5nnuB6Wp2AB-yMhCznwk_asSULY_Q/exec';   // mon appli Roland Garros Live
 (function clockTick(){
   const el = document.getElementById('clock');
   if (el){
@@ -5556,10 +5558,11 @@ function renderBoard(){
              : pNow.type === 'vacances' ? `<span class="tag tag-v">Horaires vacances scolaires</span>`
              : `<span class="tag tag-s">Horaires période scolaire</span>`;
   try { loadReports(); } catch(e){}
+  const rgl = /a[ée]roport|roland[ -]?garros/i.test(g.name) ? `<a class="btn small ghost av-rgl" href="${RGL_URL}" target="_blank" rel="noopener">🛫 Vols en direct · Roland Garros Live</a>` : '';
   const head = stopReportsHtml(g.name) + `<div class="board-head"><h2>${esc(g.name)}${stopPmr(g)}${pTxt}</h2><span class="upd">${
     mode === 'sleep' ? 'Réseau fermé · horaires théoriques'
     : `Temps réel ${feedTime ? 'à ' + fmtHM(feedTime) : ''} · actualisation auto`}</span></div>`
-    + (mode === 'sleep' ? '' : `<button class="btn small sign-b" data-sign title="Écran jaune clignotant pour que le chauffeur te voie">🔦 Faire signe au car</button>`);
+    + (mode === 'sleep' ? '' : `<button class="btn small sign-b" data-sign title="Écran jaune clignotant pour que le chauffeur te voie">🔦 Faire signe au car</button>`) + rgl;
   if (board.loading){ card.innerHTML = head + `<div class="placeholder">Chargement des passages…</div>`; return; }
 
   const pool = board.error ? [] : gtfsRows(g);
@@ -6793,7 +6796,6 @@ function confirmInline(el, txt){
    Tu indiques l'heure de ton vol : l'appli cherche le car jaune pour arriver à l'aéroport à temps (ou celui à prendre
    en sortant de l'avion), avec l'arrivée réaliste (📈), et te prévient quand partir. Un lien
    …/?vol=UU975&depart=2026-11-10T15:30 (ou &arrivee=…) ouvre directement le calcul : prévu pour Roland Garros Live. */
-const RGL_URL = 'https://script.google.com/macros/s/AKfycbxAbAzR-jX7m6emGEcwbGX7_hPZzHtNx8wY34S4p5nnuB6Wp2AB-yMhCznwk_asSULY_Q/exec';   // mon appli Roland Garros Live
 const AIR_RE = /a[ée]roport|roland[ -]?garros/i;
 let avion = (() => { try { return JSON.parse(localStorage.getItem('cj_avion') || 'null'); } catch(e){ return null; } })();
 function saveAvion(){ try { if (avion) localStorage.setItem('cj_avion', JSON.stringify(avion)); else localStorage.removeItem('cj_avion'); } catch(e){} }
