@@ -4945,16 +4945,28 @@ function updateMotion(v){
   st.corrAt = now;
   motion[v.id] = st;
 }
-/** Où devrait être le car maintenant (extrapolation limitée à 2 min). */
+/** Distance (m) avant le premier virage serré ou rond-point devant le car (le car y ralentit : on ne le devine pas au-delà). */
+function turnAhead(line, s0, dir){
+  const c0 = pointAt(line, s0)[2];
+  for (let d = 10; d <= 300; d += 10){
+    const s = s0 + dir * d;
+    if (s <= 0 || s >= line.len) return d;                           // terminus
+    if (angleGap(pointAt(line, s)[2], c0) > 50) return Math.max(0, d - 15);
+  }
+  return 300;
+}
+const AHEAD_MAX = 120;                                               // jamais plus de 120 m devant la dernière position reçue
+/** Où devrait être le car maintenant (extrapolation prudente). */
 function predictedPos(st, now){
   const el0 = Math.max(0, (now - st.t0) / 1000);
-  const el = 35 * (1 - Math.exp(-el0 / 35));                         // avance de moins en moins vite, 35 s maxi
+  const el = 20 * (1 - Math.exp(-el0 / 20));                         // avance de moins en moins vite, 20 s maxi
   if (st.line && st.speed > 0){
-    const p = pointAt(st.line, st.s0 + st.dir * st.speed * el);
+    if (st.ahead == null) st.ahead = Math.min(AHEAD_MAX, turnAhead(st.line, st.s0, st.dir));
+    const p = pointAt(st.line, st.s0 + st.dir * Math.min(st.speed * el, st.ahead));
     return [p[0], p[1], st.dir > 0 ? p[2] : (p[2] + 180) % 360];
   }
   if (st.speed > 0 && st.bearing != null){                           // hors tracé : tout droit, peu de temps
-    const d = st.speed * Math.min(el, 20), b = st.bearing * Math.PI / 180;
+    const d = Math.min(st.speed * Math.min(el, 10), 60), b = st.bearing * Math.PI / 180;
     return [st.lat + d * Math.cos(b) / 110540, st.lon + d * Math.sin(b) / (111320 * Math.cos(st.lat * Math.PI / 180)), st.bearing];
   }
   return [st.lat, st.lon, st.bearing];
