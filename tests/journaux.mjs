@@ -98,6 +98,35 @@ await t('🛎️ arrêt habituel : sans choix ni Mon trajet, l’appli reprend l
     const s = descState(v); return s && [s.name, s.habit]; })()`);
   return (r && r[0] === 'Sainte-Marie Duparc' && r[1] === true) || JSON.stringify(r);
 });
+await t('14/11 · « Tu es dans le … ? » après 20 s collé au car, « Oui » → le car se met sur ma position', async () => {
+  const r = await pg.evaluate(`(async () => {
+    let T = Date.now() + 9000e3; const real = Date.now; Date.now = () => T;
+    onBus = null; busCand = null; lastWait = null; manualBus = null; busNo = {}; document.querySelector('#busAsk').hidden = true;
+    gpsLastAt = T - 1000; gpsStartAt = T - 20 * 60e3;
+    const v = Object.assign({}, vehicles[0], { id:'O1X', route:{ s:'O1X', c:'F6BE00', t:'222222' }, headsign:'St-Denis Express', bearing: 90, est:null, times:null, tripId:null });
+    let asked = -1;
+    for (let s = 0; s < 40; s++){
+      T += 1000; const lat = -20.8916, lon = 55.4755 + s * 12 / 104000;
+      myPos = { lat, lon, acc: 8, speed: 12 }; myFixAt = T;
+      Object.assign(v, { lat, lon: lon - 250 / 104000 + 0.0006, age: 30e3 }); vehicles = [v];      // le flux le place ~200 m derrière moi
+      detectMyBus(); if (!document.querySelector('#busAsk').hidden && asked < 0) asked = s;
+    }
+    const dbg = [busCand && busCand.n, busCand && busCand.minD, document.querySelector('#busAsk').dataset.id];
+    document.querySelector('#busAskYes') && document.querySelector('#busAskYes').click();
+    const ok = onBus === 'O1X';
+    // le car garde ma position même si le flux le met 1 km derrière, tant que je roule
+    for (let s = 0; s < 120; s++){ T += 1000; myPos = { lat: -20.8916, lon: 55.4755 + (40 + s) * 12 / 104000, acc: 8, speed: 12 }; myFixAt = T;
+      Object.assign(v, { lon: myPos.lon - 1000 / 104000, age: 40e3 }); detectMyBus(); }
+    const kept = onBus === 'O1X';
+    Date.now = real; setView('map'); motion['O1X'] = motion['O1X'] || { t0: Date.now(), lat: v.lat, lon: v.lon, bearing: 90, speed: 0 };
+    if (!markers.has('O1X')) render();
+    myFixAt = Date.now(); lastMove = 0; await new Promise(r => setTimeout(r, 1900));
+    const m = markers.get('O1X'), ll = m ? m.getLatLng() : null;
+    const d = ll ? Math.round(distM(ll.lat, ll.lng, myPos.lat, myPos.lon)) : null;
+    onBus = null; manualBus = null;
+    return [asked, ok, kept, d, dbg]; })()`);
+  return (r[0] >= 18 && r[0] <= 25 && r[1] && r[2] && r[3] != null && r[3] < 15) || JSON.stringify(r);
+});
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await b.close();
 if (fails.length){ console.log(`✗ ${fails.length} problème(s)`); process.exit(1); }
