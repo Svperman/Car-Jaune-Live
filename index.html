@@ -763,6 +763,19 @@
     color:#FFB300;text-shadow:0 0 3px rgba(255,170,0,.95),0 0 10px rgba(255,140,0,.5);animation:giro 25s linear infinite;will-change:transform}
   .giro::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle,transparent .9px,rgba(0,0,0,.5) 1.35px) 0 0/3px 3px}
   .giro:hover .giro-tape,.giro:focus-visible .giro-tape{animation-play-state:paused}
+  .giro-in{left:34px}
+  .giro-ic,.giro-n{position:absolute;top:0;bottom:0;z-index:2;display:flex;align-items:center;background:#0b0b0b}
+  .giro-ic{left:0;width:34px;justify-content:center;font-size:16px;box-shadow:4px 0 6px #0b0b0b}
+  .giro-n{right:0;padding:0 8px;font:800 12px/1 ui-monospace,Menlo,monospace;color:#FFB300;box-shadow:-4px 0 6px #0b0b0b}
+  .giro-n:empty{display:none}
+  .giro-bus .giro-tape,.giro-warn .giro-tape{padding-left:28%}
+  .giro-warn{animation:giroWarn 1s steps(1) infinite}
+  .giro-warn .giro-tape{color:#FF7A45;text-shadow:0 0 3px rgba(255,90,40,.95),0 0 10px rgba(255,60,20,.5)}
+  @keyframes giroWarn{0%{box-shadow:inset 0 0 0 2px #FF4A1F}50%{box-shadow:none}}
+  @media (prefers-reduced-motion:reduce){.giro-warn{animation:none;box-shadow:inset 0 0 0 2px #FF4A1F}}
+  /* l'ancien bandeau d'alerte : remplacé par la girouette, gardé invisible pour VoiceOver / TalkBack */
+  body #alStrip{position:fixed!important;left:0!important;top:0!important;right:auto!important;bottom:auto!important;width:1px!important;height:1px!important;max-width:none!important;
+    overflow:hidden!important;clip-path:inset(50%)!important;padding:0!important;margin:0!important;border:0!important;opacity:1!important;transform:none!important;pointer-events:none!important;box-shadow:none!important}
   @keyframes giro{from{transform:translateX(0)}to{transform:translateX(-100%)}}
   @media (prefers-reduced-motion:reduce){.giro-tape{animation:none;padding-left:12px}}
   .fl-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
@@ -994,7 +1007,7 @@
   </div>
 </header>
 <div class="crumb">Accueil › <b id="crumbCur">Carte en direct</b></div>
-<button class="giro" id="giro" hidden aria-label="Avions"><span class="giro-in"><span class="giro-tape" id="giroTape"></span></span></button>
+<button class="giro" id="giro" hidden aria-label="Avions"><span class="giro-in"><span class="giro-tape" id="giroTape"></span></span><span class="giro-ic" id="giroIc" aria-hidden="true"></span><span class="giro-n" id="giroN" aria-hidden="true"></span></button>
 
 <main>
   <!-- ===== Carte en direct ===== -->
@@ -3563,23 +3576,21 @@ const strip = { q: [], timer: null, cur: null };
 function showStrip(title, body, lvl){
   strip.q.push({ title, body, lvl });
   if (!strip.cur) nextStrip();
-  else $('#alStrip .more').textContent = '+' + strip.q.length;
+  else renderGiro();
 }
+/* Les alertes des cars défilent dans la girouette (comme celle des avions), une à la fois :
+   au moins un passage complet (deux pour « descends ! »). Toucher la girouette passe à la suivante. */
 function nextStrip(){
   clearTimeout(strip.timer);
-  const it = strip.q.shift(), el = $('#alStrip');
+  const it = strip.q.shift();
   strip.cur = it || null;
-  document.body.classList.toggle('strip-on', !!it);
-  if (!it){ el.classList.add('hide'); el.classList.remove('open'); return; }
-  el.className = (it.lvl === 'warn' ? 'warn' : it.lvl === 'info' ? 'info' : '');
-  $('#alStrip .t1').textContent = it.title;
-  $('#alStrip .t2').textContent = it.body;
-  $('#alStrip .more').textContent = strip.q.length ? '+' + strip.q.length : '';
+  $('#alStrip').className = it ? (it.lvl === 'warn' ? 'warn' : it.lvl === 'info' ? 'info' : '') : 'hide';
+  $('#alStrip .t1').textContent = it ? it.title : '';                 // lu par VoiceOver (bandeau invisible)
+  $('#alStrip .t2').textContent = it ? it.body : '';
+  const pass = renderGiro();
+  if (!it) return;
   const ms = it.lvl === 'warn' ? 9000 : it.lvl === 'info' ? 4000 : 7000;
-  const bar = $('#alStrip .bar');
-  bar.style.transition = 'none'; bar.style.transform = 'scaleX(1)';
-  requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.transition = `transform ${ms}ms linear`; bar.style.transform = 'scaleX(0)'; }));
-  strip.timer = setTimeout(nextStrip, ms);
+  strip.timer = setTimeout(nextStrip, Math.max(ms, Math.min(60e3, (it.lvl === 'warn' ? 2 : 1) * pass * 1000 + 400)));
 }
 function hideStrip(all){ if (all) strip.q.length = 0; nextStrip(); }
 $('#alStrip').addEventListener('click', e => {
@@ -3602,7 +3613,7 @@ $('#alStrip').addEventListener('click', e => {
   });
 })();
 // tu touches la carte : le bandeau s'efface pour te laisser la vue (il reste dans l'historique)
-map.on('dragstart zoomstart', () => { if (strip.cur && !$('#alStrip').classList.contains('open')) hideStrip(true); });
+// (la girouette est au-dessus de la carte : elle ne cache rien, on la laisse défiler quand tu bouges la carte)
 
 /* ---------- menu de la cloche ---------- */
 function renderBell(){
@@ -6991,16 +7002,27 @@ function flightMsgs(now){
   return out.sort((a, b) => a.t - b.t).map(x => x.txt);
 }
 function renderGiro(){
-  const g = $('#giro'), tape = $('#giroTape'); if (!g || !tape) return;
-  const msgs = giroOn && flAt && Date.now() - flAt < 30 * 60e3 ? flightMsgs(Date.now()) : [];
+  const g = $('#giro'), tape = $('#giroTape'); if (!g || !tape) return 0;
+  let mode = 'air', msgs = [];
+  if (strip.cur){                                                    // une alerte de car : prioritaire
+    mode = strip.cur.lvl === 'warn' ? 'warn' : 'bus';
+    msgs = [strip.cur.title + (strip.cur.body ? ' · ' + strip.cur.body : '')];
+  } else {
+    try { if (giroOn && flAt && Date.now() - flAt < 30 * 60e3) msgs = flightMsgs(Date.now()); } catch(e){}
+  }
   if (g.hidden !== !msgs.length){ g.hidden = !msgs.length; setTimeout(() => { try { fixMapSize(); } catch(e){} }, 60); }
-  if (!msgs.length){ tape.dataset.txt = ''; return; }
+  $('#giroN').textContent = strip.cur && strip.q.length ? '+' + strip.q.length : '';
+  if (!msgs.length){ tape.dataset.txt = ''; return 0; }
+  g.className = 'giro giro-' + mode;
+  $('#giroIc').textContent = mode === 'air' ? '✈️' : mode === 'warn' ? '⚠️' : '🚌';
   const txt = msgs.join('      ✦      ');
-  if (tape.dataset.txt === txt) return;
-  tape.dataset.txt = txt; tape.textContent = txt;
-  // vitesse constante (~65 px/s) quelle que soit la longueur du texte
-  tape.style.animationDuration = Math.max(8, (tape.scrollWidth || txt.length * 10) / 65) + 's';
-  g.setAttribute('aria-label', (LANG === 'en' ? 'Planes: ' : 'Avions : ') + msgs.join(' · '));
+  if (tape.dataset.txt !== mode + txt){
+    tape.dataset.txt = mode + txt; tape.textContent = txt;
+    if (mode !== 'air'){ tape.style.animation = 'none'; void tape.offsetWidth; tape.style.animation = ''; }   // repart de la droite
+    tape.style.animationDuration = Math.max(6, (tape.scrollWidth || txt.length * 10) / 65) + 's';         // ~65 px/s
+    g.setAttribute('aria-label', mode === 'air' ? (LANG === 'en' ? 'Planes: ' : 'Avions : ') + msgs.join(' · ') : msgs[0]);
+  }
+  return parseFloat(tape.style.animationDuration) || 8;
 }
 function renderFlights(){
   const box = $('#flBody'); if (!box) return;
@@ -7044,7 +7066,7 @@ function followMyFlight(){
   if (changed){ saveAvion(); try { renderAvionRes(); } catch(e){} }
 }
 document.addEventListener('click', e => {
-  if (e.target.closest('#giro')){ setView('avion'); return; }
+  if (e.target.closest('#giro')){ if (strip.cur) nextStrip(); else setView('avion'); return; }
   const d = e.target.closest('[data-fl-dir]'); if (d){ flDir = d.dataset.flDir; renderFlights(); return; }
   if (e.target.closest('#flRefresh')){ flAt = 0; renderFlights(); loadFlights(true); return; }
   const b = e.target.closest('[data-fl]'); if (!b) return;

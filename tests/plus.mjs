@@ -120,7 +120,7 @@ await t('✈️ onglet Avions à côté de Trafic, avec les arrivées et départ
   return (/trafic,avion$/.test(r[0]) && /UU975/.test(r[1]) && /Maurice/.test(r[1]) && /UU976/.test(r[2]) && /Annulé/.test(r[2])) || JSON.stringify(r);
 });
 await t('🟧 girouette : avions qui arrivent / décollent / posés / annulés, et se coupe', async () => {
-  const r = await page.evaluate(`(() => { giroOn = true; renderGiro();
+  const r = await page.evaluate(`(() => { hideStrip(true); giroOn = true; renderGiro();
     const on = [document.querySelector('#giro').hidden, document.querySelector('#giroTape').textContent];
     const m = flightMsgs(Date.now()).join(' | ');
     giroOn = false; renderGiro(); const off = document.querySelector('#giro').hidden; giroOn = true; renderGiro();
@@ -139,6 +139,17 @@ await t('✈️ 🚌 sur un vol : remplit « Prendre l’avion » ; retard de mo
     notify = n0;
     return [a1, Math.round((avion.at - flights.arr[i].ts) / 60e3), got]; })()`);
   return (r[0][0] === 'arr' && r[0][1] === 'MK234' && r[0][2] === 40 && r[0][3] && r[1] === 0 && /MK234 de Maurice : nouvel horaire/.test(r[2])) || JSON.stringify(r);
+});
+await t('🚌 les alertes des cars passent dans la girouette (une à la fois, touche = suivante)', async () => {
+  const r = await page.evaluate(`(() => { hideStrip(true); setView('map');
+    notify('🚌 E1 dans 5 min', 'Gare de St-Denis', 'bus', { force:true }); notify('🛎️ Descends au prochain arrêt !', 'Gare de St-Denis', 'warn', { force:true });
+    const g = document.querySelector('#giro'), a = [g.hidden, g.className, document.querySelector('#giroTape').textContent, document.querySelector('#giroN').textContent,
+      getComputedStyle(document.querySelector('#alStrip')).width];
+    g.click(); const b = [g.className, document.querySelector('#giroTape').textContent];
+    g.click(); const c = [g.className, view];
+    return [a, b, c]; })()`);
+  return (r[0][0] === false && /giro-bus/.test(r[0][1]) && /E1 dans 5 min · Gare de St-Denis/.test(r[0][2]) && r[0][3] === '+1' && r[0][4] === '1px'
+    && /giro-warn/.test(r[1][0]) && /Descends au prochain arrêt/.test(r[1][1]) && /giro-air/.test(r[2][0]) && r[2][1] !== 'avion') || JSON.stringify(r);
 });
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await browser.close();
