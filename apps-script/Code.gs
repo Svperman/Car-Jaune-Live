@@ -100,7 +100,8 @@ const API_ = {
   logError:          function (json) { return logError(json); },
   feedback:          function (json) { return feedback(json); },
   getCreatorStats:   function () { return getCreatorStats(); },
-  getVigilance:      function () { return getVigilance(); }
+  getVigilance:      function () { return getVigilance(); },
+  getFlights:        function () { return getFlights(); }
 };
 
 function api_(action, args) {
@@ -1209,4 +1210,43 @@ function getCreatorStats() {
   const props = PropertiesService.getScriptProperties();
   const get = function (k, d) { try { return JSON.parse(props.getProperty(k) || d); } catch (e) { return JSON.parse(d); } };
   return JSON.stringify({ usage: get('usage_v1', '{}'), errors: get('errors_v1', '[]'), feedback: get('feedback_v1', '[]'), server: SERVER_VERSION, at: Date.now() });
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  ✈️ Vols de Roland Garros (via mon appli Roland Garros Live)        */
+/* ------------------------------------------------------------------ */
+
+const RGL_URL = 'https://script.google.com/macros/s/AKfycbxAbAzR-jX7m6emGEcwbGX7_hPZzHtNx8wY34S4p5nnuB6Wp2AB-yMhCznwk_asSULY_Q/exec';
+
+/** Arrivées et départs (de -4 h à +14 h), en version courte, gardés 2 min pour tout le monde. */
+function getFlights() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('flights');
+  if (hit) return hit;
+  const now = Date.now();
+  const out = { at: now, arr: [], dep: [], err: null };
+  const court = v => ({ n: v.numero, c: v.compagnie, v: v.ville, ts: v.ts, h: v.heure, hr: v.heureReelle || '',
+                        st: v.statut || '', e: v.etat, r: v.retardMin });
+  try {
+    const res = UrlFetchApp.fetchAll(['arrivals', 'departures'].map(d => ({
+      url: RGL_URL + '?api=vols&direction=' + d, muteHttpExceptions: true, followRedirects: true })));
+    res.forEach((r, i) => {
+      if (r.getResponseCode() !== 200) { out.err = 'Roland Garros Live injoignable (HTTP ' + r.getResponseCode() + ')'; return; }
+      const o = JSON.parse(r.getContentText());
+      if (o.erreur) out.err = o.erreur;
+      out[i ? 'dep' : 'arr'] = (o.vols || []).filter(v => v.ts > now - 4 * 3600e3 && v.ts < now + 14 * 3600e3).map(court);
+    });
+  } catch (e) {
+    out.err = 'Vols indisponibles : ' + e.message;
+  }
+  const s = JSON.stringify(out);
+  if (out.arr.length || out.dep.length) {
+    cache.put('flights', s, 120);
+    cache.put('flights_ok', s, 21600);
+    return s;
+  }
+  const ok = cache.get('flights_ok');            // panne : la dernière liste connue, avec l'erreur
+  if (ok) { const o = JSON.parse(ok); o.err = out.err || o.err; return JSON.stringify(o); }
+  return s;
 }

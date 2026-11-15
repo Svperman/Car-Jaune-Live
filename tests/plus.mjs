@@ -86,7 +86,7 @@ await t('✈️ vol dans 5 h : le car pour arriver 2 h avant (+ plus prudent)', 
     journeyRows = (A, B) => /roport/.test(B.name) ? [row(60, 40), row(120, 40), row(210, 40)] : [];
     STATSW = {}; STATS = {};
     avion = { mode:'dep', at: now + 5 * 3600e3, me:'Gare de St-Denis', lead:120 }; saveAvion();
-    setView('trip'); document.querySelector('#avionCard').open = true; renderAvion();
+    setView('avion'); document.querySelector('#avionCard').open = true; renderAvion();
     return [document.querySelector('#avRes').innerText, document.querySelector('#avionSum').textContent];
   })()`);
   return (/Z120/.test(r[0]) && /Plus prudent : le Z60/.test(r[0]) && !/Z210 de/.test(r[0]) && /🛫 vol/.test(r[1])) || JSON.stringify(r);
@@ -109,7 +109,36 @@ await t('✈️ lien depuis Roland Garros Live (?vol=…&depart=…)', async () 
   await p2.waitForTimeout(3500);
   const r = await p2.evaluate("[avion && avion.vol, avion && avion.mode, view, document.querySelector('#avionCard').open, location.search]");
   await p2.close();
-  return (r[0] === 'UU975' && r[1] === 'dep' && r[2] === 'trip' && r[3] && r[4] === '') || JSON.stringify(r);
+  return (r[0] === 'UU975' && r[1] === 'dep' && r[2] === 'avion' && r[3] && r[4] === '') || JSON.stringify(r);
+});
+await t('✈️ onglet Avions à côté de Trafic, avec les arrivées et départs', async () => {
+  const r = await page.evaluate(`(async () => { flAt = 0; await loadFlights(true); setView('avion');
+    const tabs = [...document.querySelectorAll('.tab')].map(x => x.dataset.view).join(',');
+    flDir = 'arr'; renderFlights(); const a = document.querySelector('#flBody').innerText;
+    flDir = 'dep'; renderFlights(); const d = document.querySelector('#flBody').innerText;
+    return [tabs, a, d]; })()`);
+  return (/trafic,avion$/.test(r[0]) && /UU975/.test(r[1]) && /Maurice/.test(r[1]) && /UU976/.test(r[2]) && /Annulé/.test(r[2])) || JSON.stringify(r);
+});
+await t('🟧 girouette : avions qui arrivent / décollent / posés / annulés, et se coupe', async () => {
+  const r = await page.evaluate(`(() => { giroOn = true; renderGiro();
+    const on = [document.querySelector('#giro').hidden, document.querySelector('#giroTape').textContent];
+    const m = flightMsgs(Date.now()).join(' | ');
+    giroOn = false; renderGiro(); const off = document.querySelector('#giro').hidden; giroOn = true; renderGiro();
+    return [on[0], m, off]; })()`);
+  return (r[0] === false && /UU975 de Paris-Orly atterrit dans 1[12] min/.test(r[1]) && /AF652 de Paris-CDG s’est posé/.test(r[1])
+    && /SS940 pour Paris-Orly a décollé/.test(r[1]) && /UU976 pour Paris-Orly : embarquement/.test(r[1]) && /Vol MD123 pour Antananarivo annulé/.test(r[1])
+    && !/MK234/.test(r[1]) && r[2] === true) || JSON.stringify(r);
+});
+await t('✈️ 🚌 sur un vol : remplit « Prendre l’avion » ; retard de mon vol → heure recalculée + alerte', async () => {
+  const r = await page.evaluate(`(() => { flDir = 'arr'; renderFlights();
+    const i = flights.arr.findIndex(f => f.n === 'MK234');
+    document.querySelector('[data-fl="arr|' + i + '"]').click();
+    const a1 = [avion.mode, avion.vol, Math.round((avion.at - flights.arr[i].ts) / 60e3), document.querySelector('#avionCard').open];
+    let got = ''; const n0 = notify; notify = (t, b) => { got = t; };
+    flights.arr[i] = Object.assign({}, flights.arr[i], { hr: '', ts: flights.arr[i].ts + 70 * 60e3 }); followMyFlight();
+    notify = n0;
+    return [a1, Math.round((avion.at - flights.arr[i].ts) / 60e3), got]; })()`);
+  return (r[0][0] === 'arr' && r[0][1] === 'MK234' && r[0][2] === 40 && r[0][3] && r[1] === 0 && /MK234 de Maurice : nouvel horaire/.test(r[2])) || JSON.stringify(r);
 });
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await browser.close();

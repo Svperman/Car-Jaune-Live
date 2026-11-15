@@ -160,7 +160,9 @@
   @media (max-height:520px) and (orientation:landscape){ .map-ctl{flex-direction:row} }
   /* ordinateur et tablette à l'horizontale : en-tête qui tient sur une ligne */
   @media (min-width:861px) and (max-width:1600px) and (min-height:501px), (min-width:1001px) and (max-width:1600px){ .tab .lg{display:none} .brand small .sub{display:none} }
-  @media (min-width:861px) and (max-width:1250px) and (min-height:501px), (min-width:1001px) and (max-width:1250px){ #periodPill{display:none} .top-in{gap:10px;padding:0 12px} .tab{padding:0 11px} }
+  @media (min-width:861px) and (max-width:1340px) and (min-height:501px), (min-width:1001px) and (max-width:1340px){ #periodPill{display:none} .top-in{gap:10px;padding:0 12px} .tab{padding:0 11px} }
+  @media (min-width:1341px) and (max-width:1600px){ .tab{padding:0 13px} #periodPill .sub{display:none} }
+  @media (min-width:1601px){ .tab{padding:0 14px} }
   /* très petit téléphone : logo seul */
   @media (max-width:350px){ .brand>div{display:none} }
   .leaflet-control-layers{border-radius:10px !important;border:none !important;box-shadow:0 1px 5px rgba(0,0,0,.35) !important;font-family:"Nunito Sans",sans-serif}
@@ -753,6 +755,32 @@
   @media (max-width:420px){ .av-form{grid-template-columns:1fr} }
   .av-form label{font-size:12px;font-weight:600;display:flex;flex-direction:column;gap:3px}
   .av-res{margin-top:12px;padding:12px;border-radius:10px;background:var(--fond);display:flex;flex-direction:column;gap:5px}
+  /* ✈️ girouette : bandeau LED orange qui défile, comme la girouette d'un car */
+  .giro{flex:none;display:block;position:relative;width:100%;height:30px;margin:0;padding:0;border:0;background:#0b0b0b;cursor:pointer;overflow:hidden;z-index:900}
+  .giro[hidden]{display:none}
+  .giro-in{position:absolute;inset:0;display:flex;align-items:center;overflow:hidden}
+  .giro-tape{display:inline-block;white-space:nowrap;padding-left:100%;font:700 15px/1 ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:.07em;text-transform:uppercase;
+    color:#FFB300;text-shadow:0 0 3px rgba(255,170,0,.95),0 0 10px rgba(255,140,0,.5);animation:giro 25s linear infinite;will-change:transform}
+  .giro::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle,transparent .9px,rgba(0,0,0,.5) 1.35px) 0 0/3px 3px}
+  .giro:hover .giro-tape,.giro:focus-visible .giro-tape{animation-play-state:paused}
+  @keyframes giro{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+  @media (prefers-reduced-motion:reduce){.giro-tape{animation:none;padding-left:12px}}
+  .fl-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+  .fl-row{display:grid;grid-template-columns:54px 1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--ligne,#e5e7eb)}
+  .fl-row:first-child{border-top:0}
+  .fl-row.fini{opacity:.55}
+  .fl-h b{font-size:17px;font-variant-numeric:tabular-nums}
+  .fl-h s{display:block;font-size:12px;color:var(--gris)}
+  .fl-h .nv{color:#E8710A}
+  .fl-h small{display:block;font-size:11px;color:var(--gris)}
+  .fl-m{min-width:0}.fl-m b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fl-m small{color:var(--gris)}
+  .fl-st{font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(127,127,127,.15);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+  .fl-st.st-termine{background:rgba(30,142,62,.15);color:#1E8E3E}.fl-st.st-retard{background:rgba(232,113,10,.15);color:#E8710A}
+  .fl-st.st-annule{background:rgba(198,40,40,.15);color:#C62828}.fl-st.st-embarquement{background:rgba(246,190,0,.2);color:#9A6B00}.fl-st.st-envol{background:rgba(21,101,192,.15);color:#1565C0}
+  html.dark .fl-st.st-embarquement{color:#F6BE00}html.dark .fl-st.st-envol{color:#64A8FF}
+  .fl-bus{width:40px;height:40px;font-size:18px}
+  #flBody .src-note{margin-top:10px}
+  .fl-mine{box-shadow:inset 3px 0 0 var(--jaune)}
   .av-rgl{display:block;width:fit-content;max-width:100%;margin:8px 0 12px;text-align:center;text-decoration:none}
   #avionBody .av-rgl{width:auto}
   .av-big{font-size:17px}
@@ -960,11 +988,13 @@
       <button class="tab" data-view="board"><span class="ti" aria-hidden="true">🕒</span><span class="tl">Horaires<span class="lg"> à l'arrêt</span></span></button>
       <button class="tab" data-view="fiches"><span class="ti" aria-hidden="true">📄</span><span class="tl">Fiches<span class="lg"> horaires</span></span></button>
       <button class="tab" data-view="trafic"><span class="ti" aria-hidden="true">⚠️</span><span class="tl"><span class="lg">Infos </span>trafic</span><span class="n" id="alertCount" hidden></span></button>
+      <button class="tab" data-view="avion"><span class="ti" aria-hidden="true">✈️</span><span class="tl">Avions</span></button>
     </nav>
     <div class="live"><button id="bellBtn" class="hd-btn" title="Notifications" aria-label="Notifications" aria-haspopup="true"><span id="bellIco">🔕</span><span class="cnt" id="bellCnt" hidden></span></button><button id="gearBtn" class="hd-btn" title="Paramètres" aria-label="Paramètres">⚙️<span class="gdot" id="gearDot"></span></button><button id="netSig" class="sig" aria-label="Qualité du réseau" title="Qualité du réseau"><i></i><i></i><i></i><i></i><b class="x">✕</b></button><div class="pill period" id="periodPill" hidden></div><div class="pill" id="livePill"><span class="dot"></span><span><span id="count">–</span> <span id="countLbl">cars</span></span><span id="status">Chargement…</span></div></div>
   </div>
 </header>
 <div class="crumb">Accueil › <b id="crumbCur">Carte en direct</b></div>
+<button class="giro" id="giro" hidden aria-label="Avions"><span class="giro-in"><span class="giro-tape" id="giroTape"></span></span></button>
 
 <main>
   <!-- ===== Carte en direct ===== -->
@@ -1015,10 +1045,6 @@
             <select class="set-sel" id="clsWalk"><option value="3">3 min</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div>
           <div id="clsToday"></div>
         </div>
-      </details>
-      <details class="card cls-card" id="avionCard" style="margin-top:16px">
-        <summary><span class="sa-i">✈️</span><span class="sa-t"><b>Prendre l’avion à Roland-Garros</b><small id="avionSum">ton vol → le car jaune à prendre</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
-        <div class="cls-body" id="avionBody"></div>
       </details>
       <details class="card cls-card" id="bilanCard" style="margin-top:16px">
         <summary><span class="sa-i">📊</span><span class="sa-t"><b>Mon bilan</b><small id="bilanSum">tes trajets en car jaune, notés tout seuls</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
@@ -1101,6 +1127,24 @@
       <div id="vigiBox"></div>
       <div id="alertsList"></div>
 
+    </div>
+  </section>
+
+  <!-- ===== Avions ===== -->
+  <section class="view" id="view-avion">
+    <div class="wrap">
+      <h1>Avions à Roland-Garros</h1>
+      <p class="lead">Les arrivées et départs en direct, et le car jaune à prendre pour ton vol (touche 🚌).</p>
+      <details class="card cls-card" id="avionCard">
+        <summary><span class="sa-i">✈️</span><span class="sa-t"><b>Prendre l’avion à Roland-Garros</b><small id="avionSum">ton vol → le car jaune à prendre</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
+        <div class="cls-body" id="avionBody"></div>
+      </details>
+      <div class="card fl-card">
+        <div class="fl-top"><div class="seg" id="flSeg"><button data-fl-dir="arr" class="on">🛬 Arrivées</button><button data-fl-dir="dep">🛫 Départs</button></div>
+          <button class="round" id="flRefresh" title="Actualiser" aria-label="Actualiser les vols">↻</button></div>
+        <div id="flBody"></div>
+      </div>
+      <div class="card"><div class="set-row"><div class="set-l"><b>🟧 Girouette des avions</b><small>en haut de l’appli, les avions qui arrivent ou décollent défilent comme sur la girouette d’un car</small></div><label class="switch"><input type="checkbox" id="giroOn" checked><span></span></label></div></div>
     </div>
   </section>
 </main>
@@ -1431,6 +1475,11 @@ const I18N_FRAG = {
   'Quand partir · mes horaires de cours':'When to leave · my class times','indique tes heures de cours : je te dis quel car prendre':'enter your class times: I’ll tell you which bus to take',
   'Me prévenir':'Notify me','le matin pour arriver à l’heure, et avant la fin des cours pour le retour':'in the morning to arrive on time, and before classes end for the return',
   'temps pour rejoindre l’arrêt / arriver avant le cours':'time to reach the stop / arrive before class',
+  'Avions':'Planes','Avions à Roland-Garros':'Planes at Roland-Garros','🛬 Arrivées':'🛬 Arrivals','🛫 Départs':'🛫 Departures','Chargement des vols…':'Loading flights…',
+  'Les arrivées et départs en direct, et le car jaune à prendre pour ton vol (touche 🚌).':'Live arrivals and departures, and the yellow bus to take for your flight (tap 🚌).',
+  '🟧 Girouette des avions':'🟧 Plane ticker','en haut de l’appli, les avions qui arrivent ou décollent défilent comme sur la girouette d’un car':'at the top of the app, planes landing or taking off scroll by like a bus destination sign',
+  'Le car jaune pour rentrer après ce vol':'The yellow bus home after this flight','Le car jaune pour arriver à temps':'The yellow bus to get there on time','Actualiser les vols':'Refresh flights',
+  'Prévu':'Scheduled','demain':'tomorrow','hier':'yesterday','tout voir':'see all','Renseigne-toi auprès de la compagnie.':'Check with the airline.','Le car jaune conseillé est recalculé.':'The suggested bus has been recalculated.',
   'Prendre l’avion à Roland-Garros':'Flying from Roland-Garros','ton vol → le car jaune à prendre':'your flight → the bus to take','Je prends l’avion':'I’m flying out',
   'J’atterris':'I’m landing','🛫 Vols en direct · Roland Garros Live':'🛫 Live flights · Roland Garros Live','Heure de décollage':'Take-off time','Heure d’atterrissage':'Landing time','N° de vol (facultatif)':'Flight no. (optional)','Je pars de':'I leave from',
   'Je vais à':'I’m going to','Être à l’aéroport':'Be at the airport','Temps pour sortir':'Time to get out','2 h avant':'2 h before','3 h avant':'3 h before','1 h 30 avant':'1 h 30 before',
@@ -2002,7 +2051,7 @@ async function init(){
 }
 
 /* ====================== Navigation par onglets ====================== */
-const VIEW_NAMES = { map:'Carte en direct', trip:'Mon trajet', board:"Horaires à l'arrêt", fiches:'Fiches horaires', trafic:'Infos trafic' };
+const VIEW_NAMES = { map:'Carte en direct', trip:'Mon trajet', board:"Horaires à l'arrêt", fiches:'Fiches horaires', trafic:'Infos trafic', avion:'Avions' };
 /* ---------- bouton « retour » d'Android (et retour du navigateur) ----------
    Ferme la fenêtre ouverte (réglages, signalement, prochain car, cloche…) ou revient à la carte,
    au lieu de quitter l'appli. */
@@ -2056,6 +2105,7 @@ function setView(v, silent){
   if (v === 'map') setTimeout(fixMapSize, 50);
   if (v === 'board') renderBoard();
   if (v === 'trip'){ renderTrip(); try { renderClasses(); } catch(e){} }
+  if (v === 'avion'){ renderFlights(); loadFlights(); }
   if (!silent) savePrefs();
 }
 document.querySelector('.tabs').addEventListener('click', e => {
@@ -6888,10 +6938,135 @@ document.addEventListener('toggle', e => {
     avion = { mode: dep ? 'dep' : 'arr', at, vol: (q.get('vol') || '').toUpperCase().slice(0, 8), me: (avion && avion.me) || '', lead: dep ? 120 : 30 };
     saveAvion();
     history.replaceState(history.state, '', location.pathname);
-    setTimeout(() => { setView('trip'); const c = $('#avionCard'); if (c){ c.open = true; renderAvion(); c.scrollIntoView({ block: 'start' }); } }, 800);
+    setTimeout(() => { setView('avion'); const c = $('#avionCard'); if (c){ c.open = true; renderAvion(); c.scrollIntoView({ block: 'start' }); } }, 800);
   } catch(e){}
 })();
 setTimeout(() => { try { renderBilan(); if (avion) renderAvionRes(); } catch(e){} }, 1500);
+
+/* ====================== ✈️ Avions : tableau des vols + girouette ======================
+   Les vols viennent de mon appli Roland Garros Live (via le serveur, gardés 2 min).
+   La girouette (bandeau LED orange sous l'en-tête) fait défiler les avions qui arrivent ou décollent
+   dans la demi-heure, ceux qui viennent de se poser / de partir, les retards et annulations.
+   Ton vol (carte « Prendre l'avion ») est suivi : retard → heure et car recalculés, et une alerte. */
+let flights = { at: 0, arr: [], dep: [], err: null }, flDir = 'arr', flLoading = false, flAt = 0;
+let giroOn = (() => { try { return localStorage.getItem('cj_giro') !== '0'; } catch(e){ return true; } })();
+/** Heure réelle annoncée (gère minuit), sinon l'heure prévue. */
+function flTime(f){
+  if (!f.hr || !f.h) return f.ts;
+  const m = x => +x.slice(0, 2) * 60 + +x.slice(3, 5);
+  let d = m(f.hr) - m(f.h); if (d > 720) d -= 1440; if (d < -720) d += 1440;
+  return f.ts + d * 60e3;
+}
+const flDone = f => f.e === 'termine' || f.e === 'annule';
+async function loadFlights(force){
+  if (flLoading || (!force && Date.now() - flAt < 110e3)) return;
+  flLoading = true;
+  try { const o = JSON.parse(await call('getFlights')); flights = { at: o.at || Date.now(), arr: o.arr || [], dep: o.dep || [], err: o.err || null }; }
+  catch(e){ flights.err = errMsg(e); }
+  flAt = Date.now(); flLoading = false;
+  try { followMyFlight(); } catch(e){}
+  renderGiro();
+  if (view === 'avion') renderFlights();
+}
+/** Les messages de la girouette, dans l'ordre de l'heure. */
+function flightMsgs(now){
+  const en = LANG === 'en', out = [];
+  const late = f => f.r >= 15 && !flDone(f) ? (en ? ` · ${f.r} min late` : ` · retard ${f.r} min`) : '';
+  const push = (t, txt) => out.push({ t, txt });
+  flights.arr.forEach(f => {
+    const t = flTime(f), m = Math.round((t - now) / 60e3), w = en ? `${f.n} from ${f.v}` : `${f.n} de ${f.v}`;
+    if (f.e === 'annule'){ if (Math.abs(f.ts - now) < 3 * 3600e3) push(f.ts, en ? `❌ Flight ${w} cancelled` : `❌ Vol ${w} annulé`); return; }
+    if (f.e === 'termine'){ if (m >= -20 && m <= 5) push(t, en ? `🛬 ${w} landed at ${fmtHM(t)}` : `🛬 ${w} s’est posé à ${fmtHM(t)}`); return; }
+    if (m <= 30 && m >= -20) push(t, (m <= 1 ? (en ? `✈️ ${w} landing now` : `✈️ ${w} atterrit maintenant`)
+                                           : (en ? `✈️ ${w} lands in ${m} min (${fmtHM(t)})` : `✈️ ${w} atterrit dans ${m} min (${fmtHM(t)})`)) + late(f));
+  });
+  flights.dep.forEach(f => {
+    const t = flTime(f), m = Math.round((t - now) / 60e3), w = en ? `${f.n} to ${f.v}` : `${f.n} pour ${f.v}`;
+    if (f.e === 'annule'){ if (Math.abs(f.ts - now) < 3 * 3600e3) push(f.ts, en ? `❌ Flight ${w} cancelled` : `❌ Vol ${w} annulé`); return; }
+    if (f.e === 'termine'){ if (m >= -20 && m <= 5) push(t, en ? `🛫 ${w} took off at ${fmtHM(t)}` : `🛫 ${w} a décollé à ${fmtHM(t)}`); return; }
+    if (f.e === 'embarquement' && m <= 60 && m >= -20){ push(t, (en ? `🛫 ${w} boarding · departs ${fmtHM(t)}` : `🛫 ${w} : embarquement · départ ${fmtHM(t)}`) + late(f)); return; }
+    if (m <= 30 && m >= -20) push(t, (m <= 1 ? (en ? `🛫 ${w} taking off now` : `🛫 ${w} décolle maintenant`)
+                                           : (en ? `🛫 ${w} takes off in ${m} min` : `🛫 ${w} décolle dans ${m} min`)) + late(f));
+  });
+  return out.sort((a, b) => a.t - b.t).map(x => x.txt);
+}
+function renderGiro(){
+  const g = $('#giro'), tape = $('#giroTape'); if (!g || !tape) return;
+  const msgs = giroOn && flAt && Date.now() - flAt < 30 * 60e3 ? flightMsgs(Date.now()) : [];
+  if (g.hidden !== !msgs.length){ g.hidden = !msgs.length; setTimeout(() => { try { fixMapSize(); } catch(e){} }, 60); }
+  if (!msgs.length){ tape.dataset.txt = ''; return; }
+  const txt = msgs.join('      ✦      ');
+  if (tape.dataset.txt === txt) return;
+  tape.dataset.txt = txt; tape.textContent = txt;
+  // vitesse constante (~65 px/s) quelle que soit la longueur du texte
+  tape.style.animationDuration = Math.max(8, (tape.scrollWidth || txt.length * 10) / 65) + 's';
+  g.setAttribute('aria-label', (LANG === 'en' ? 'Planes: ' : 'Avions : ') + msgs.join(' · '));
+}
+function renderFlights(){
+  const box = $('#flBody'); if (!box) return;
+  document.querySelectorAll('#flSeg [data-fl-dir]').forEach(b => b.classList.toggle('on', b.dataset.flDir === flDir));
+  const giroBox = $('#giroOn'); if (giroBox) giroBox.checked = giroOn;
+  if (!flAt){ box.innerHTML = '<p class="muted">Chargement des vols…</p>'; return; }
+  const now = Date.now(), all = flDir === 'arr' ? flights.arr : flights.dep;
+  const today = new Date(now).toDateString();
+  const mine = avion && avion.vol ? avion.vol : '';
+  const rows = all.map((f, i) => ({ f, i })).filter(({ f }) => !(flDone(f) && flTime(f) < now - 60 * 60e3)).sort((a, b) => a.f.ts - b.f.ts);
+  const html = rows.map(({ f, i }) => {
+    const t = flTime(f), moved = t !== f.ts && Math.abs(t - f.ts) >= 5 * 60e3 && f.e !== 'termine';
+    const day = new Date(f.ts).toDateString() !== today ? `<small>${new Date(f.ts) > now ? 'demain' : 'hier'}</small>` : '';
+    const bus = f.e === 'annule' || (flDone(f) && flDir === 'dep') ? '' :
+      `<button class="round fl-bus" data-fl="${flDir}|${i}" title="${flDir === 'arr' ? 'Le car jaune pour rentrer après ce vol' : 'Le car jaune pour arriver à temps'}" aria-label="Car jaune pour le vol ${esc(f.n)}">🚌</button>`;
+    return `<div class="fl-row${flDone(f) ? ' fini' : ''}${mine && mine === f.n ? ' fl-mine' : ''}">
+      <div class="fl-h">${moved ? `<s>${esc(f.h)}</s><b class="nv">${fmtHM(t)}</b>` : `<b>${esc(f.h)}</b>`}${day}</div>
+      <div class="fl-m"><b>${esc(f.v)}</b><small>${esc(f.c)} · ${esc(f.n)}</small></div>
+      <span class="fl-st st-${esc(f.e)}">${esc(f.st || 'Prévu')}</span>${bus || '<span></span>'}</div>`;
+  }).join('');
+  box.innerHTML = (html || `<p class="muted">Aucun vol ${flDir === 'arr' ? 'à l’arrivée' : 'au départ'} pour le moment.</p>`)
+    + (flights.err ? `<p class="src-note">⚠️ ${esc(flights.err)}</p>` : '')
+    + `<p class="src-note">Source : site de l’aéroport, via Roland Garros Live · mis à jour à ${fmtHM(flights.at || flAt)} · <a href="${RGL_URL}" target="_blank" rel="noopener">tout voir</a></p>`;
+}
+/** Mon vol (carte « Prendre l'avion ») : suit son statut et son heure réelle. */
+function followMyFlight(){
+  if (!avion || !avion.vol || !avion.at) return;
+  const list = avion.mode === 'arr' ? flights.arr : flights.dep;
+  const f = list.find(x => x.n === avion.vol && Math.abs(x.ts - avion.at) < 14 * 3600e3);
+  if (!f) return;
+  const t = flTime(f), w = `${f.n} ${avion.mode === 'arr' ? 'de' : 'pour'} ${f.v}`;
+  let changed = false;
+  if (f.e === 'annule' && avion.st !== 'annule'){ notify('❌ Vol ' + w + ' annulé', 'Renseigne-toi auprès de la compagnie.', 'warn'); changed = true; }
+  else if (f.e !== 'annule' && Math.abs(t - avion.at) >= 5 * 60e3){
+    notify('✈️ Vol ' + w + ' : nouvel horaire ' + fmtHM(t), 'Le car jaune conseillé est recalculé.', 'info');
+    avion.at = t; changed = true;
+  } else if (avion.st && avion.st !== f.e && (f.e === 'termine' || f.e === 'embarquement')){
+    notify(avion.mode === 'arr' ? '🛬 Vol ' + w + ' posé' : (f.e === 'embarquement' ? '🛫 Embarquement du vol ' + w : '🛫 Vol ' + w + ' parti'), f.st || '', 'info'); changed = true;
+  }
+  if (avion.st !== f.e){ avion.st = f.e; changed = true; }
+  if (changed){ saveAvion(); try { renderAvionRes(); } catch(e){} }
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('#giro')){ setView('avion'); return; }
+  const d = e.target.closest('[data-fl-dir]'); if (d){ flDir = d.dataset.flDir; renderFlights(); return; }
+  if (e.target.closest('#flRefresh')){ flAt = 0; renderFlights(); loadFlights(true); return; }
+  const b = e.target.closest('[data-fl]'); if (!b) return;
+  const [dir, i] = b.dataset.fl.split('|'), f = (dir === 'arr' ? flights.arr : flights.dep)[+i]; if (!f) return;
+  avion = { mode: dir === 'arr' ? 'arr' : 'dep', at: flTime(f), vol: f.n, st: f.e, me: (avion && avion.me) || '', lead: dir === 'arr' ? 30 : 120 };
+  saveAvion();
+  const c = $('#avionCard'); if (c){ c.open = true; renderAvion(); c.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+  renderFlights();
+});
+document.addEventListener('change', e => {
+  if (e.target.id !== 'giroOn') return;
+  giroOn = e.target.checked;
+  try { localStorage.setItem('cj_giro', giroOn ? '1' : '0'); } catch(err){}
+  if (giroOn) loadFlights(); renderGiro();
+});
+setTimeout(() => loadFlights(), 4000);
+setInterval(() => {
+  if (document.hidden) return;
+  if (giroOn || view === 'avion' || (avion && avion.vol && Math.abs(avion.at - Date.now()) < 14 * 3600e3)) loadFlights();
+  renderGiro();
+  if (view === 'avion') renderFlights();
+}, 30e3);
 
 /* ====================== 🗺️ Trajet en direct · ✅ Bien rentré · 👁️ Suivi d'un proche · 🔎 Vue simple ====================== */
 
