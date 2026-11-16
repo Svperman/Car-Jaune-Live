@@ -994,7 +994,7 @@
   <div class="top-in">
     <div class="brand">
       <div class="mark"><svg viewBox="0 0 24 24" fill="#222"><path d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-1 1.7V20a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 3 16V5a2 2 0 0 1 2-2Zm0 3v5h14V6H5Zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm10 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg></div>
-      <div><b>Car Jaune Live</b><small><time class="clock" id="clock" aria-label="Heure"></time><span class="sub"> · Suivi en temps réel · non officiel</span></small></div>
+      <div><b>Car Jaune Live</b><small><span id="chargeIco" hidden title="En charge : l’écran reste allumé">🔌 </span><time class="clock" id="clock" aria-label="Heure"></time><span class="sub"> · Suivi en temps réel · non officiel</span></small></div>
     </div>
     <nav class="tabs" aria-label="Sections">
       <button class="tab" data-view="map"><span class="ti" aria-hidden="true">🗺️</span><span class="tl">Carte<span class="lg"> en direct</span></span></button>
@@ -1210,6 +1210,7 @@
       <div class="set-row"><div class="set-l"><b>Son</b></div><label class="switch"><input type="checkbox" id="alSound" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>🗣️ Annonces vocales</b><small>un carillon puis une voix, comme en gare ou à l’aéroport · <button class="linkbtn" id="voiceTest" type="button">▶ écouter</button></small></div><label class="switch"><input type="checkbox" id="alVoice" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Vibration</b><small>Android uniquement</small></div><label class="switch"><input type="checkbox" id="alVibe" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>🔌 En charge : garder l’appli ouverte</b><small id="chargeHint">l’écran reste allumé tant que le chargeur est branché</small></div><label class="switch"><input type="checkbox" id="alCharge" checked><span></span></label></div>
       </details>
     </div>
   </details>
@@ -1491,6 +1492,7 @@ const I18N_FRAG = {
   'Quand partir · mes horaires de cours':'When to leave · my class times','indique tes heures de cours : je te dis quel car prendre':'enter your class times: I’ll tell you which bus to take',
   'Me prévenir':'Notify me','le matin pour arriver à l’heure, et avant la fin des cours pour le retour':'in the morning to arrive on time, and before classes end for the return',
   'temps pour rejoindre l’arrêt / arriver avant le cours':'time to reach the stop / arrive before class',
+  '🔌 En charge : garder l’appli ouverte':'🔌 While charging: keep the app open','l’écran reste allumé tant que le chargeur est branché':'the screen stays on while the charger is plugged in',
   'Avions':'Planes','Avions à Roland-Garros':'Planes at Roland-Garros','🛬 Arrivées':'🛬 Arrivals','🛫 Départs':'🛫 Departures','Chargement des vols…':'Loading flights…',
   'Les arrivées et départs en direct, et le car jaune à prendre pour ton vol (touche 🚌).':'Live arrivals and departures, and the yellow bus to take for your flight (tap 🚌).',
   '🟧 Girouette des avions':'🟧 Plane ticker','🗣️ Annoncer les avions à voix haute':'🗣️ Announce planes out loud',
@@ -3879,9 +3881,43 @@ function setPause(v){
   toast(alertCfg.muteUntil ? `⏸️ Notifications en pause jusqu’à ${fmtDayHM(alertCfg.muteUntil)}.` : '▶ Notifications reprises.');
 }
 function fmtDayHM(ms){ return (midnightMs(ms) === midnightMs(Date.now()) ? '' : 'demain ') + fmtHM(ms); }
+/* 🔌 En charge : l'appli reste ouverte (écran allumé, pas de verrouillage auto).
+   Android / ordinateur : le navigateur dit si le chargeur est branché.
+   iPhone : il ne le dit pas aux applis web → automatisation Raccourcis « Chargeur branché » qui ouvre ?charge=1
+   (et « débranché » → ?charge=0). */
+let charging = null;                                         // null = on ne sait pas (iPhone)
+let chargeFlag = (() => {
+  try {
+    const q = new URLSearchParams(location.search).get('charge');
+    if (q === '1' || q === '0') sessionStorage.setItem('cj_charge', q);
+    return sessionStorage.getItem('cj_charge') === '1';
+  } catch(e){ return false; }
+})();
+function chargeAwake(){ return alertCfg.chargeAwake !== false && (charging === true || (charging === null && chargeFlag)); }
+if (navigator.getBattery) navigator.getBattery().then(b => {
+  const upd = first => {
+    const was = chargeAwake(); charging = !!b.charging; applyWake();
+    if (!first && alertCfg.chargeAwake !== false && was !== chargeAwake())
+      toast(chargeAwake() ? '🔌 En charge : l’appli reste ouverte, écran allumé.' : '🔋 Chargeur débranché : l’écran peut de nouveau se mettre en veille.');
+  };
+  b.addEventListener('chargingchange', () => upd(false)); upd(true);
+}).catch(() => {});
+setTimeout(() => {
+  const h = $('#chargeHint');
+  if (h && !navigator.getBattery) h.innerHTML = 'iPhone : il faut une automatisation Raccourcis « Chargeur » qui ouvre ce lien · <button class="linkbtn" id="chargeCopy" type="button">📋 copier le lien</button>';
+  if (chargeFlag && charging === null && alertCfg.chargeAwake !== false) toast('🔌 En charge : l’appli reste ouverte, écran allumé.');
+  applyWake();
+}, 1500);
+document.addEventListener('click', async e => {
+  if (!e.target.closest('#chargeCopy')) return;
+  const url = location.origin + location.pathname + '?charge=1';
+  try { await navigator.clipboard.writeText(url); toast('📋 Lien copié : colle-le dans Raccourcis › Automatisation › Chargeur › Ouvrir l’URL.'); }
+  catch(err){ prompt('Lien à mettre dans Raccourcis :', url); }
+});
 /** Écran allumé : seulement si l'option est cochée et les notifications actives. */
 async function applyWake(){
-  const want = alertCfg.wake && alertCfg.on && !isMuted() && document.visibilityState === 'visible';
+  const want = document.visibilityState === 'visible' && ((alertCfg.wake && alertCfg.on && !isMuted()) || chargeAwake());
+  const ci = $('#chargeIco'); if (ci) ci.hidden = !chargeAwake();
   try {
     if (want && !wakeLock && navigator.wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
     if (!want && wakeLock){ await wakeLock.release(); wakeLock = null; }
@@ -4168,6 +4204,7 @@ function renderSettings(){
     : muted ? `En pause jusqu’à ${fmtDayHM(alertCfg.muteUntil)}.` : 'Toujours actives, même après avoir fermé l’appli.';
   $('#pauseTxt').textContent = muted ? `En pause jusqu’à ${fmtDayHM(alertCfg.muteUntil)}` : 'Coupe-les un moment, elles reviennent toutes seules.';
   $('#pauseOff').hidden = !muted;
+  $('#alCharge').checked = alertCfg.chargeAwake !== false;
   $('#alSound').checked = alertCfg.sound; $('#alVibe').checked = alertCfg.vibe; $('#alWake').checked = alertCfg.wake; $('#alVoice').checked = alertCfg.voice !== false; $('#alVoice').disabled = !alertCfg.sound;
   $('#alFollow').checked = alertCfg.follow;
   renderShareUI(); renderCityUI(); renderDiag(); renderPushUI(); renderTfKey(); renderEcoUI(); renderSummaries(); renderOffline();
@@ -4252,8 +4289,8 @@ document.addEventListener('click', e => {
 });
 $('#setOn').addEventListener('change', e => setAlertsOn(e.target.checked));
 $('#pauseSeg').addEventListener('click', e => { const b = e.target.closest('[data-pause]'); if (b) setPause(b.dataset.pause); });
-[['alSound', 'sound'], ['alVibe', 'vibe'], ['alWake', 'wake'], ['alVoice', 'voice']].forEach(([id, k]) => $('#' + id).addEventListener('change', e => {
-  alertCfg[k] = e.target.checked; saveAlertCfg(); if (k === 'wake') applyWake();
+[['alSound', 'sound'], ['alVibe', 'vibe'], ['alWake', 'wake'], ['alVoice', 'voice'], ['alCharge', 'chargeAwake']].forEach(([id, k]) => $('#' + id).addEventListener('change', e => {
+  alertCfg[k] = e.target.checked; saveAlertCfg(); if (k === 'wake' || k === 'chargeAwake') applyWake();
   if (k === 'sound'){ $('#alVoice').disabled = !e.target.checked; if (e.target.checked) beep('none'); }
   if (k === 'voice' && e.target.checked) $('#voiceTest').click();
   if (k === 'vibe' && e.target.checked) try { navigator.vibrate && navigator.vibrate(200); } catch(err){}
@@ -7776,7 +7813,7 @@ function stopDescAlarm(){ clearInterval(descAlarmT); descAlarmT = null; const ov
 async function descWake(on){
   try {
     if (on && !document.hidden && navigator.wakeLock && (!wakeLock || wakeLock.released)){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); }
-    if (!on && wakeLock && !alertCfg.wake){ await wakeLock.release(); wakeLock = null; }
+    if (!on && wakeLock && !alertCfg.wake && !chargeAwake()){ await wakeLock.release(); wakeLock = null; }
   } catch(e){}
 }
 function descTick(){

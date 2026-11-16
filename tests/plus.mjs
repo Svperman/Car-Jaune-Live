@@ -184,6 +184,21 @@ await t('🗣️ avions : rien à l’ouverture, puis une annonce par nouvel év
     announce = a0; return [n0, said]; })()`);
   return (r[0] === 0 && r[1].length === 1 && r[1][0] === 'air|Le vol U U 9 7 6 à destination de Paris-Orly vient de décoller.') || JSON.stringify(r);
 });
+await t('🔌 chargeur branché → écran gardé allumé (Android), ?charge=1 (raccourci iPhone), réglage coupé → non', async () => {
+  const r = await page.evaluate(`(async () => {
+    let asked = 0; const wl = navigator.wakeLock;
+    Object.defineProperty(navigator, 'wakeLock', { configurable:true, value: { request: async () => { asked++; return { released:false, addEventListener(){}, release: async () => {} }; } } });
+    const c0 = charging, f0 = chargeFlag, w0 = wakeLock; wakeLock = null; alertCfg.wake = false; alertCfg.chargeAwake = true;
+    const out = [];
+    charging = true; await applyWake(); out.push(chargeAwake(), !document.querySelector('#chargeIco').hidden, asked);
+    charging = false; await applyWake(); out.push(chargeAwake(), document.querySelector('#chargeIco').hidden);
+    charging = null; chargeFlag = true; out.push(chargeAwake());
+    alertCfg.chargeAwake = false; out.push(chargeAwake());
+    alertCfg.chargeAwake = true; charging = c0; chargeFlag = f0; wakeLock = w0; await applyWake();
+    Object.defineProperty(navigator, 'wakeLock', { configurable:true, value: wl });
+    return out; })()`);
+  return JSON.stringify(r) === '[true,true,1,false,true,true,false]' || JSON.stringify(r);
+});
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await browser.close();
 if (fails.length){ console.log(`✗ ${fails.length} problème(s)`); process.exit(1); }
