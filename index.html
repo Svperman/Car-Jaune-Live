@@ -3587,7 +3587,13 @@ function speechify(t){
     .replace(/\(\s*/g, ', ').replace(/\s*\)/g, ',').replace(/\s+,/g, ',').replace(/,{2,}/g, ',').replace(/,\s*([.!?:])/g, '$1').replace(/([!?])\./g, '$1').replace(/\s{2,}/g, ' ').trim();
 }
 const sayQ = [];
-let saying = false;
+let saying = false, voiceUnlocked = false, voiceOk = false, voiceErr = '';
+/** iPhone : la voix n'est autorisée qu'après une première phrase dite PENDANT un toucher. On en dit une, muette. */
+function unlockVoice(){
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch(e){}
+  if (voiceUnlocked || !('speechSynthesis' in window)) return;
+  try { const u = new SpeechSynthesisUtterance('.'); u.volume = 0; u.rate = 2; u.lang = 'fr-FR'; speechSynthesis.speak(u); voiceUnlocked = true; pickVoice(); } catch(e){}
+}
 function announce(kind, text){
   if (!text || !('speechSynthesis' in window) || document.visibilityState !== 'visible') return;
   if (sayQ.length >= 3) sayQ.shift();                        // pas d'embouteillage d'annonces
@@ -3603,8 +3609,10 @@ function nextSay(){
       const u = new SpeechSynthesisUtterance(it.text), v = pickVoice();
       if (v) u.voice = v; u.lang = v ? v.lang : (LANG === 'en' ? 'en-GB' : 'fr-FR');
       u.rate = 0.92; u.pitch = 1; u.volume = 1;
-      u.onend = end; u.onerror = end;
-      speechSynthesis.cancel(); speechSynthesis.speak(u);
+      u.onend = end; u.onerror = e => { voiceErr = (e && e.error) || 'erreur'; end(); };
+      u.onstart = () => { voiceOk = true; };
+      try { speechSynthesis.resume(); } catch(e){}                // iOS : la voix peut rester « en pause » après un passage en arrière-plan
+      speechSynthesis.speak(u);                                  // (pas de cancel() juste avant : sur iPhone ça coupe la phrase suivante)
       setTimeout(end, 4000 + it.text.length * 110);            // filet de sécurité si onend ne vient jamais (iOS)
     } catch(e){ end(); }
   }, wait * 1000);
@@ -3883,15 +3891,42 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // le son ne peut démarrer qu'après un premier toucher : on le prépare discrètement
 document.addEventListener('pointerdown', () => {
   try { if (alertCfg.sound){ audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } } catch(e){}
-  // iPhone : la voix doit être « réveillée » une fois par un toucher, ensuite l'appli peut parler seule
-  try { if (alertCfg.voice !== false && 'speechSynthesis' in window && !saying){ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); pickVoice(); } } catch(e){}
 }, { once:true });
+// iPhone : la voix (et le son) doivent être « réveillés » par un vrai toucher (touchend / click, pas pointerdown)
+['touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => {
+  if (!voiceUnlocked && alertCfg.sound && alertCfg.voice !== false && !saying) unlockVoice();
+}, { capture:true, passive:true }));
 document.addEventListener('click', e => {
   if (!e.target.closest('#voiceTest')) return;
   e.preventDefault();
-  announce('bus', LANG === 'en' ? 'Attention please. Bus E 1 to Saint-Benoît will arrive at Gare de Saint-Denis in 5 minutes.'
-    : 'Votre attention s’il vous plaît. Le car E 1, à destination de Saint-Benoît, arrivera à l’arrêt Gare de Saint-Denis dans 5 minutes.');
+  voiceTestRun();
 });
+function voiceTestRun(){
+  if (!('speechSynthesis' in window)){ toast('🗣️ Ce navigateur ne sait pas parler.'); return; }
+  const txt = LANG === 'en' ? 'Attention please. Bus E 1 to Saint-Benoît will arrive at Gare de Saint-Denis in 5 minutes.'
+    : 'Votre attention s’il vous plaît. Le car E 1, à destination de Saint-Benoît, arrivera à l’arrêt Gare de Saint-Denis dans 5 minutes.';
+  // dans le toucher même : carillon + voix lancés tout de suite (la voix attend la fin du carillon par une pause au début)
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } catch(e){}
+  sayQ.length = 0; saying = true; voiceOk = false; voiceErr = '';
+  const wait = chime('bus');
+  try { speechSynthesis.cancel(); } catch(e){}
+  const pause = new SpeechSynthesisUtterance('.'); pause.volume = 0; pause.rate = 0.1; pause.lang = 'fr-FR';   // ≈ silence le temps du carillon
+  const u = new SpeechSynthesisUtterance(txt), v = pickVoice();
+  if (v) u.voice = v; u.lang = v ? v.lang : (LANG === 'en' ? 'en-GB' : 'fr-FR'); u.rate = 0.92;
+  u.onstart = () => { voiceOk = true; };
+  u.onend = u.onerror = ev => { if (ev && ev.error) voiceErr = ev.error; saying = false; setTimeout(nextSay, 300); };
+  try { speechSynthesis.resume(); } catch(e){}
+  if (wait) speechSynthesis.speak(pause);
+  speechSynthesis.speak(u); voiceUnlocked = true;
+  setTimeout(() => {
+    if (voiceOk) return;
+    saying = false;
+    const nb = (speechSynthesis.getVoices() || []).filter(x => /^fr/i.test(x.lang)).length;
+    toast(voiceErr && voiceErr !== 'interrupted' ? `🗣️ La voix a échoué (${voiceErr}). Monte le volume et réessaie.`
+      : !nb ? '🗣️ Aucune voix française sur ce téléphone : Réglages › Accessibilité › Contenu énoncé › Voix › Français.'
+      : '🗣️ Pas de voix ? Vérifie le volume, et sur iPhone que le bouton sur le côté n’est pas en silencieux.');
+  }, 6000);
+}
 
 /* ---------- mon prochain car (raccourci d'écran d'accueil, ou touche le compteur de cars) ---------- */
 let nextTimer = null;
