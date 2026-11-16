@@ -794,6 +794,7 @@
   .fl-bus{width:40px;height:40px;font-size:18px}
   #flBody .src-note{margin-top:10px}
   .fl-mine{box-shadow:inset 3px 0 0 var(--jaune)}
+  .linkbtn{border:0;background:none;padding:0;margin:0;color:inherit;font:inherit;font-weight:800;text-decoration:underline;cursor:pointer}
   .av-rgl{display:block;width:fit-content;max-width:100%;margin:8px 0 12px;text-align:center;text-decoration:none}
   #avionBody .av-rgl{width:auto}
   .av-big{font-size:17px}
@@ -1157,7 +1158,8 @@
           <button class="round" id="flRefresh" title="Actualiser" aria-label="Actualiser les vols">↻</button></div>
         <div id="flBody"></div>
       </div>
-      <div class="card"><div class="set-row"><div class="set-l"><b>🟧 Girouette des avions</b><small>en haut de l’appli, les avions qui arrivent ou décollent défilent comme sur la girouette d’un car</small></div><label class="switch"><input type="checkbox" id="giroOn" checked><span></span></label></div></div>
+      <div class="card"><div class="set-row"><div class="set-l"><b>🟧 Girouette des avions</b><small>en haut de l’appli, les avions qui arrivent ou décollent défilent comme sur la girouette d’un car</small></div><label class="switch"><input type="checkbox" id="giroOn" checked><span></span></label></div>
+        <div class="set-row"><div class="set-l"><b>🗣️ Annoncer les avions à voix haute</b><small>approche, atterrissage, embarquement, décollage, annulation · si les annonces vocales sont activées dans ⚙️</small></div><label class="switch"><input type="checkbox" id="airVoice" checked><span></span></label></div></div>
     </div>
   </section>
 </main>
@@ -1206,6 +1208,7 @@
       <div class="set-row"><div class="set-l"><b>🌙 Dernier car</b><small>30 min puis 10 min avant le dernier car du jour</small></div><label class="switch"><input type="checkbox" id="alLast" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Arrêt le plus proche</b><small>choisi tout seul selon ta position</small></div><label class="switch"><input type="checkbox" id="alFollow"><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Son</b></div><label class="switch"><input type="checkbox" id="alSound" checked><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>🗣️ Annonces vocales</b><small>un carillon puis une voix, comme en gare ou à l’aéroport · <button class="linkbtn" id="voiceTest" type="button">▶ écouter</button></small></div><label class="switch"><input type="checkbox" id="alVoice" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>Vibration</b><small>Android uniquement</small></div><label class="switch"><input type="checkbox" id="alVibe" checked><span></span></label></div>
       </details>
     </div>
@@ -1398,7 +1401,7 @@ let view = 'map';
 let stopGroups = [], board = { group:null, data:null, loading:false, at:0 };
 let favs = [];
 let CAL = { holidays:[], feries:{} }, SVC_TYPE = {};
-let alertCfg = { on:true, lead:5, line:'', quai:true, late:true, noBus:true, follow:false, ntfy:'', muteUntil:0, sound:true, vibe:true, wake:false };
+let alertCfg = { on:true, lead:5, line:'', quai:true, late:true, noBus:true, follow:false, ntfy:'', muteUntil:0, sound:true, vibe:true, wake:false, voice:true };
 // ce qui a déjà été notifié (par passage) : gardé sur le téléphone, car l'iPhone relance souvent l'appli
 const alertSent = (() => { try { const o = JSON.parse(localStorage.getItem('cj_sent') || '{}'), lim = Date.now() - 4 * 3600e3;
   Object.keys(o).forEach(k => { if (+k.split('|').pop() < lim) delete o[k]; }); return o; } catch(e){ return {}; } })();
@@ -1490,7 +1493,9 @@ const I18N_FRAG = {
   'temps pour rejoindre l’arrêt / arriver avant le cours':'time to reach the stop / arrive before class',
   'Avions':'Planes','Avions à Roland-Garros':'Planes at Roland-Garros','🛬 Arrivées':'🛬 Arrivals','🛫 Départs':'🛫 Departures','Chargement des vols…':'Loading flights…',
   'Les arrivées et départs en direct, et le car jaune à prendre pour ton vol (touche 🚌).':'Live arrivals and departures, and the yellow bus to take for your flight (tap 🚌).',
-  '🟧 Girouette des avions':'🟧 Plane ticker','en haut de l’appli, les avions qui arrivent ou décollent défilent comme sur la girouette d’un car':'at the top of the app, planes landing or taking off scroll by like a bus destination sign',
+  '🟧 Girouette des avions':'🟧 Plane ticker','🗣️ Annoncer les avions à voix haute':'🗣️ Announce planes out loud',
+  'approche, atterrissage, embarquement, décollage, annulation · si les annonces vocales sont activées dans ⚙️':'approach, landing, boarding, take-off, cancellation · if voice announcements are on in ⚙️',
+  '🗣️ Annonces vocales':'🗣️ Voice announcements','▶ écouter':'▶ listen','en haut de l’appli, les avions qui arrivent ou décollent défilent comme sur la girouette d’un car':'at the top of the app, planes landing or taking off scroll by like a bus destination sign',
   'Le car jaune pour rentrer après ce vol':'The yellow bus home after this flight','Le car jaune pour arriver à temps':'The yellow bus to get there on time','Actualiser les vols':'Refresh flights',
   'Prévu':'Scheduled','demain':'tomorrow','hier':'yesterday','tout voir':'see all','Renseigne-toi auprès de la compagnie.':'Check with the airline.','Le car jaune conseillé est recalculé.':'The suggested bus has been recalculated.',
   'Prendre l’avion à Roland-Garros':'Flying from Roland-Garros','ton vol → le car jaune à prendre':'your flight → the bus to take','Je prends l’avion':'I’m flying out',
@@ -3535,6 +3540,75 @@ function beep(kind){
   } catch(e){}
 }
 const isMuted = () => alertCfg.muteUntil && Date.now() < alertCfg.muteUntil;
+
+/** Annonce façon gare : « Votre attention s'il vous plaît. Le car E 1, à destination de Saint-Benoît, arrivera… » */
+function sayBus(r, stop, what, delayMin){
+  const late = delayMin == null ? '' : delayMin >= 2 ? `, avec un retard d’environ ${delayMin} minutes` : delayMin <= -2 ? `, avec ${-delayMin} minutes d’avance` : '';
+  return speechify(`Votre attention s’il vous plaît. Le car ${r.route.s}, à destination de ${r.dest}, ${what}${late}.`);
+}
+/* ---------- 🗣️ annonces vocales, comme en gare / à l'aéroport ----------
+   Un carillon à 3 notes (le nôtre, pas celui de la SNCF), puis la voix du téléphone (synthèse vocale, gratuite, hors ligne).
+   Une annonce à la fois ; seulement quand l'appli est à l'écran (iPhone : pas de voix en arrière-plan → notification). */
+function chime(kind){
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume();
+    const notes = kind === 'warn' ? [880, 698, 880, 698] : kind === 'air' ? [659, 880, 1047] : [784, 659, 523];
+    const gap = kind === 'warn' ? 0.28 : 0.42;
+    notes.forEach((f, i) => [[1, 0.22], [2.01, 0.06], [3.02, 0.025]].forEach(([h, v]) => {   // cloche : fondamentale + harmoniques
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain(), t = audioCtx.currentTime + 0.05 + i * gap;
+      o.type = 'sine'; o.frequency.value = f * h; o.connect(g); g.connect(audioCtx.destination);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.5 / h);
+      o.start(t); o.stop(t + 1.6);
+    }));
+    return 0.05 + (notes.length - 1) * gap + 0.9;
+  } catch(e){ return 0; }
+}
+let voiceCache = null;
+function pickVoice(){
+  const want = LANG === 'en' ? 'en' : 'fr';
+  const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+  if (voiceCache && voiceCache.lang.toLowerCase().startsWith(want) && vs.includes(voiceCache)) return voiceCache;
+  const score = v => (v.lang.replace('_', '-') === (want === 'fr' ? 'fr-FR' : 'en-GB') ? 4 : 0) + (/premium|enhanced|natural|neural|siri/i.test(v.name) ? 3 : 0)
+    + (/Audrey|Thomas|Marie|Aurélie|Amélie|Google|Serena|Daniel/i.test(v.name) ? 1 : 0) + (v.localService ? 1 : 0);
+  voiceCache = vs.filter(v => v.lang.toLowerCase().startsWith(want)).sort((a, b) => score(b) - score(a))[0] || null;
+  return voiceCache;
+}
+try { speechSynthesis.onvoiceschanged = () => { voiceCache = null; }; } catch(e){}
+/** Texte d'une alerte → phrase à dire (sans émojis, « St- » → « Saint- », « 14:05 » → « 14 h 05 »…). */
+function speechify(t){
+  const en = LANG === 'en';
+  return String(t || '')
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu, '')
+    .replace(/\s*→\s*/g, en ? ' to ' : ' direction ').replace(/\s*[·•✦|]\s*/g, ', ')
+    .replace(/\bSte-/g, 'Sainte-').replace(/\bSt-/g, 'Saint-')
+    .replace(/\b(\d{1,2}):(\d{2})\b/g, (m, h, mi) => en ? m : +mi ? `${+h} h ${mi}` : `${+h} heures`)
+    .replace(/\b(\d+)\s?min\b\.?/g, (m, n) => en ? `${n} minute${n > 1 ? 's' : ''}` : `${n} minute${n > 1 ? 's' : ''}`)
+    .replace(/\b([A-Z]{1,3})(\d{1,4})\b/g, (m, l, d) => l.split('').join(' ') + ' ' + (d.length > 2 ? d.split('').join(' ') : d))   // E1, ZE1, UU 9 7 5
+    .replace(/\(\s*/g, ', ').replace(/\s*\)/g, ',').replace(/\s+,/g, ',').replace(/,{2,}/g, ',').replace(/,\s*([.!?:])/g, '$1').replace(/([!?])\./g, '$1').replace(/\s{2,}/g, ' ').trim();
+}
+const sayQ = [];
+let saying = false;
+function announce(kind, text){
+  if (!text || !('speechSynthesis' in window) || document.visibilityState !== 'visible') return;
+  if (sayQ.length >= 3) sayQ.shift();                        // pas d'embouteillage d'annonces
+  sayQ.push({ kind, text }); if (!saying) nextSay();
+}
+function nextSay(){
+  const it = sayQ.shift(); if (!it){ saying = false; return; }
+  saying = true;
+  const wait = chime(it.kind);
+  setTimeout(() => {
+    let done = false; const end = () => { if (done) return; done = true; setTimeout(nextSay, 700); };
+    try {
+      const u = new SpeechSynthesisUtterance(it.text), v = pickVoice();
+      if (v) u.voice = v; u.lang = v ? v.lang : (LANG === 'en' ? 'en-GB' : 'fr-FR');
+      u.rate = 0.92; u.pitch = 1; u.volume = 1;
+      u.onend = end; u.onerror = end;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+      setTimeout(end, 4000 + it.text.length * 110);            // filet de sécurité si onend ne vient jamais (iOS)
+    } catch(e){ end(); }
+  }, wait * 1000);
+}
 /* Alertes « intelligentes » :
    - appli à l'écran  → un bandeau fin d'une ligne sous l'en-tête (pas de notification système en double),
                         qui se cache tout seul, se ferme d'un geste, et s'efface dès que tu touches la carte ;
@@ -3556,7 +3630,7 @@ function notify(title, body, kind, opt = {}){
   if (visible){
     if (lvl !== 'info' || opt.show) showStrip(title, body, lvl);
     if (lvl !== 'info'){
-      if (alertCfg.sound) beep(kind);
+      if (alertCfg.sound){ if (alertCfg.voice !== false && 'speechSynthesis' in window) announce(kind === 'warn' ? 'warn' : 'bus', LANG === 'en' || !opt.say ? speechify(title + '. ' + body) : opt.say); else beep(kind); }
       if (alertCfg.vibe) try { if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) navigator.vibrate(lvl === 'warn' ? [200, 100, 200] : [180]); } catch(e){}
     }
   } else if (lvl !== 'info' || opt.show){
@@ -3697,7 +3771,8 @@ function checkAlerts(){
     }
     if (!st.lead && mins <= lead && mins > 1){
       st.lead = true; st.delay = delayMin; saveSent();
-      notify(`🚌 ${name}`, `Arrive à ${stop} dans ${Math.round(mins)} min, à ${fmtHM(r.eff)} (${dTxt}).${arrTxt}`);
+      notify(`🚌 ${name}`, `Arrive à ${stop} dans ${Math.round(mins)} min, à ${fmtHM(r.eff)} (${dTxt}).${arrTxt}`, undefined,
+        { say: sayBus(r, stop, `arrivera à l’arrêt ${stop} dans ${Math.round(mins)} minute${Math.round(mins) > 1 ? 's' : ''}`, delayMin) });
     } else if (alertCfg.late && st.lead && !st.quai && delayMin != null && st.delay != null && Math.abs(delayMin - st.delay) >= (r.approx ? 3 : 2)){
       notify(`⏱️ ${name} : ${delayMin > st.delay ? 'plus de retard' : 'rattrape son retard'}`,
              `Nouvelle heure d’arrivée à ${stop} : ${fmtHM(r.eff)} (${dTxt}), dans ${Math.max(0, Math.round(mins))} min.`, 'warn');
@@ -3708,7 +3783,8 @@ function checkAlerts(){
     }
     if (alertCfg.quai && !st.quai && r.real != null && mins <= 0.75 && mins > -2){
       st.quai = true; saveSent();
-      notify(`🚏 ${name} arrive à quai`, `Le car est en train d’arriver à ${stop} (${fmtHM(r.eff)}, ${dTxt}).`);
+      notify(`🚏 ${name} arrive à quai`, `Le car est en train d’arriver à ${stop} (${fmtHM(r.eff)}, ${dTxt}).`, undefined,
+        { say: sayBus(r, stop, `entre à l’arrêt ${stop}. Préparez-vous à monter`, delayMin) });
     }
   });
   // aucun car dans l'heure
@@ -3807,7 +3883,15 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // le son ne peut démarrer qu'après un premier toucher : on le prépare discrètement
 document.addEventListener('pointerdown', () => {
   try { if (alertCfg.sound){ audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); audioCtx.resume(); } } catch(e){}
+  // iPhone : la voix doit être « réveillée » une fois par un toucher, ensuite l'appli peut parler seule
+  try { if (alertCfg.voice !== false && 'speechSynthesis' in window && !saying){ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); pickVoice(); } } catch(e){}
 }, { once:true });
+document.addEventListener('click', e => {
+  if (!e.target.closest('#voiceTest')) return;
+  e.preventDefault();
+  announce('bus', LANG === 'en' ? 'Attention please. Bus E 1 to Saint-Benoît will arrive at Gare de Saint-Denis in 5 minutes.'
+    : 'Votre attention s’il vous plaît. Le car E 1, à destination de Saint-Benoît, arrivera à l’arrêt Gare de Saint-Denis dans 5 minutes.');
+});
 
 /* ---------- mon prochain car (raccourci d'écran d'accueil, ou touche le compteur de cars) ---------- */
 let nextTimer = null;
@@ -4049,7 +4133,7 @@ function renderSettings(){
     : muted ? `En pause jusqu’à ${fmtDayHM(alertCfg.muteUntil)}.` : 'Toujours actives, même après avoir fermé l’appli.';
   $('#pauseTxt').textContent = muted ? `En pause jusqu’à ${fmtDayHM(alertCfg.muteUntil)}` : 'Coupe-les un moment, elles reviennent toutes seules.';
   $('#pauseOff').hidden = !muted;
-  $('#alSound').checked = alertCfg.sound; $('#alVibe').checked = alertCfg.vibe; $('#alWake').checked = alertCfg.wake;
+  $('#alSound').checked = alertCfg.sound; $('#alVibe').checked = alertCfg.vibe; $('#alWake').checked = alertCfg.wake; $('#alVoice').checked = alertCfg.voice !== false; $('#alVoice').disabled = !alertCfg.sound;
   $('#alFollow').checked = alertCfg.follow;
   renderShareUI(); renderCityUI(); renderDiag(); renderPushUI(); renderTfKey(); renderEcoUI(); renderSummaries(); renderOffline();
   $('#apkRow').hidden = NATIVE || !/Android/i.test(navigator.userAgent);
@@ -4133,9 +4217,10 @@ document.addEventListener('click', e => {
 });
 $('#setOn').addEventListener('change', e => setAlertsOn(e.target.checked));
 $('#pauseSeg').addEventListener('click', e => { const b = e.target.closest('[data-pause]'); if (b) setPause(b.dataset.pause); });
-[['alSound', 'sound'], ['alVibe', 'vibe'], ['alWake', 'wake']].forEach(([id, k]) => $('#' + id).addEventListener('change', e => {
+[['alSound', 'sound'], ['alVibe', 'vibe'], ['alWake', 'wake'], ['alVoice', 'voice']].forEach(([id, k]) => $('#' + id).addEventListener('change', e => {
   alertCfg[k] = e.target.checked; saveAlertCfg(); if (k === 'wake') applyWake();
-  if (k === 'sound' && e.target.checked) beep('none');
+  if (k === 'sound'){ $('#alVoice').disabled = !e.target.checked; if (e.target.checked) beep('none'); }
+  if (k === 'voice' && e.target.checked) $('#voiceTest').click();
   if (k === 'vibe' && e.target.checked) try { navigator.vibrate && navigator.vibrate(200); } catch(err){}
 }));
 $('#reloadBtn').addEventListener('click', () => location.reload());
@@ -6976,6 +7061,7 @@ async function loadFlights(force){
   catch(e){ flights.err = errMsg(e); }
   flAt = Date.now(); flLoading = false;
   try { followMyFlight(); } catch(e){}
+  try { announcePlanes(); } catch(e){}
   renderGiro();
   if (view === 'avion') renderFlights();
 }
@@ -7028,6 +7114,7 @@ function renderFlights(){
   const box = $('#flBody'); if (!box) return;
   document.querySelectorAll('#flSeg [data-fl-dir]').forEach(b => b.classList.toggle('on', b.dataset.flDir === flDir));
   const giroBox = $('#giroOn'); if (giroBox) giroBox.checked = giroOn;
+  const av = $('#airVoice'); if (av) av.checked = airVoice;
   if (!flAt){ box.innerHTML = '<p class="muted">Chargement des vols…</p>'; return; }
   const now = Date.now(), all = flDir === 'arr' ? flights.arr : flights.dep;
   const today = new Date(now).toDateString();
@@ -7046,6 +7133,32 @@ function renderFlights(){
   box.innerHTML = (html || `<p class="muted">Aucun vol ${flDir === 'arr' ? 'à l’arrivée' : 'au départ'} pour le moment.</p>`)
     + (flights.err ? `<p class="src-note">⚠️ ${esc(flights.err)}</p>` : '')
     + `<p class="src-note">Source : site de l’aéroport, via Roland Garros Live · mis à jour à ${fmtHM(flights.at || flAt)} · <a href="${RGL_URL}" target="_blank" rel="noopener">tout voir</a></p>`;
+}
+/* 🗣️ les avions annoncés à voix haute, comme dans un aérogare (une fois par événement) */
+let airVoice = (() => { try { return localStorage.getItem('cj_airvoice') !== '0'; } catch(e){ return true; } })();
+const planeSaid = {}; let planeFirst = true;
+function planeEvents(now){
+  const en = LANG === 'en', ev = [];
+  flights.arr.forEach(f => {
+    const m = (flTime(f) - now) / 60e3, k = f.n + '|' + f.ts + '|';
+    if (f.e === 'annule'){ if (Math.abs(f.ts - now) < 3 * 3600e3) ev.push([k + 'x', en ? `Flight ${f.n} from ${f.v} is cancelled.` : `Le vol ${f.n} en provenance de ${f.v} est annulé.`]); }
+    else if (f.e === 'termine'){ if (m >= -10 && m <= 5) ev.push([k + 'land', en ? `Flight ${f.n} from ${f.v} has landed.` : `Le vol ${f.n} en provenance de ${f.v} vient d’atterrir.`]); }
+    else if (m <= 10 && m >= -5) ev.push([k + 'appr', en ? `Flight ${f.n} from ${f.v} is on approach.` : `Le vol ${f.n} en provenance de ${f.v} est en approche.`]);
+  });
+  flights.dep.forEach(f => {
+    const m = (flTime(f) - now) / 60e3, k = f.n + '|' + f.ts + '|';
+    if (f.e === 'annule'){ if (Math.abs(f.ts - now) < 3 * 3600e3) ev.push([k + 'x', en ? `Flight ${f.n} to ${f.v} is cancelled.` : `Le vol ${f.n} à destination de ${f.v} est annulé.`]); }
+    else if (f.e === 'termine'){ if (m >= -10 && m <= 5) ev.push([k + 'off', en ? `Flight ${f.n} to ${f.v} has taken off.` : `Le vol ${f.n} à destination de ${f.v} vient de décoller.`]); }
+    else if (f.e === 'embarquement' && m <= 60) ev.push([k + 'board', en ? `Now boarding, flight ${f.n} to ${f.v}.` : `Embarquement immédiat, vol ${f.n} à destination de ${f.v}.`]);
+  });
+  return ev;
+}
+function announcePlanes(){
+  const ev = planeEvents(Date.now()), fresh = ev.filter(([k]) => !planeSaid[k]);
+  ev.forEach(([k]) => { planeSaid[k] = 1; });
+  if (planeFirst){ planeFirst = false; return; }        // à l'ouverture : on n'annonce pas ce qui était déjà en cours
+  if (!fresh.length || !airVoice || !alertCfg.sound || alertCfg.voice === false || isMuted()) return;
+  fresh.slice(0, 2).forEach(([, t]) => announce('air', speechify(t)));
 }
 /** Mon vol (carte « Prendre l'avion ») : suit son statut et son heure réelle. */
 function followMyFlight(){
@@ -7077,6 +7190,7 @@ document.addEventListener('click', e => {
   renderFlights();
 });
 document.addEventListener('change', e => {
+  if (e.target.id === 'airVoice'){ airVoice = e.target.checked; try { localStorage.setItem('cj_airvoice', airVoice ? '1' : '0'); } catch(err){} return; }
   if (e.target.id !== 'giroOn') return;
   giroOn = e.target.checked;
   try { localStorage.setItem('cj_giro', giroOn ? '1' : '0'); } catch(err){}

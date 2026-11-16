@@ -151,6 +151,39 @@ await t('🚌 les alertes des cars passent dans la girouette (une à la fois, to
   return (r[0][0] === false && /giro-bus/.test(r[0][1]) && /E1 dans 5 min · Gare de St-Denis/.test(r[0][2]) && r[0][3] === '+1' && r[0][4] === '1px'
     && /giro-warn/.test(r[1][0]) && /Descends au prochain arrêt/.test(r[1][1]) && /giro-air/.test(r[2][0]) && r[2][1] !== 'avion') || JSON.stringify(r);
 });
+await t('🗣️ texte dit à voix haute : sans émojis, St- → Saint-, 14:05 → 14 h 05, E1 → E 1', async () => {
+  const r = await page.evaluate(`speechify('🚌 ZE1 → St-Benoît · arrive à Ste-Marie dans 5 min, à 14:05 (retard 1 min). Vol UU975 à 14:00')`);
+  return r === 'Z E 1 direction Saint-Benoît, arrive à Sainte-Marie dans 5 minutes, à 14 h 05, retard 1 minute. Vol U U 9 7 5 à 14 heures' || r;
+});
+await t('🗣️ annonce façon gare pour un car qui arrive, carillon puis voix française', async () => {
+  const r = await page.evaluate(`(async () => {
+    const said = [], a0 = announce; let spoke = null;
+    announce = (k, t) => said.push(k + '|' + t);
+    alertCfg.sound = true; alertCfg.voice = true; alertCfg.muteUntil = 0;
+    notify('🚌 E1 → St-Benoît', 'Arrive à Gare de St-Denis dans 5 min.', undefined, { say: sayBus({ route:{ s:'E1' }, dest:'St-Benoît' }, 'Gare de St-Denis', 'arrivera à l’arrêt Gare de St-Denis dans 5 minutes', 3) });
+    notify('🛎️ Descends au prochain arrêt !', 'Gare de St-Denis : appuie sur le bouton.', 'warn');
+    alertCfg.voice = false; notify('🚌 test', 'sans voix'); alertCfg.voice = true;
+    announce = a0; hideStrip(true);
+    // le vrai moteur : carillon puis speechSynthesis.speak
+    const sp0 = speechSynthesis.speak.bind(speechSynthesis); speechSynthesis.speak = u => { spoke = [u.text, u.lang, u.rate]; };
+    sayQ.length = 0; saying = false; announce('bus', 'Bonjour'); await new Promise(ok => setTimeout(ok, 2600));
+    speechSynthesis.speak = sp0;
+    return [said, spoke]; })()`);
+  const [said, spoke] = r;
+  return (said.length === 2 && said[0] === 'bus|Votre attention s’il vous plaît. Le car E 1, à destination de Saint-Benoît, arrivera à l’arrêt Gare de Saint-Denis dans 5 minutes, avec un retard d’environ 3 minutes.'
+    && /^warn\|Descends au prochain arrêt ! Gare de Saint-Denis : appuie/.test(said[1]) && spoke && spoke[0] === 'Bonjour' && /^fr/.test(spoke[1])) || JSON.stringify(r);
+});
+await t('🗣️ avions : rien à l’ouverture, puis une annonce par nouvel événement', async () => {
+  const r = await page.evaluate(`(() => {
+    const said = [], a0 = announce; announce = (k, t) => said.push(k + '|' + t);
+    Object.keys(planeSaid).forEach(k => delete planeSaid[k]); planeFirst = true; airVoice = true;
+    announcePlanes(); const n0 = said.length;
+    const i = flights.dep.findIndex(f => f.n === 'UU976');
+    flights.dep[i] = Object.assign({}, flights.dep[i], { e: 'termine', st: 'Décollé', ts: Date.now() - 60e3, hr: '' });
+    announcePlanes(); announcePlanes();
+    announce = a0; return [n0, said]; })()`);
+  return (r[0] === 0 && r[1].length === 1 && r[1][0] === 'air|Le vol U U 9 7 6 à destination de Paris-Orly vient de décoller.') || JSON.stringify(r);
+});
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await browser.close();
 if (fails.length){ console.log(`✗ ${fails.length} problème(s)`); process.exit(1); }
