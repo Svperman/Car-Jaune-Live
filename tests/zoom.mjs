@@ -1,4 +1,6 @@
 // Car Jaune Live — test du zoom de la carte au doigt (pincer pour zoomer / dézoomer), boutons + et −, limites
+/** téléphone : les boutons Trafic / Plein écran / Toute l’île sont rangés derrière « ⋯ » */
+async function moreBtn(pg){ if (await pg.isVisible('#btnMore') && !(await pg.isVisible('#btnFit'))){ await pg.click('#btnMore'); await pg.waitForTimeout(150); } }
 import { createRequire } from 'node:module';
 const { chromium } = createRequire(import.meta.url)('playwright');
 const BASE = process.env.BASE || 'http://localhost:8765';
@@ -49,7 +51,7 @@ await t('toucher deux fois la carte : zoom +', async () => {
 await t('carte du monde : on peut dézoomer jusqu’au monde entier, puis revenir sur l’île', async () => {
   await p.evaluate('map.setZoom(2, { animate:false }); 1'); await p.waitForTimeout(300);
   const z = await p.evaluate('map.getZoom()');
-  await p.tap('#btnFit'); await p.waitForTimeout(1200);
+  await moreBtn(p); await p.tap('#btnFit'); await p.waitForTimeout(1200);
   const r = await p.evaluate('[map.getZoom(), map.getBounds().contains([-21.1, 55.5])]');
   return (z <= 2.5 && r[0] >= 8 && r[1]) || JSON.stringify([z, r]);
 });

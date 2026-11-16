@@ -113,11 +113,12 @@ await t('✈️ lien depuis Roland Garros Live (?vol=…&depart=…)', async () 
 });
 await t('✈️ onglet Avions à côté de Trafic, avec les arrivées et départs', async () => {
   const r = await page.evaluate(`(async () => { flAt = 0; await loadFlights(true); setView('avion');
-    const tabs = [...document.querySelectorAll('.tab')].map(x => x.dataset.view).join(',');
+    const tabs = [...document.querySelectorAll('.tab')].map(x => x.dataset.view).join(',') + '|' + [...document.querySelectorAll('#view-avion .subtab')].map(x => x.dataset.goto).join(',')
+      + '|' + document.querySelector('.tab.on').dataset.view;
     flDir = 'arr'; renderFlights(); const a = document.querySelector('#flBody').innerText;
     flDir = 'dep'; renderFlights(); const d = document.querySelector('#flBody').innerText;
     return [tabs, a, d]; })()`);
-  return (/trafic,avion$/.test(r[0]) && /UU975/.test(r[1]) && /Maurice/.test(r[1]) && /UU976/.test(r[2]) && /Annulé/.test(r[2])) || JSON.stringify(r);
+  return (r[0] === 'map,trip,board,trafic|trafic,avion|trafic' && /UU975/.test(r[1]) && /Maurice/.test(r[1]) && /UU976/.test(r[2]) && /Annulé/.test(r[2])) || JSON.stringify(r);
 });
 await t('🟧 girouette : avions qui arrivent / décollent / posés / annulés, et se coupe', async () => {
   const r = await page.evaluate(`(() => { hideStrip(true); giroOn = true; renderGiro();

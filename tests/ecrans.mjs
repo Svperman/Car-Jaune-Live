@@ -26,6 +26,8 @@ for (const [n, w, h, touch] of DEV){
     if (r[2]) fails.push(`${n} (${w}×${h}) · ${v} : en-tête trop large`);
   }
   await p.evaluate("setView('map'); 1"); await p.waitForTimeout(300);
+  // téléphone : Trafic / Plein écran / Toute l’île sont rangés derrière « ⋯ » → on l’ouvre et tout doit tenir à l’écran
+  await p.evaluate("(() => { const m = document.querySelector('#btnMore'); if (m && m.getBoundingClientRect().width) m.click(); })(); 1"); await p.waitForTimeout(150);
   const btns = await p.evaluate(`[...document.querySelectorAll('.map-ctl button')].filter(x => { const r = x.getBoundingClientRect(); return r.width && r.top >= 0 && r.bottom <= innerHeight && r.right <= innerWidth; }).length`);
   if (btns < 5) fails.push(`${n} (${w}×${h}) : boutons de la carte hors de l’écran (${btns}/5)`);
   errs.forEach(e => fails.push(`${n} : erreur JS : ${e}`));

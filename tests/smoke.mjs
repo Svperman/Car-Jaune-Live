@@ -40,7 +40,7 @@ for (const [name, vp] of [['téléphone', { width: 390, height: 844 }], ['ordina
     if (!n) throw new Error('aucun car affiché');
   });
   for (const v of ['trip', 'board', 'fiches', 'trafic', 'avion', 'map']) {
-    await step('onglet ' + v, async () => { await page.click(`.tab[data-view=${v}]`); await page.waitForTimeout(400); });
+    await step('onglet ' + v, async () => { await page.click(`.tab[data-view=${v}], .view.on [data-goto=${v}]`); await page.waitForTimeout(400); });
   }
   await step('arrêt et départs', async () => {
     await page.evaluate("selectStop(stopGroups.find(g => g.ids.includes('A'))); 1");

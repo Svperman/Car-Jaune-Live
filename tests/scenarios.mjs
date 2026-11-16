@@ -1,4 +1,6 @@
 // Car Jaune Live — scénarios de la vraie vie : serveur en panne, hors ligne, la nuit, tous les réglages, saisies bizarres…
+/** téléphone : les boutons Trafic / Plein écran / Toute l’île sont rangés derrière « ⋯ » */
+async function moreBtn(pg){ if (await pg.isVisible('#btnMore') && !(await pg.isVisible('#btnFit'))){ await pg.click('#btnMore'); await pg.waitForTimeout(150); } }
 // Usage : node tests/smoke.mjs (crée _test.html) puis node tests/scenarios.mjs
 import { createRequire } from 'node:module';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -26,7 +28,7 @@ const go = async (pg, url = '/_bug.html') => { await pg.goto('http://localhost:8
 
 await scenario('serveur injoignable au 1er lancement', async pg => {
   await go(pg); await pg.waitForTimeout(1500);
-  for (const v of ['map','trip','board','fiches','trafic']) { await pg.click(`.tab[data-view=${v}]`); await pg.waitForTimeout(300); }
+  for (const v of ['map','trip','board','fiches','trafic']) { await pg.click(`.tab[data-view=${v}], .view.on [data-goto=${v}]`); await pg.waitForTimeout(300); }
   await pg.click('#gearBtn'); await pg.waitForTimeout(300); await pg.click('#setClose');
   await pg.evaluate('openNext(); 1'); await pg.waitForTimeout(300);
   return 'toast: ' + (await pg.evaluate("$('#toast').hidden ? '-' : $('#toast').textContent")).slice(0, 80);
@@ -47,7 +49,7 @@ await scenario('hors ligne avec cache (2e ouverture)', async (pg, ctx) => {
 
 await scenario('la nuit (réseau fermé)', async pg => {
   await go(pg);
-  for (const v of ['map','trip','board','trafic']) { await pg.click(`.tab[data-view=${v}]`); await pg.waitForTimeout(300); }
+  for (const v of ['map','trip','board','trafic']) { await pg.click(`.tab[data-view=${v}], .view.on [data-goto=${v}]`); await pg.waitForTimeout(300); }
   return 'mode : ' + await pg.evaluate('mode');
 }, { ctx: {}, init: () => { const real = Date.now; const off = (new Date(real()).setUTCHours(19, 30, 0, 0)) - real(); /* 23h30 à La Réunion */ Date.now = () => real() + off; } });
 
@@ -68,7 +70,7 @@ await scenario('tous les réglages activés puis réouverture', async pg => {
   await pg.click('#setClose');
   await pg.reload(); await pg.waitForTimeout(4000);
   await pg.evaluate('forceUntil = Date.now()+3600e3; updateMode(); refresh(); 1'); await pg.waitForTimeout(1500);
-  for (const v of ['map','trip','board','fiches','trafic','map']) { await pg.click(`.tab[data-view=${v}]`); await pg.waitForTimeout(300); }
+  for (const v of ['map','trip','board','fiches','trafic','map']) { await pg.click(`.tab[data-view=${v}], .view.on [data-goto=${v}]`); await pg.waitForTimeout(300); }
   await pg.click('#bellBtn'); await pg.waitForTimeout(200); await pg.click('#bellBtn');
   return `réglages gardés : partage=${await pg.evaluate('shareCfg.on')} ville=${await pg.evaluate('cityCfg.on')} thème=${await pg.evaluate("document.documentElement.classList.contains('dark')")} délai=${await pg.evaluate('alertCfg.lead')}`;
 }, { ctx: { geolocation:{ latitude:-20.879, longitude:55.448, accuracy:20 }, permissions:['geolocation'] } });
@@ -95,8 +97,8 @@ await scenario('recherche d’arrêt : vide, accents, inconnu', async pg => {
 
 await scenario('ordinateur + mode sombre + grand texte', async pg => {
   await go(pg); await pg.evaluate("look.theme='dark'; look.text='big'; saveLook(); forceUntil = Date.now()+3600e3; updateMode(); refresh(); 1"); await pg.waitForTimeout(1200);
-  for (const v of ['trip','board','fiches','trafic','map']) { await pg.click(`.tab[data-view=${v}]`); await pg.waitForTimeout(300); }
-  await pg.click('#btnList'); await pg.click('#btnTraffic'); await pg.click('#btnFs'); await pg.click('#btnFit'); await pg.waitForTimeout(400);
+  for (const v of ['trip','board','fiches','trafic','map']) { await pg.click(`.tab[data-view=${v}], .view.on [data-goto=${v}]`); await pg.waitForTimeout(300); }
+  await pg.click('#btnList'); await moreBtn(pg); await pg.click('#btnTraffic'); await moreBtn(pg); await pg.click('#btnFs'); await moreBtn(pg); await pg.click('#btnFit'); await pg.waitForTimeout(400);
   return 'ok';
 }, { vp: { width:1280, height:800 } });
 
