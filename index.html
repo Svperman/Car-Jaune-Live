@@ -1196,8 +1196,8 @@
       <div class="set-row col"><div class="set-l"><b>Pause</b><small id="pauseTxt">Coupe-les un moment, elles reviennent toutes seules.</small></div><div class="pseg" id="pauseSeg"><button data-pause="60">1 h</button><button data-pause="180">3 h</button><button data-pause="tomorrow">Jusqu’à demain</button><button data-pause="0" id="pauseOff" hidden>▶ Reprendre</button></div></div>
       <div class="set-row"><div class="set-l"><b>Me prévenir</b><small>avant chaque car</small></div><select class="set-sel" id="alLead" aria-label="Délai"><option value="2">2 min</option><option value="5" selected>5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option></select></div>
       <div class="set-row"><div class="set-l"><b>🚗 Bouchons et accidents</b><small>sur ton trajet et devant ton car</small></div><label class="switch"><input type="checkbox" id="alJam" checked><span></span></label></div>
-      <div class="set-row adv"><div class="set-l"><b>Même appli fermée</b><small id="pushStatus"></small></div><label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
-      <div class="set-row col dep-push adv" id="pushSec"><div class="set-l"><b>Canal ntfy</b><small>installe l’appli gratuite <b>ntfy</b> et abonne-toi à ce nom</small></div>
+      <div class="set-row"><div class="set-l"><b>📲 Même appli fermée</b><small id="pushStatus"></small></div><label class="switch"><input type="checkbox" id="pushOn"><span></span></label></div>
+      <div class="set-row col dep-push" id="pushSec"><div class="set-l"><b>Canal ntfy</b><small>installe l’appli gratuite <b>ntfy</b> et abonne-toi à ce nom</small></div>
         <div class="set-ctl"><code id="pushTopic" class="sh-code sm"></code><button class="btn ghost small" id="pushCopy">Copier</button><button class="btn ghost small" id="pushTest">🧪 Tester</button></div></div>
       <details class="set-more adv"><summary>Plus d’options</summary>
       <div class="set-row"><div class="set-l"><b>Arrivée à quai</b><small>quand le car arrive à l’arrêt</small></div><label class="switch"><input type="checkbox" id="alQuai" checked><span></span></label></div>
@@ -1552,7 +1552,7 @@ const I18N_FRAG = {
   'colle ta clé gratuite (developer.tomtom.com)':'paste your free key (developer.tomtom.com)','Arrivée à quai':'Bus at the stop','quand le car arrive à l’arrêt':'when the bus reaches the stop',
   'Avance / retard':'Early / late','si le retard change de 2 min ou plus':'if the delay changes by 2 min or more','Aucun car dans l’heure':'No bus within the hour',
   '30 min puis 10 min avant le dernier car du jour':'30 min then 10 min before the last bus of the day','Arrêt le plus proche':'Nearest stop','choisi tout seul selon ta position':'picked automatically from your location',
-  'Avant de descendre':'Before getting off','Correspondance':'Connection','Garder l’écran allumé':'Keep the screen on','pendant les alertes':'during alerts','Même appli fermée':'Even with the app closed',
+  'Avant de descendre':'Before getting off','Correspondance':'Connection','Garder l’écran allumé':'Keep the screen on','pendant les alertes':'during alerts','📲 Même appli fermée':'Even with the app closed',
   'Ligne pour les alertes':'Line for alerts','toutes les lignes':'all lines','avant chaque car':'before each bus','Mes proches':'My family','Messages à mes proches':'Messages to my family',
   'Mon prénom':'My first name','tes proches te retrouvent avec lui':'your family find you with it','Mon code secret':'My secret code','avec ton prénom, il protège ta position':'with your first name, it protects your location',
   'Partager tout le temps':'Share all the time','même hors des cars, appli ouverte':'even off the bus, app open','Automatique dans les cars jaunes':'Automatic on Car Jaune buses',
