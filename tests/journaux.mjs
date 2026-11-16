@@ -182,6 +182,46 @@ await t('14/11 · car croisé sorti d’un rond-point : il n’y reste pas affic
   // 20 s de retard : il est ressorti du rond-point depuis longtemps → au moins 150 m plus loin (avant : ~35 m)
   return (r >= 150 && r <= 600) || 'avance affichée : ' + r + ' m';
 });
+await t('16/11 · descendu au Campus : l’E2 repart, l’appli le voit en moins d’une minute (et plus 2 min après)', async () => {
+  const r = await pg.evaluate(`(() => {
+    let T = Date.now() + 9000e3; const real = Date.now; Date.now = () => T;
+    const v = Object.assign({}, vehicles[0], { id:'E2c', route:{ s:'E2', c:'F6BE00', t:'222222' }, headsign:'St-André', bearing: 90, tripId:null });
+    onBus = 'E2c'; manualBus = null; busCand = null; busLastOk = T; detectMyBus.track = null; alightPos = null;
+    const me = { lat: -20.90077, lon: 55.48672 }; let off = -1;
+    for (let s = 0; s < 150; s++){
+      T += 1000;
+      myPos = { lat: me.lat, lon: me.lon + s * 1.1 / 104000, acc: 8, speed: s < 5 ? 0 : 1.1 }; myFixAt = T;   // descendu puis à pied
+      if (s % 20 === 0){ const dx = 80 + s * 9; Object.assign(v, { lat: me.lat, lon: me.lon + dx / 104000, ts: T - 15e3, age: 15e3 }); }   // le car s’éloigne (flux toutes les 20 s)
+      vehicles = [v]; detectMyBus(); if (!onBus && off < 0) off = s;
+    }
+    Date.now = real; onBus = null; return off; })()`);
+  return (r > 0 && r <= 60) || 'descente vue à ' + r + ' s';
+});
+await t('16/11 · dans le car arrêté (feu, bouchon) : ses positions en retard se rapprochent → je reste dedans', async () => {
+  const r = await pg.evaluate(`(() => {
+    let T = Date.now() + 9900e3; const real = Date.now; Date.now = () => T;
+    const v = Object.assign({}, vehicles[0], { id:'E2d', route:{ s:'E2', c:'F6BE00', t:'222222' }, headsign:'St-André', bearing: 90, tripId:null });
+    onBus = 'E2d'; manualBus = null; busCand = null; busLastOk = T; detectMyBus.track = null; alightPos = null;
+    const me = { lat: -20.90077, lon: 55.48672 }; let lost = -1;
+    for (let s = 0; s < 80; s++){
+      T += 1000; myPos = { lat: me.lat, lon: me.lon, acc: 8, speed: 0 }; myFixAt = T;
+      if (s % 20 === 0){ const dx = Math.max(10, 300 - s * 5); Object.assign(v, { lat: me.lat, lon: me.lon - dx / 104000, ts: T - 25e3, age: 25e3 }); }
+      vehicles = [v]; detectMyBus(); if (!onBus && lost < 0) lost = s;
+    }
+    Date.now = real; onBus = null; return lost; })()`);
+  return r === -1 || 'perdu à ' + r + ' s';
+});
+await t('16/11 · dans l’E2 : pas d’alerte « E2 arrive à Cafés de Chine » ni de changement d’arrêt suivi', async () => {
+  const r = await pg.evaluate(`(async () => {
+    window.__n = []; const n0 = notify; notify = (t, b) => __n.push(t);
+    setAlertsOn(true, true); setView('board'); await selectStop(findGroup('Gare de St-Denis'));
+    for (const k in alertSent) delete alertSent[k];
+    const g = findGroup('Gare de St-Denis');
+    onBus = 'bus1'; myPos = { lat: g.lat, lon: g.lon, acc: 8, speed: 8 };
+    const n1 = __n.length; checkAlerts(); const a = __n.slice(n1);
+    notify = n0; onBus = null; return a; })()`);
+  return r.length === 0 || 'dans le car : ' + r.join(' / ');
+});
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await b.close();
 if (fails.length){ console.log(`✗ ${fails.length} problème(s)`); process.exit(1); }

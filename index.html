@@ -3158,6 +3158,7 @@ function useMyPosition(pos, auto){
   if (view === 'trip' || (alertCfg.on && alertCfg.journey)){ renderTrip(); if (alertCfg.on) checkAlerts(); }
   if (alertCfg.on && alertCfg.journey) return;            // en mode trajet, c'est le sens qui change, pas l'arrêt
   if (keepCurrent) return;
+  if (auto && onBus && board.group) return;               // dans un car : l'arrêt suivi ne défile pas avec les arrêts traversés (journal du 16/11)
   if (!board.group || board.group.name !== p.g.name){
     if (auto && board.group && alertCfg.on) notify('📍 Nouvel arrêt suivi', `Tu es maintenant plus près de ${p.g.name} (${fmtDist(p.d)}) : les alertes le suivent.`, 'none');
     $('#stopInput').value = p.g.name;
@@ -3398,6 +3399,15 @@ function detectMyBus(){
     // au terminus le car reste garé : à plus de 50 m de lui, je suis descendu
     // car choisi à la main (« 🙋 Je suis dans ce car ») : on le garde tant que je roule, même si sa position dans le flux est en retard
     const manual = manualBus && manualBus.id === onBus;
+    // Journal du 16/11 (descendu au Campus) : la marge due au retard du flux gardait l'E2 « près de moi » plus de 2 min.
+    // Moi arrêté ou à pied, et deux positions successives du car qui s'éloignent de moi → il est reparti sans moi.
+    let gone = false;
+    if (cur && cur.ts && dCur != null){
+      const tk = detectMyBus.track;
+      if (tk && tk.id === cur.id && tk.ts !== cur.ts && sp <= 3 && !manual && dCur > tk.d + 60 && dCur > 150 + Math.min(myPos.acc || 0, 60)) gone = true;
+      if (!tk || tk.id !== cur.id || tk.ts !== cur.ts) detectMyBus.track = { id: cur.id, ts: cur.ts, d: dCur };
+    }
+    if (gone){ diag('descente', { car: onBus, raison: 'le car s’éloigne', distance: Math.round(dCur) }); try { localStorage.removeItem('cj_ride'); } catch(e){} onBus = null; busCand = null; manualBus = null; detectMyBus.track = null; render(); return renderRide(); }
     const curOk = cur && (manual && sp > 3 ? dCur < 2000 : sp <= 3 ? dCur < (atEnd ? 50 + Math.min(40, myPos.acc || 0) : busTol(cur, 3) + 150) : match(cur) != null);
     if (cur && atEnd && sp <= 3 && !curOk){ try { localStorage.removeItem('cj_ride'); } catch(e){} onBus = null; busCand = null; render(); return renderRide(); }
     if (curOk){ busLastOk = now; busCand = null; return renderRide(); }
@@ -3788,8 +3798,9 @@ function checkAlerts(){
   if (alertCfg.journey && tripReady() && !tripBoard.data){ loadTripBoard(); return; }
   const ctx = alertContext();
   if (!ctx.stop) return;
-  // dans un car, loin de l'arrêt surveillé (journal du 09/11 : alertes « Gare de St-Paul » en roulant vers le Campus) : on se tait
-  if (onBus && myPos){ const sg = findGroup(ctx.stop); if (sg && isFinite(sg.lat) && distM(myPos.lat, myPos.lon, sg.lat, sg.lon) > 3000) return; }
+  // dans un car, on n'attend pas de car : pas d'alertes d'attente (journaux du 09/11 « Gare de St-Paul » en roulant,
+  // et du 16/11 « E2 arrive à Cafés de Chine », « arrive à quai »… alors que j'étais dans cet E2)
+  if (onBus) return;
   const now = Date.now(), stop = ctx.stop, lead = alertCfg.lead, rows = ctx.rows;
   rows.forEach(r => {
     const key = stop + '|' + r.route.s + '|' + r.dest + '|' + r.sched;
