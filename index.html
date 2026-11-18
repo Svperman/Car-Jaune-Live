@@ -3160,7 +3160,7 @@ function useMyPosition(pos, auto){
   if (keepCurrent) return;
   if (auto && onBus && board.group) return;               // dans un car : l'arrêt suivi ne défile pas avec les arrêts traversés (journal du 16/11)
   if (!board.group || board.group.name !== p.g.name){
-    if (auto && board.group && alertCfg.on) notify('📍 Nouvel arrêt suivi', `Tu es maintenant plus près de ${p.g.name} (${fmtDist(p.d)}) : les alertes le suivent.`, 'none');
+    // (plus de message « 📍 Nouvel arrêt suivi · Tu es maintenant plus près de … » : l'arrêt change en silence, demandé le 18/11)
     $('#stopInput').value = p.g.name;
     selectStop(p.g);
   }
