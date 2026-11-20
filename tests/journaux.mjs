@@ -81,6 +81,7 @@ await t('09/11 · dans le car, pas d’alertes « Gare de St-Paul » quand on ro
     window.__n = []; const n0 = notify; notify = (t, b) => __n.push(t);
     setAlertsOn(true, true); setView('board'); await selectStop(findGroup('Gare de St-Pierre'));
     for (const k in alertSent) delete alertSent[k];
+    __n.length = 0;                                   // (seulement ce qui arrive dans le car)
     onBus = 'bus1'; myPos = { lat: -20.8916, lon: 55.4755, acc: 8, speed: 8 };
     checkAlerts(); const inBus = __n.length;
     onBus = null; for (const k in alertSent) delete alertSent[k]; checkAlerts(); const after = __n.length - inBus;

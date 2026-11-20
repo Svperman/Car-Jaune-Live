@@ -6387,8 +6387,11 @@ function busJamTick(){
     const nearStop = pts.some(p => distM(v.lat, v.lon, p[1], p[2]) < 220);
     const sp = v.speed != null && v.speed >= 0 ? v.speed : st.speed;
     const key = v.id, prev = TF.slow[key];
-    if (!nearStop && sp < 3.5){                                       // < 12 km/h loin de tout arrêt
-      if (prev && now - prev.t < 120e3 && distM(prev.lat, prev.lon, v.lat, v.lon) < 600){
+    // suivi en direct du 20/11 : des cars garés (entre deux services, gare de St-Paul) donnaient « bouchon devant ton car »
+    // → il faut un car en service (avec un voyage) qui AVANCE au pas, pas un car immobile
+    if (!nearStop && sp < 3.5 && v.tripId){                           // < 12 km/h loin de tout arrêt
+      const moved = prev ? distM(prev.lat, prev.lon, v.lat, v.lon) : 0;
+      if (prev && now - prev.t < 120e3 && moved >= 15 && moved < 600){
         // 2e position lente de suite : bouchon (on fusionne avec un bouchon proche sur la même ligne)
         let jam = Object.values(TF.jams).find(j => j.line === st.line && Math.abs(j.s - st.s0) < 500);
         if (!jam){ jam = { id: 'j' + now + key, line: st.line, s: st.s0, from: st.s0, to: st.s0, first: now }; TF.jams[jam.id] = jam; }
@@ -6608,7 +6611,7 @@ async function updateCity(){
       city = { name: c.nom, poly: c.contour, at: Date.now(), loading:false };
       diag('commune', { nom: c.nom });
       cityState = {};                                         // nouveau secteur : on repart de zéro (pas d'annonce en rafale)
-      if (changed && cityCfg.on && alertCfg.on) notify(`🏙️ Tu es maintenant à ${c.nom}`, 'Je t’annonce les cars jaunes de cette ville.', 'none');
+      if (changed && cityCfg.on && alertCfg.on && !onBus) notify(`🏙️ Tu es maintenant à ${c.nom}`, 'Je t’annonce les cars jaunes de cette ville.', 'none');
     }
   } catch(e){ city.name = city.name || ''; }
   city.loading = false;
@@ -6673,6 +6676,7 @@ function cityTick(){
   });
   Object.keys(cityState).forEach(id => { if (!seen.has(id)) delete cityState[id]; });
   if (!evs.length || !alertCfg.on) return;
+  if (onBus) return;                                           // dans un car : pas d'annonces « Cars dans ma ville » (suivi en direct du 20/11)
   const dl = v => { const k = punctOf(v.delay); return k === 'late' ? ` (retard ${Math.round(v.delay / 60)} min)` : k === 'early' ? ` (avance ${Math.round(-v.delay / 60)} min)` : ''; };
   const one = e => ({
     enter:  [`➡️ Le ${e.l} arrive à ${sectorName()}`, `Direction ${e.d}${e.v.stopName ? ' · prochain arrêt ' + e.v.stopName : ''}${dl(e.v)}.`],
