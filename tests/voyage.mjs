@@ -10,7 +10,8 @@ const t = async (label, fn) => {
 };
 const browser = await browser0();
 async function browser0(){ return chromium.launch(); }
-const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true })).newPage();
+const PHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
+const page = await (await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, userAgent: PHONE_UA })).newPage();
 const errs = []; page.on('pageerror', e => errs.push(e.message));
 await page.goto(BASE + '/_test.html');
 await page.waitForTimeout(2500);
@@ -122,6 +123,21 @@ await t('🔦 écran clignotant avec la ligne, puis Fermer', async () => {
 await t('🔦 bouton aussi dans Horaires', async () => {
   const n = await page.evaluate(`(async () => { ride.phase = 'idle'; setView('board'); await selectStop(findGroup('Gare de St-Denis')); renderBoard(); return document.querySelectorAll('#boardCard [data-sign]').length; })()`);
   return n === 1 || n;
+});
+await t('🔦 pas de bouton « Faire signe » sur ordinateur ni tablette', async () => {
+  const out = [];
+  for (const [w, h, ua, touch] of [[1280, 800, '', false],
+    [820, 1180, 'Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1', true],
+    [800, 1280, 'Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36', true]]){
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: touch, ...(ua ? { userAgent: ua } : {}) });
+    const p = await ctx.newPage();
+    await p.goto(BASE + '/_test.html'); await p.waitForTimeout(2500);
+    out.push(await p.evaluate(`(async () => { forceUntil = Date.now() + 3600e3; updateMode(); setView('board'); await selectStop(findGroup('Gare de St-Denis')); renderBoard();
+      ride = { phase:'wait', stop:'Sainte-Marie Duparc', since: Date.now(), sent:{}, veh:'', info:null }; setView('map'); signTick();
+      return [isPhone(), document.querySelectorAll('[data-sign]:not(#signBtn)').length, document.querySelector('#signBtn').hidden]; })()`));
+    await ctx.close();
+  }
+  return out.every(r => r[0] === false && r[1] === 0 && r[2] === true) || JSON.stringify(out);
 });
 // ---------- 🌀 vigilance météo / cyclone ----------
 await t('🌀 rien à signaler : pas de bandeau, carte verte dans Infos trafic', async () => {

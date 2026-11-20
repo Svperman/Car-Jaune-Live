@@ -5829,7 +5829,7 @@ function renderBoard(){
   const head = stopReportsHtml(g.name) + `<div class="board-head"><h2>${esc(g.name)}${stopPmr(g)}${pTxt}</h2><span class="upd">${
     mode === 'sleep' ? 'Réseau fermé · horaires théoriques'
     : `Temps réel ${feedTime ? 'à ' + fmtHM(feedTime) : ''} · actualisation auto`}</span></div>`
-    + (mode === 'sleep' ? '' : `<button class="btn small sign-b" data-sign title="Écran jaune clignotant pour que le chauffeur te voie">🔦 Faire signe au car</button>`) + rgl;
+    + (mode === 'sleep' || !isPhone() ? '' : `<button class="btn small sign-b" data-sign title="Écran jaune clignotant pour que le chauffeur te voie">🔦 Faire signe au car</button>`) + rgl;
   if (board.loading){ card.innerHTML = head + `<div class="placeholder">Chargement des passages…</div>`; return; }
 
   const pool = board.error ? [] : gtfsRows(g);
@@ -8042,12 +8042,19 @@ document.addEventListener('click', e => {
   else if (e.target.closest('#signTorch')) toggleTorch();
   else if (e.target.closest('#signClose') || e.target.id === 'signOv') closeSign();
 });
+/** Téléphone seulement (pas ordinateur ni tablette) : c'est le seul appareil qu'on tend au chauffeur. */
+function isPhone(){
+  const ua = navigator.userAgent || '';
+  if (/iPhone|iPod/.test(ua) || /Android.*Mobile/.test(ua)) return true;
+  if (/iPad|Tablet/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return false;
+  try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; } catch(e){ return false; }
+}
 /** À l'arrêt : le bouton 🔦 apparaît, et pulse quand un car arrive (avec un rappel). */
 let signNotif = {};
 function signTick(){
   const b = $('#signBtn'); if (!b) return;
   const waiting = typeof ride !== 'undefined' && ride.phase === 'wait' && !onBus;
-  if (!waiting || view !== 'map'){ b.hidden = true; b.classList.remove('pulse'); return; }
+  if (!waiting || view !== 'map' || !isPhone()){ b.hidden = true; b.classList.remove('pulse'); return; }
   const g = findGroup(ride.stop), near = g ? signApproaching(g) : [];
   b.hidden = false;
   if (g && isGare(g)){ b.classList.remove('pulse'); return; }        // dans une gare, tous les cars s'arrêtent : pas besoin de faire signe
