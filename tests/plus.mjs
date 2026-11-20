@@ -200,6 +200,19 @@ await t('🔌 chargeur branché → écran gardé allumé (Android), ?charge=1 (
     return out; })()`);
   return JSON.stringify(r) === '[true,true,1,false,true,true,false]' || JSON.stringify(r);
 });
+await t('📡 suivi en direct : code de 8 caractères, journal envoyé par paquets, pas deux fois la même ligne', async () => {
+  const r = await page.evaluate(`(async () => {
+    window.__live = []; const box = document.querySelector('#liveOn');
+    box.checked = true; box.dispatchEvent(new Event('change'));
+    diag('car', { vitesse: 30, dedans: 'X' }); diag('alerte', { titre: 'test' });
+    await liveFlush(); const a = __live.length;
+    await liveFlush(); const b = __live.length;
+    diag('gps', { lat: 1, lon: 2 }); await liveFlush(); const c = __live.length;
+    const code = live.code, txt = document.querySelector('#liveTxt').textContent;
+    box.checked = false; box.dispatchEvent(new Event('change')); await new Promise(ok => setTimeout(ok, 50));
+    return [code, window.__liveCode, a, b, c, /En direct · code/.test(txt), live]; })()`);
+  return (/^[A-Z2-9]{8}$/.test(r[0]) && r[1] === r[0] && r[2] >= 3 && r[3] === r[2] && r[4] === r[2] + 1 && r[5] && r[6] === null) || JSON.stringify(r);
+});
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await browser.close();
 if (fails.length){ console.log(`✗ ${fails.length} problème(s)`); process.exit(1); }

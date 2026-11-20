@@ -101,7 +101,9 @@ const API_ = {
   feedback:          function (json) { return feedback(json); },
   getCreatorStats:   function () { return getCreatorStats(); },
   getVigilance:      function () { return getVigilance(); },
-  getFlights:        function () { return getFlights(); }
+  getFlights:        function () { return getFlights(); },
+  liveDiag:          function (code, lines) { return liveDiag(code, lines); },
+  getLiveDiag:       function (code, from) { return getLiveDiag(code, from); }
 };
 
 function api_(action, args) {
@@ -1249,4 +1251,41 @@ function getFlights() {
   const ok = cache.get('flights_ok');            // panne : la dernière liste connue, avec l'erreur
   if (ok) { const o = JSON.parse(ok); o.err = out.err || o.err; return JSON.stringify(o); }
   return s;
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  📡 Suivi en direct : journal de trajet envoyé par l'appli            */
+/*  Rangé dans le cache (6 h max) sous un code secret de 8 caractères.  */
+/* ------------------------------------------------------------------ */
+function liveCode_(code) {
+  code = String(code || '').toUpperCase();
+  if (!/^[A-Z0-9]{8}$/.test(code)) throw new Error('code invalide');
+  return code;
+}
+function liveDiag(code, lines) {
+  code = liveCode_(code);
+  const txt = String(lines || '');
+  if (txt.length > 95000) throw new Error('trop long');
+  JSON.parse(txt);                                              // doit être du JSON valide
+  const lock = LockService.getScriptLock(); lock.waitLock(5000);
+  try {
+    const cache = CacheService.getScriptCache(), kn = 'live_' + code + '_n';
+    const n = Number(cache.get(kn) || 0) + 1;
+    if (n > 600) throw new Error('journal plein');
+    cache.put('live_' + code + '_' + n, txt, 21600);
+    cache.put(kn, String(n), 21600);
+    return String(n);
+  } finally { lock.releaseLock(); }
+}
+function getLiveDiag(code, from) {
+  code = liveCode_(code);
+  const cache = CacheService.getScriptCache();
+  const n = Number(cache.get('live_' + code + '_n') || 0);
+  const a = Math.max(1, Number(from) || 1), keys = [];
+  for (let i = a; i <= n && keys.length < 200; i++) keys.push('live_' + code + '_' + i);
+  const got = keys.length ? cache.getAll(keys) : {};
+  let lines = [];
+  keys.forEach(function (k) { if (got[k]) { try { lines = lines.concat(JSON.parse(got[k])); } catch (e) {} } });
+  return JSON.stringify({ n: n, from: a, lines: lines, at: Date.now() });
 }

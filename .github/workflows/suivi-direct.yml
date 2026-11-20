@@ -1,0 +1,57 @@
+# 📡 Suivi en direct : récupère le journal de trajet envoyé par l'appli (code secret de 8 caractères)
+# et le CHIFFRE avec la clé publique donnée en entrée : le dépôt est public, rien de lisible n'apparaît
+# dans les journaux ni dans l'artefact (seul le détenteur de la clé privée peut le lire).
+name: Suivi en direct
+
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: Code affiché dans l'appli (⚙️ › Suivi en direct par Claude)
+        required: true
+      from:
+        description: Premier paquet à récupérer
+        required: false
+        default: '1'
+      pub:
+        description: Clé publique RSA (PEM en base64) pour chiffrer le journal
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  recuperer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DEPLOYMENT_ID: AKfycbxb8N-ilmQrYtY4D7vY0TSPUYB_CnQfsbXgKDVwRw48ZzWbiMk5lJ4ULQU-lczHal53
+    steps:
+      - name: Journal chiffré
+        env:
+          CODE: ${{ inputs.code }}
+          FROM: ${{ inputs.from }}
+          PUB: ${{ inputs.pub }}
+        run: |
+          set -e
+          echo "$CODE" | grep -qE '^[A-Z0-9]{8}$' || { echo "::error::code invalide"; exit 1; }
+          echo "$FROM" | grep -qE '^[0-9]{1,4}$' || FROM=1
+          echo "$PUB" | base64 -d > pub.pem
+          base="https://script.google.com/macros/s/$DEPLOYMENT_ID/exec"
+          args=$(printf '["%s",%s]' "$CODE" "$FROM")
+          for i in 1 2 3; do
+            curl -sL --max-time 60 -G "$base" --data-urlencode "action=getLiveDiag" --data-urlencode "args=$args" -o out.json || true
+            grep -q '"ok":true' out.json && break; sleep 10
+          done
+          grep -q '"ok":true' out.json || { echo "::error::serveur : réponse inattendue"; exit 1; }
+          echo "Taille : $(wc -c < out.json) octets"                # (pas le contenu : dépôt public)
+          openssl rand -out k.bin 32
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in out.json -out journal.enc -pass file:k.bin
+          openssl pkeyutl -encrypt -pubin -inkey pub.pem -pkeyopt rsa_padding_mode:oaep -in k.bin -out cle.enc
+          mkdir chiffre && mv journal.enc cle.enc chiffre/ && rm -f out.json k.bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: journal-chiffre
+          path: chiffre/
+          retention-days: 1
