@@ -1001,7 +1001,7 @@
 <body>
 <header class="top">
   <div class="top-in">
-    <div class="brand">
+    <div class="brand" id="brandHome" role="button" tabindex="0" title="Retour à la carte" aria-label="Car Jaune Live : retour à la carte" style="cursor:pointer">
       <div class="mark"><svg viewBox="0 0 24 24" fill="#222"><path d="M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-1 1.7V20a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2.3A2 2 0 0 1 3 16V5a2 2 0 0 1 2-2Zm0 3v5h14V6H5Zm2 7.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm10 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"/></svg></div>
       <div><b>Car Jaune Live</b><small><span id="chargeIco" hidden title="En charge : l’écran reste allumé">🔌 </span><time class="clock" id="clock" aria-label="Heure"></time><span class="sub"> · Suivi en temps réel · non officiel</span></small></div>
     </div>
@@ -1600,7 +1600,7 @@ const I18N_FRAG = {
   'Enregistre ce que l’appli détecte (position, car repéré, retards, alertes) pour corriger les erreurs. Rien n’est envoyé.':'Records what the app detects (location, bus spotted, delays, alerts) to fix errors. Nothing is sent.',
   'enregistre ce que l’appli détecte pendant un trajet (rien n’est envoyé)':'records what the app detects during a trip (nothing is sent)',
   'Dans Apps Script, les notifications du téléphone ne sont pas possibles : utilise l’appli installée':'Phone notifications aren’t possible inside Apps Script: use the installed app',
-  'en service jusqu’à':'running until','Arrivée':'Arrival','du … au …':'from … to …','Gares principales :':'Main stations:','Aller / retour':'Out / return','Par heure':'By time','aller':'outbound','retour':'return','Aller':'Outbound','Retour':'Return','dernier':'last','Période scolaire':'School term','période scolaire':'school term','Horaires période scolaire':'School-term times','Horaires de période scolaire':'School-term times',
+  'en service jusqu’à':'running until','Arrivée':'Arrival','du … au …':'from … to …','Gares principales :':'Main stations:','Aller / retour':'Out / return','Par destination':'By destination','Par heure':'By time','aller':'outbound','retour':'return','Aller':'Outbound','Retour':'Return','dernier':'last','Période scolaire':'School term','période scolaire':'school term','Horaires période scolaire':'School-term times','Horaires de période scolaire':'School-term times',
   'Horaires de jour férié':'Public-holiday times','Dimanches et jours fériés':'Sundays and public holidays','Jour férié :':'Public holiday:','vacances scolaires':'school holidays',
   'Vacances scolaires':'School holidays','Vacances d\'Été austral':'Southern summer holidays','Vacances après 3ème période':'Holidays after term 3','Vacances après 4ème période':'Holidays after term 4','Vacances après 1ère période':'Holidays after term 1','Vacances après 2ème période':'Holidays after term 2','Vacances':'Holidays','Données Région Réunion (Licence Ouverte)':'Data Région Réunion (Open Licence)','prochaines vacances le':'next holidays on','vacances le':'holidays on','Prochains jours fériés':'Upcoming public holidays',
   'Aujourd’hui :':'Today:','Actualisation dans':'Refresh in','dès le':'from','Toute l’île':'Whole island','Plus de boutons':'More buttons','prévu':'scheduled','temps réel':'real time','Horaires du jour':'Today’s times',
@@ -2061,17 +2061,26 @@ async function init(){
 
   setStatus('Chargement des lignes…');
   // 1. ce qui est gardé sur le téléphone : affichage tout de suite (même sans réseau)
-  const [cs, cc] = await Promise.all([cachedValue('getStatic'), cachedValue('getSchoolCalendar')]);
-  let fromCache = false;
-  if (cs){ try { S = JSON.parse(cs); if (cc) CAL = JSON.parse(cc); applyStatic(); fromCache = true; } catch(e){} }
-  // 2. version fraîche du serveur (en arrière-plan si on a déjà le cache)
+  const [csE, ccE] = await Promise.all([idb.get('getStatic|[]'), idb.get('getSchoolCalendar|[]')]);
+  const cs = csE ? csE.v : null, cc = ccE ? ccE.v : null;
+  // 2. version fraîche du serveur (en arrière-plan si on a déjà un cache récent)
   const fresh = Promise.allSettled([call('getStatic'), call('getSchoolCalendar')]).then(([st, cal]) => {
     let changed = false;
-    if (st.status === 'fulfilled' && st.value !== cs){ S = JSON.parse(st.value); changed = true; }
+    if (st.status === 'fulfilled' && (st.value !== cs || !fromCache)){ S = JSON.parse(st.value); changed = true; }
     else if (st.status !== 'fulfilled' && !fromCache) toast('Horaires théoriques indisponibles : ' + errMsg(st.reason));
-    if (cal.status === 'fulfilled' && cal.value !== cc){ CAL = JSON.parse(cal.value); changed = true; }
+    if (cal.status === 'fulfilled' && (cal.value !== cc || !fromCache)){ CAL = JSON.parse(cal.value); changed = true; }
     if (changed || !fromCache) applyStatic();
   });
+  // Cache ancien (plus de 2 jours) et réseau dispo : on attend la version fraîche (10 s max)
+  // pour ne pas afficher d'anciens numéros de lignes avec « Destination inconnue ».
+  let fromCache = false;
+  const cacheOld = !csE || !csE.t || Date.now() - csE.t > 2 * 864e5;
+  if (cs && cacheOld && navigator.onLine !== false){
+    setStatus('Mise à jour des lignes…');
+    const ok = await Promise.race([fresh.then(() => true), new Promise(r => setTimeout(() => r(false), 10000))]);
+    if (ok && S && S.routes) fromCache = true;            // déjà appliqué par « fresh »
+  }
+  if (!fromCache && cs){ try { S = JSON.parse(cs); if (cc) CAL = JSON.parse(cc); applyStatic(); fromCache = true; } catch(e){} }
   if (!fromCache) await fresh;
   loadAlertCfg();
   renderSettings();
@@ -3869,10 +3878,13 @@ function renderAlertStatus(rows, ctx){
   const now = Date.now();
   ctx = ctx || alertContext();
   const nx = (rows || ctx.rows).find(r => r.eff > now);
+  // notifications du téléphone vraiment autorisées ? sinon les alertes ne s'affichent que dans l'appli
+  let phoneOk = false;
+  try { phoneOk = LNOTIF ? lnPerm === 'granted' : ('Notification' in window && Notification.permission === 'granted'); } catch(e){}
   box.className = 'al-status on';
-  box.innerHTML = `✅ Alertes actives pour <b>${esc(ctx.stop || '—')}</b>${ctx.sens ? ` · ton <b>${ctx.sens}</b> vers ${esc(ctx.to)}` : ''}${alertCfg.line ? ' (ligne ' + esc(alertCfg.line) + ')' : ''}
+  box.innerHTML = `${phoneOk ? '✅ Alertes actives' : '🔔 Alertes dans l’appli seulement'} pour <b>${esc(ctx.stop || '—')}</b>${ctx.sens ? ` · ton <b>${ctx.sens}</b> vers ${esc(ctx.to)}` : ''}${alertCfg.line ? ' (ligne ' + esc(alertCfg.line) + ')' : ''}
     ${nx ? ` · prochain car : <b>${esc(nx.route.s)}</b> → ${esc(nx.dest)} à <b>${fmtHM(nx.eff)}</b> (${fmtIn(nx.eff)})${nx.real != null ? ' · temps réel' : ''}` : ''}
-    <br><small>Les alertes marchent tant que l’appli est ouverte${alertCfg.ntfy ? ' · elles partent aussi sur ntfy' : ''}.</small>`;
+    <br><small>${phoneOk ? 'Les alertes marchent tant que l’appli est ouverte' : '⚠️ Notifications du téléphone non autorisées : touche « Autoriser » pour être prévenu même sur un autre écran'}${alertCfg.ntfy ? ' · elles partent aussi sur ntfy' : ''}.</small>`;
   if (!ctx.stop) box.innerHTML = '🔔 Notifications actives : choisis un arrêt (ou Mon trajet) pour être prévenu.';
 }
 function updateAlertUI(){
@@ -5830,7 +5842,7 @@ function renderBoard(){
     return;
   }
   const now = Date.now();
-  const groupBtns = `<span class="grp"><button data-grp="sens" class="${boardGroupBy === 'sens' ? 'on' : ''}">Aller / retour</button><button data-grp="heure" class="${boardGroupBy === 'heure' ? 'on' : ''}">Par heure</button></span>`;
+  const groupBtns = `<span class="grp"><button data-grp="sens" class="${boardGroupBy === 'sens' ? 'on' : ''}">Par destination</button><button data-grp="heure" class="${boardGroupBy === 'heure' ? 'on' : ''}">Par heure</button></span>`;
   const table = list => {
     let lastDay = midnightMs(now), html = '';
     list.forEach(r => {
@@ -5849,11 +5861,11 @@ function renderBoard(){
       const status = r.ghost ? `<span class="dchip ghost">🚫 Pas vu en circulation</span><br><small class="muted">peut-être supprimé</small>`
         : r.real != null ? delayChip(r.real - r.sched, r.approx) : `<span class="th">${fr ? 'Fiche horaire' : 'Horaire théorique'}</span>${habitHtml(r)}`;
       const crowd = typeof crowdNote === 'function' ? crowdNote(r.route.s, r.sched) : '';
-      const sensTag = boardGroupBy === 'heure' && r.sens ? `<span class="tag ${r.sens === 'aller' ? 'tag-s' : 'tag-v'}">${r.sens}</span>` : '';
+      const sensTag = '';   // l'aller/retour d'une ligne n'a pas de sens pour quelqu'un sur le quai : on montre la destination
       html += `<tr class="${r.ghost ? 'ghost' : ''}">
         <td>${whenL}</td>
         <td>${badge(r.route)}${r.pmr === '1' ? '<span class="pmr-i" title="Car accessible en fauteuil roulant">♿</span>' : ''}</td>
-        <td class="b-dest">${esc(r.dest)}${sensTag}${r.tag}${r.last ? LAST_TAG : ''}${reportChips(r)}<small>${r.veh && r.veh.stopName ? 'vers ' + esc(r.veh.stopName) : ''}</small>
+        <td class="b-dest">${esc(r.dest)}${sensTag}${r.tag}${r.last ? LAST_TAG : ''}${reportChips(r)}<small>${r.veh && r.veh.stopName ? '🚌 le car est vers : ' + esc(r.veh.stopName) : ''}</small>
           ${r.veh ? `<button class="see" data-veh="${esc(r.veh.id)}">📍 Voir le car</button>` : ''}
           ${r.sched - now < 30 * 60e3 ? `<button class="see" data-report="${esc(g.name)}" data-line="${esc(r.route.s)}" data-sched="${r.sched}">📣 Signaler</button>` : ''}</td>
         <td>${fmtTime(r.real, r.sched, r.approx)}</td>
@@ -5865,11 +5877,13 @@ function renderBoard(){
   const all = markLast(fr || pool);
   let body = '';
   if (boardGroupBy === 'sens'){
-    ['aller', 'retour'].forEach(s => {
-      const list = all.filter(r => (r.sens || 'aller') === s).slice(0, Math.ceil(BOARD_MAX / 2) + 3);
-      if (!list.length) return;
-      const dests = [...new Set(list.map(r => `${r.route.s} → ${r.dest}`))].slice(0, 4).join(' · ');
-      body += `<div class="sens-h sens-${s}"><span class="pillx">${s === 'aller' ? '➡️ Aller' : '⬅️ Retour'}</span><small>${esc(dests)}</small></div>` + table(list);
+    // regroupé par destination (ce que cherche quelqu'un sur le quai), la destination qui part le plus tôt en premier
+    const byDest = new Map();
+    all.forEach(r => { const k = r.dest || '—'; if (!byDest.has(k)) byDest.set(k, []); byDest.get(k).push(r); });
+    [...byDest.entries()].sort((a, b) => a[1][0].eff - b[1][0].eff).forEach(([dest, list], i) => {
+      list = list.slice(0, 5);
+      const lines = [...new Set(list.map(r => r.route.s))].join(' · ');
+      body += `<div class="sens-h sens-${i % 2 ? 'retour' : 'aller'}"><span class="pillx">➡️ Vers ${esc(dest)}</span><small>${esc(lines)}</small></div>` + table(list);
     });
   } else body = table(rows);
   card.innerHTML = head + src.replace('</p>', ` ${groupBtns}</p>`) + body + reliabilityHtml(all.map(r => r.route.s));
@@ -5879,6 +5893,13 @@ $('#boardCard').addEventListener('click', e => {
   if (gb){ boardGroupBy = gb.dataset.grp; savePrefs(); renderBoard(); return; }
   const b = e.target.closest('[data-veh]'); if (b) focusVehicle(b.dataset.veh);
 });
+/* le logo ramène à la carte, comme dans la plupart des applis */
+(() => {
+  const home = document.getElementById('brandHome'); if (!home) return;
+  const go = () => { if (view !== 'map') setView('map'); };
+  home.addEventListener('click', go);
+  home.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); } });
+})();
 
 /* ====================== Interactions carte ====================== */
 $('#chips').addEventListener('click', e => {
