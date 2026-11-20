@@ -6656,6 +6656,7 @@ function gareAt(v){
   return best && inSector(best.g.lat, best.g.lon) ? best.g : null;
 }
 /** Appelé après chaque mise à jour du temps réel. */
+const cityOnce = {};
 function cityTick(){
   if (!cityCfg.on || !myPos || !vehicles.length) return;
   if (cityCfg.sector === 'city' && !city.poly && !city.loading) updateCity();
@@ -6675,6 +6676,13 @@ function cityTick(){
       evs.push({ k:'gareOut', gare: prev.gare, ...who });
   });
   Object.keys(cityState).forEach(id => { if (!seen.has(id)) delete cityState[id]; });
+  // même car, même gare : pas deux fois la même annonce en 10 min (position qui saute autour de la gare, suivi du 20/11)
+  const nowC = Date.now();
+  for (let i = evs.length - 1; i >= 0; i--){
+    const e = evs[i], k = e.v.id + '|' + e.k + '|' + (e.gare || '');
+    if (cityOnce[k] && nowC - cityOnce[k] < 10 * 60e3) evs.splice(i, 1); else cityOnce[k] = nowC;
+  }
+  Object.keys(cityOnce).forEach(k => { if (nowC - cityOnce[k] > 30 * 60e3) delete cityOnce[k]; });
   if (!evs.length || !alertCfg.on) return;
   if (onBus) return;                                           // dans un car : pas d'annonces « Cars dans ma ville » (suivi en direct du 20/11)
   const dl = v => { const k = punctOf(v.delay); return k === 'late' ? ` (retard ${Math.round(v.delay / 60)} min)` : k === 'early' ? ` (avance ${Math.round(-v.delay / 60)} min)` : ''; };
