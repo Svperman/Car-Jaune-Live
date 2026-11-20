@@ -6975,11 +6975,16 @@ function rideTick(){
   if (v){
     if (ride.phase !== 'ride'){
       const waitOk = ride.phase === 'wait' && now - ride.since < 30 * 60e3 && ride.lat != null && distM(ride.lat, ride.lon, myPos.lat, myPos.lon) < 600;
-      const from = waitOk ? ride.stop : (nearStop(400) || {}).name || '';
+      // suivi en direct du 20/11 : appli rouverte en roulant à 62 km/h → « monté à Gare de St-Pierre » envoyé aux proches.
+      // Déjà annoncé pour ce car (avant la réouverture) : on ne recommence pas ; en roulant vite, pas d'« arrêt le plus proche ».
+      let dep0 = null; try { dep0 = JSON.parse(localStorage.getItem('cj_dep') || 'null'); } catch(e){}
+      const dup = dep0 && dep0.veh === v.id && now - dep0.at < 3 * 3600e3;
+      const from = waitOk ? ride.stop : dup ? (dep0.stop || '') : sp > 5 ? '' : (nearStop(400) || {}).name || '';
       const info = rideInfo(v);
       ride = { phase:'ride', stop: from, since: now, sent:{}, veh: v.id, info };
       try { bilanStart(v, from); } catch(e){}
-      shareEvent({ k:'depart', stop: from, l: v.route.s, d: v.headsign, to: info.to, eta: info.until, dl: v.delay });
+      if (!dup) shareEvent({ k:'depart', stop: from, l: v.route.s, d: v.headsign, to: info.to, eta: info.until, dl: v.delay });
+      try { localStorage.setItem('cj_dep', JSON.stringify({ veh: v.id, at: dup ? dep0.at : now, stop: from })); } catch(e){}
     } else {
       try { bilanTick(v); } catch(e){}
       ride.info = rideInfo(v);
