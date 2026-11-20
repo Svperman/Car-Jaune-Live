@@ -1,9 +1,10 @@
 /* Car Jaune Live — service worker : appli utilisable hors ligne (coquille), données toujours fraîches */
-const VERSION = 'cj-v68';
+const VERSION = 'cj-v69';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png',
   './lib/leaflet.css', './lib/leaflet.js', './lib/leaflet-rotate.js', './lib/protobuf.min.js',
+  './lib/maplibre-gl.js', './lib/maplibre-gl.css', './lib/leaflet-maplibre-gl.js',
   './lib/images/layers.png', './lib/images/layers-2x.png'
 ];
 
@@ -29,7 +30,7 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   // carte hors ligne : chaque morceau de carte déjà vu est gardé (et rafraîchi quand il y a du réseau)
-  if (/tile\.openstreetmap|basemaps\.cartocdn|arcgisonline/.test(url.host)){
+  if (/tile\.openstreetmap|basemaps\.cartocdn|arcgisonline|openfreemap/.test(url.host)){
     // morceau déjà gardé : affiché tout de suite, sans le retélécharger à chaque fois (la carte change rarement ;
     // 1 fois sur 20 on le rafraîchit en arrière-plan). Moins de réseau = les nouveaux morceaux arrivent plus vite.
     e.respondWith(caches.open(TILE_CACHE).then(async c => {

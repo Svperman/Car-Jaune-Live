@@ -19,6 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,300;6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <noscript><link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:opsz,wght@6..12,300;6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="lib/leaflet.css">
+<link rel="stylesheet" href="lib/maplibre-gl.css">
 <style>
   /* iPhone et Android : texte qui ne grossit pas tout seul à l'horizontale, pas de « rebond » ni de rafraîchissement
      accidentel en tirant l'écran, pas de zoom en touchant deux fois un bouton, pas de menu « copier » sur la carte */
@@ -1343,6 +1344,8 @@
 
 <script src="lib/leaflet.js"></script>
 <script src="lib/leaflet-rotate.js"></script>
+<script src="lib/maplibre-gl.js"></script>
+<script src="lib/leaflet-maplibre-gl.js"></script>
 <script src="lib/protobuf.min.js"></script>
 <script>
 /* ====================== Réglages ====================== */
@@ -1722,12 +1725,29 @@ const SharpTiles = L.TileLayer.extend({
 const sharpTiles = (url, o) => new SharpTiles(url, o);
 // « Plan » : plan Esri (gratuit, sans clé), sans le cercle violet des eaux territoriales du plan OpenStreetMap.
 // (CARTO demande désormais une clé : ses cartes s'affichaient avec « API KEY REQUIRED ».)
-const BASES = {
-  'Plan': sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
-    maxZoom:19, maxNativeZoom:19, attribution:'Plan © Esri, HERE, Garmin, © OpenStreetMap' + SRC }),
-  'Satellite': sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
-    maxZoom:19, attribution:'Imagerie © Esri' + SRC })
-};
+const ESRI_PLAN = sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
+  maxZoom:19, maxNativeZoom:19, attribution:'Plan © Esri, HERE, Garmin, © OpenStreetMap' + SRC });
+// « Plan » façon Google Maps (demande du 20/11) : OpenFreeMap, style Liberty — gratuit, sans clé, sans inscription, sans limite.
+// Carte vectorielle (nette à tous les zooms). Si le téléphone ne sait pas l'afficher (WebGL) ou si le style ne charge pas,
+// on repasse tout seul sur le plan Esri.
+const GL_OK = (() => { try { const c = document.createElement('canvas'); return !!(window.maplibregl && L.maplibreGL && (c.getContext('webgl2') || c.getContext('webgl'))); } catch(e){ return false; } })();
+let GL_PLAN = null;
+if (GL_OK){
+  GL_PLAN = L.maplibreGL({ style:'https://tiles.openfreemap.org/styles/liberty', interactive:false,
+    attribution:'<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · données <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a>' + SRC });
+  let glLoaded = false;
+  GL_PLAN.on('add', () => {
+    const g = GL_PLAN.getMaplibreMap && GL_PLAN.getMaplibreMap(); if (!g || g.__cj) return; g.__cj = true;
+    g.on('load', () => { glLoaded = true; });
+    g.on('error', () => {                                       // style ou carte injoignable (pas de réseau, site en panne)
+      if (glLoaded || !map.hasLayer(GL_PLAN)) return;
+      map.removeLayer(GL_PLAN); ESRI_PLAN.addTo(map);
+    });
+  });
+}
+const BASES = GL_PLAN ? { 'Plan': GL_PLAN, 'Plan Esri': ESRI_PLAN } : { 'Plan': ESRI_PLAN };
+BASES['Satellite'] = sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
+  maxZoom:19, attribution:'Imagerie © Esri' + SRC });
 let baseName = 'Plan';
 try { const b = localStorage.getItem('cj_base'); if (BASES[b]) baseName = b; else if (b) localStorage.setItem('cj_base', 'Plan'); } catch(e){}   // anciens « Plan détaillé / Plan clair » → Plan
 BASES[baseName].addTo(map);
