@@ -1285,7 +1285,7 @@
       <div class="set-row" id="apkRow" hidden><div class="set-l"><b>Appli Android</b><small>position partagée même appli fermée</small></div><a class="btn small ghost" href="https://github.com/Svperman/Car-Jaune-Live/releases/download/android/car-jaune.apk">📥 APK</a></div>
       <div class="set-row col adv" id="apiRow" hidden><div class="set-l"><b>Serveur <span id="srvState"></span></b><small id="apiTxt"></small></div>
         <div class="set-ctl"><button class="btn small ghost" id="srvCheck">↻ Vérifier</button><button id="apiBtn" class="btn small ghost">Modifier l’adresse</button></div></div>
-      <div class="set-row"><div class="set-l"><b>📡 Suivi en direct par Claude</b><small id="liveTxt">pendant un trajet, le journal (position, car repéré, alertes) est envoyé toutes les 30 s pour corriger les bugs en direct · 3 h maximum</small></div><label class="switch"><input type="checkbox" id="liveOn"><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>📡 Suivi en direct par Claude</b><small id="claudeTxt">pendant un trajet, le journal (position, car repéré, alertes) est envoyé toutes les 30 s pour corriger les bugs en direct · 3 h maximum</small></div><label class="switch"><input type="checkbox" id="claudeOn"><span></span></label></div>
       <div class="set-row col"><div class="set-l"><b>💬 Une idée / un bug ?</b><small>ton message arrive directement au créateur de l’appli (anonyme)</small></div>
         <div class="fb"><select class="set-sel" id="fbKind" aria-label="Type de message"><option value="idee">💡 Une idée</option><option value="bug">🐞 Un bug</option></select>
         <textarea class="set-in" id="fbText" rows="3" maxlength="600" placeholder="Dis-moi ce qui te serait utile, ou ce qui ne marche pas…" aria-label="Ton message"></textarea>
@@ -4208,7 +4208,7 @@ async function liveFlush(){
   liveBusy = false; renderLive();
 }
 function renderLive(){
-  const c = $('#liveOn'), t = $('#liveTxt'); if (!c || !t) return;
+  const c = $('#claudeOn'), t = $('#claudeTxt'); if (!c || !t) return;
   c.checked = !!live;
   if (!live) return;
   t.innerHTML = `🔴 En direct · code <b style="font-size:16px;letter-spacing:.08em">${live.code}</b> (donne-le à Claude) · `
@@ -4240,7 +4240,7 @@ $('#diagOn').addEventListener('change', e => {
   }
   renderDiag();
 });
-$('#liveOn').addEventListener('change', e => {
+$('#claudeOn').addEventListener('change', e => {
   if (e.target.checked){
     const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(8));
     live = { code: [...r].map(x => A[x % A.length]).join(''), sent: diagSeq, until: Date.now() + 3 * 3600e3, ok: 0, err: '' };
