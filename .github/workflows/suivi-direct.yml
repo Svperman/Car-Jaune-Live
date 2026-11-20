@@ -50,6 +50,6 @@ jobs:
           openssl pkeyutl -encrypt -pubin -inkey pub.pem -pkeyopt rsa_padding_mode:oaep -in k.bin -out cle.enc
           rm -f out.json k.bin
           # sortie : uniquement du chiffré (illisible sans la clé privée), découpé en lignes
-          base64 -w0 cle.enc | fold -w 3000 | sed 's/^/CLE:/'
-          base64 -w0 journal.enc | fold -w 3000 | sed 's/^/JRN:/'
+          { base64 -w0 cle.enc; echo; } | fold -w 3000 | sed 's/^/CLE:/'
+          { base64 -w0 journal.enc; echo; } | fold -w 3000 | sed 's/^/JRN:/'
           rm -f cle.enc journal.enc
