@@ -1705,13 +1705,25 @@ map.fitBounds(REUNION);
 const SRC = ' · Données Région Réunion (Licence Ouverte)';
 // sur téléphone, Leaflet n'affichait les nouveaux morceaux de carte qu'une fois le doigt levé (zones vides pendant
 // le déplacement) : on charge en continu et on garde plus de morceaux autour de l'écran
-const TILE_OPTS = { updateWhenIdle:false, updateInterval:150, keepBuffer:4 };
+// updateWhenZooming:false : pendant un zoom on agrandit l'image déjà là, et on ne charge le bon niveau qu'à la fin
+// (avant, chaque cran de molette ou de pincement relançait des chargements → carte pixelisée qui « recharge »)
+const TILE_OPTS = { updateWhenIdle:false, updateWhenZooming:false, updateInterval:150, keepBuffer:4 };
+// Carte nette : avec les zooms intermédiaires (10,25…), Leaflet prenait le niveau arrondi (10) et l'agrandissait → flou.
+// On prend toujours le niveau juste au-dessus (11) et on le réduit : l'image n'est jamais agrandie.
+const SharpTiles = L.TileLayer.extend({
+  _setView(center, zoom, noPrune, noUpdate){
+    const r = Math.round;
+    Math.round = x => x === zoom ? Math.ceil(x - 0.02) : r(x);   // seul l'arrondi du niveau de zoom change
+    try { return L.TileLayer.prototype._setView.call(this, center, zoom, noPrune, noUpdate); } finally { Math.round = r; }
+  }
+});
+const sharpTiles = (url, o) => new SharpTiles(url, o);
 // « Plan » : plan Esri (gratuit, sans clé), sans le cercle violet des eaux territoriales du plan OpenStreetMap.
 // (CARTO demande désormais une clé : ses cartes s'affichaient avec « API KEY REQUIRED ».)
 const BASES = {
-  'Plan': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
+  'Plan': sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
     maxZoom:19, maxNativeZoom:19, attribution:'Plan © Esri, HERE, Garmin, © OpenStreetMap' + SRC }),
-  'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
+  'Satellite': sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
     maxZoom:19, attribution:'Imagerie © Esri' + SRC })
 };
 let baseName = 'Plan';
@@ -5262,9 +5274,15 @@ function predictedPos(st, now){
   return [st.lat, st.lon, st.bearing];
 }
 let lastMove = 0;
+// Pendant qu'on fait glisser ou zoomer la carte, on ne bouge pas les ~90 cars (ça faisait saccader le geste) :
+// ils reprennent leur place dès que la carte s'arrête.
+let mapBusy = 0;
+map.on('movestart zoomstart', () => { mapBusy = performance.now(); });
+map.on('moveend zoomend', () => { mapBusy = 0; lastMove = 0; });
 function moveLoop(t){
   requestAnimationFrame(moveLoop);
-  if (document.hidden || view !== 'map' || t - lastMove < (lowBattery ? 330 : 120)) return;   // ~8 images/s (3 si batterie faible), carte à l'écran seulement
+  if (mapBusy && t - mapBusy > 4000) mapBusy = 0;                    // sécurité : jamais figé plus de 4 s
+  if (document.hidden || view !== 'map' || mapBusy || t - lastMove < (lowBattery ? 330 : 120)) return;   // ~8 images/s (3 si batterie faible), carte à l'écran seulement
   lastMove = t;
   const now = Date.now();
   markers.forEach((m, id) => {
