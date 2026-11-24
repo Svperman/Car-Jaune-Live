@@ -1275,7 +1275,7 @@
   <details class="set-sec" id="sec-appli" data-acc>
     <summary><span class="sa-i">📲</span><span class="sa-t"><b>Appli et téléphone</b><small id="sum-sec-appli"></small></span><span class="sa-c" aria-hidden="true">›</span></summary>
     <div class="sa-body">
-      <div class="set-row"><div class="set-l"><b>📍 Localisation</b><small id="geoTxt">pour te repérer sur la carte, trouver les arrêts proches et prévenir tes proches</small></div><button class="btn small" id="geoBtn">Autoriser</button></div>
+      <div class="set-row"><div class="set-l"><b>📍 Localisation</b><small id="geoTxt">pour te repérer sur la carte, trouver les arrêts proches et prévenir tes proches</small></div><button class="btn small" id="geoSetBtn">Autoriser</button></div>
       <div class="set-row" id="installRow" hidden><div class="set-l"><b>Installer l’appli</b><small>sur l’écran d’accueil</small></div><button id="installBtn" class="btn small">📲 Installer</button></div>
       <div class="set-row"><div class="set-l"><b>🔌 En charge : garder l’appli ouverte</b><small id="chargeHint">l’écran reste allumé tant que le chargeur est branché</small></div><label class="switch"><input type="checkbox" id="alCharge" checked><span></span></label></div>
       <div class="set-row adv"><div class="set-l"><b>Garder l’écran allumé</b><small>pendant les alertes</small></div><label class="switch"><input type="checkbox" id="alWake"><span></span></label></div>
@@ -1344,8 +1344,6 @@
 
 <script src="lib/leaflet.js"></script>
 <script src="lib/leaflet-rotate.js"></script>
-<script src="lib/maplibre-gl.js"></script>
-<script src="lib/leaflet-maplibre-gl.js"></script>
 <script src="lib/protobuf.min.js"></script>
 <script>
 /* ====================== Réglages ====================== */
@@ -1728,23 +1726,40 @@ const sharpTiles = (url, o) => new SharpTiles(url, o);
 const ESRI_PLAN = sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
   maxZoom:19, maxNativeZoom:19, attribution:'Plan © Esri, HERE, Garmin, © OpenStreetMap' + SRC });
 // « Plan » façon Google Maps (demande du 20/11) : OpenFreeMap, style Liberty — gratuit, sans clé, sans inscription, sans limite.
-// Carte vectorielle (nette à tous les zooms). Si le téléphone ne sait pas l'afficher (WebGL) ou si le style ne charge pas,
+// Carte vectorielle (nette à tous les zooms). Sa bibliothèque (MapLibre, ~800 ko) se charge APRÈS l'affichage de l'appli
+// (−250 ms à l'ouverture sur un téléphone lent). Si le téléphone ne sait pas l'afficher (WebGL) ou si le style ne charge pas,
 // on repasse tout seul sur le plan Esri.
-const GL_OK = (() => { try { const c = document.createElement('canvas'); return !!(window.maplibregl && L.maplibreGL && (c.getContext('webgl2') || c.getContext('webgl'))); } catch(e){ return false; } })();
-let GL_PLAN = null;
-if (GL_OK){
-  GL_PLAN = L.maplibreGL({ style:'https://tiles.openfreemap.org/styles/liberty', interactive:false,
-    attribution:'<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · données <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a>' + SRC });
-  let glLoaded = false;
-  GL_PLAN.on('add', () => {
-    const g = GL_PLAN.getMaplibreMap && GL_PLAN.getMaplibreMap(); if (!g || g.__cj) return; g.__cj = true;
-    g.on('load', () => { glLoaded = true; });
-    g.on('error', () => {                                       // style ou carte injoignable (pas de réseau, site en panne)
-      if (glLoaded || !map.hasLayer(GL_PLAN)) return;
-      map.removeLayer(GL_PLAN); ESRI_PLAN.addTo(map);
-    });
-  });
+const GL_OK = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch(e){ return false; } })();
+const GL_ATTR = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · données <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a>' + SRC;
+let glLib = null;
+function loadGlLib(){
+  if (glLib) return glLib;
+  const add = src => new Promise((ok, ko) => { const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = ko; document.head.appendChild(t); });
+  return glLib = (window.maplibregl ? Promise.resolve() : add('lib/maplibre-gl.js')).then(() => L.maplibreGL ? null : add('lib/leaflet-maplibre-gl.js'))
+    .then(() => !!(window.maplibregl && L.maplibreGL)).catch(() => false);
 }
+const PlanGL = L.Layer.extend({
+  getAttribution(){ return GL_ATTR; },
+  onAdd(m){
+    this._actif = true;
+    loadGlLib().then(ok => {
+      if (!this._actif) return;
+      if (!ok){ this._fallback(m); return; }
+      if (!this._gl){
+        this._gl = L.maplibreGL({ style:'https://tiles.openfreemap.org/styles/liberty', interactive:false });
+        this._gl.on('add', () => {
+          const g = this._gl.getMaplibreMap && this._gl.getMaplibreMap(); if (!g || g.__cj) return; g.__cj = true;
+          g.on('load', () => { this._loaded = true; });
+          g.on('error', () => { if (!this._loaded && this._actif) this._fallback(m); });   // style injoignable (pas de réseau, site en panne)
+        });
+      }
+      m.addLayer(this._gl);
+    });
+  },
+  onRemove(m){ this._actif = false; if (this._gl && m.hasLayer(this._gl)) m.removeLayer(this._gl); },
+  _fallback(m){ if (m.hasLayer(this)) m.removeLayer(this); if (!m.hasLayer(ESRI_PLAN)) ESRI_PLAN.addTo(m); }
+});
+const GL_PLAN = GL_OK ? new PlanGL() : null;
 const BASES = GL_PLAN ? { 'Plan': GL_PLAN, 'Plan Esri': ESRI_PLAN } : { 'Plan': ESRI_PLAN };
 BASES['Satellite'] = sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
   maxZoom:19, attribution:'Imagerie © Esri' + SRC });
@@ -1844,7 +1859,15 @@ $('#btnFs').addEventListener('click', () => {
   $('#btnFs').classList.toggle('on', on);
   on ? mbtn('#btnFs', '⤡', 'Quitter le plein écran') : mbtn('#btnFs', '⛶', 'Plein écran');
 });
-$('#btnFit').addEventListener('click', () => map.flyToBounds(REUNION, { duration:.8 }));
+// Déplacements animés protégés : carte pas encore à sa taille (cachée, en train de s'ouvrir sur ordinateur) → l'animation
+// de Leaflet calculait une position NaN (« Invalid LatLng (NaN, NaN) », vu en cliquant « Toute l'île »). On se place alors sans animation.
+(() => {
+  const ready = () => { const z = map.getSize(); return z.x > 40 && z.y > 40; };
+  const fly = map.flyTo, flyB = map.flyToBounds;
+  map.flyTo = function (c, z, o){ try { if (ready()) return fly.call(map, c, z, o); } catch(e){} return map.setView(c, z == null ? map.getZoom() : z, { animate:false }); };
+  map.flyToBounds = function (bd, o){ try { if (ready()) return flyB.call(map, bd, o); } catch(e){} try { return map.fitBounds(bd, Object.assign({}, o, { animate:false })); } catch(e){ return map; } };
+})();
+$('#btnFit').addEventListener('click', () => { fixMapSize(); map.flyToBounds(REUNION, { duration:.8 }); });
 // ma position n'est plus affichée sur la carte (boutons « Ma position » et « Navigation » retirés)
 
 /* ====================== Appels serveur ====================== */
@@ -1904,22 +1927,20 @@ const idb = (() => {
 })();
 // données fixes : gardées sur le téléphone, réutilisées hors ligne
 const CACHED = { getStatic:1, getSchoolCalendar:1, getTimetables:1, getParsedFiches:1, getStopBoard:1 };
-let offline = false;
 async function call(fn, ...args){
   if (!CACHED[fn]) return rawCall(fn, ...args);
   const key = fn + '|' + JSON.stringify(args);
   try {
     const v = await rawCall(fn, ...args);
-    offline = false;
     idb.set(key, { v, t: Date.now() });
     if (fn === 'getStopBoard') keepBoards(v);
     return v;
   } catch(e){
     const c = await idb.get(key);
-    if (c){ offline = true; return c.v; }                 // pas de réseau : la dernière version gardée
+    if (c) return c.v;                 // pas de réseau : la dernière version gardée
     if (fn === 'getStopBoard' && Array.isArray(args[0])){  // sinon : reconstitué arrêt par arrêt (pack hors ligne)
       const got = await Promise.all(args[0].map(id => idb.get('sb|' + id)));
-      if (got.some(x => x)){ offline = true; const o = {}; args[0].forEach((id, i) => o[id] = got[i] || []); return JSON.stringify(o); }
+      if (got.some(x => x)){ const o = {}; args[0].forEach((id, i) => o[id] = got[i] || []); return JSON.stringify(o); }
     }
     throw e;
   }
@@ -1928,8 +1949,6 @@ async function call(fn, ...args){
 function keepBoards(v){
   try { const o = JSON.parse(v), m = {}; Object.keys(o).forEach(id => m['sb|' + id] = o[id]); idb.setMany(m); } catch(e){}
 }
-/** Version gardée sur le téléphone (ou null), sans attendre le réseau. */
-async function cachedValue(fn, ...args){ const c = await idb.get(fn + '|' + JSON.stringify(args)); return c ? c.v : null; }
 function rawCall(fn, ...args){
   if (IN_GAS) return new Promise((resolve, reject) => {
     google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
@@ -2223,7 +2242,6 @@ function routeByShort(s){
 function ficheLinks(short){
   const f = FICHES[short];
   if (!f) return '';
-  const a = (url, txt) => `<a class="pdf" href="${esc(url)}" target="_blank" rel="noopener">${txt}</a>`;
   // uniquement les fiches PDF publiées sur carjaune.re ; celle de la période en cours est mise en avant
   const cur = (CAL.holidays || []).length ? periodOf(Date.now()).type : '';
   const kind = p => /vacances/i.test(p.label + p.url) ? 'vacances' : /scolaire/i.test(p.label + p.url) ? 'scolaire' : '';
@@ -3148,17 +3166,6 @@ function distM(a, b, c, d){            // distance en mètres entre deux points 
 }
 const isGare = g => /\b(gare|aeroport|pole d echanges)\b/.test(g.key);
 
-/** Gare (ou à défaut arrêt) la plus proche d'une position. */
-function nearestStop(lat, lon){
-  let bestG = null, bestS = null;
-  stopGroups.forEach(g => {
-    if (!isFinite(g.lat) || !isFinite(g.lon)) return;
-    const d = distM(lat, lon, g.lat, g.lon);
-    if (!bestS || d < bestS.d) bestS = { g, d };
-    if (isGare(g) && (!bestG || d < bestG.d)) bestG = { g, d };
-  });
-  return { gare: bestG, stop: bestS };
-}
 const fmtDist = d => d < 1000 ? `${Math.round(d / 10) * 10} m` : `${(d / 1000).toFixed(1).replace('.', ',')} km`;
 const NEAR_M = 1500;                                    // au-delà, tu n'es « à » aucun arrêt
 const walkMin = d => Math.max(1, Math.round(d * 1.3 / 80));   // à pied ~4,8 km/h, détours compris
@@ -3213,7 +3220,7 @@ function useMyPosition(pos, auto){
 const meLayer = L.layerGroup();      // moi + précision : pas affiché sur la carte
 const nearLayer = L.layerGroup();    // arrêts autour de moi : pas affichés sur la carte
 let meMarker = null, meCircle = null, meWatch = null, meFollow = false, userPanned = false;
-let lastFix = null, nearAt = 0, nearPos = null, onBus = null, busCand = null, busMiss = 0, meWake = null, gpsWeak = false;
+let lastFix = null, nearAt = 0, nearPos = null, onBus = null, busCand = null;
 
 function meIcon(){
   const h = myPos && myPos.heading, moving = myPos && (myPos.speed || 0) > 1;
@@ -3340,7 +3347,6 @@ function onLiveFix(p){
       heading = (Math.atan2((c.longitude - lastFix.lon) * Math.cos(c.latitude * Math.PI / 180), c.latitude - lastFix.lat) * 180 / Math.PI + 360) % 360;
   }
   lastFix = { lat: c.latitude, lon: c.longitude, t: now, acc: c.accuracy };
-  gpsWeak = false;
   myPos = { lat: c.latitude, lon: c.longitude, acc: c.accuracy, speed, heading }; myFixAt = Date.now();
   diag('gps', { lat: +c.latitude.toFixed(5), lon: +c.longitude.toFixed(5), acc: Math.round(c.accuracy), kmh: speed != null ? Math.round(speed * 3.6) : null });
   showMeOnMap();
@@ -3496,7 +3502,6 @@ function announceBus(v){
 }
 // (ancien mode navigation et bandeau « dans le car » retirés : ta position n'est plus affichée sur la carte)
 function renderRide(){}
-const navOn = false;
 
 /* ---------- localisation : demande claire au 1er lancement, aide pas à pas si elle a été refusée ---------- */
 let geoPerm = 'unknown';
@@ -3513,7 +3518,7 @@ async function geoCheck(){
   return st;
 }
 function renderGeo(){
-  const t = $('#geoTxt'), b = $('#geoBtn'); if (!t) return;
+  const t = $('#geoTxt'), b = $('#geoSetBtn'); if (!t) return;
   if (!navigator.geolocation){ t.textContent = 'ton téléphone ne donne pas sa position à l’appli'; b.hidden = true; return; }
   t.textContent = geoPerm === 'granted' ? '✅ autorisée : carte, arrêts proches et proches fonctionnent'
     : geoPerm === 'denied' ? '⚠️ refusée : l’appli ne peut pas te situer'
@@ -3566,7 +3571,7 @@ $('#geoSheet').addEventListener('click', e => {
   if (e.target.closest('#geoRetry')){ geoPerm = 'prompt'; geoAsk(); }
 });
 $('#geoLater').addEventListener('click', () => { $('#geoSheet').hidden = true; try { localStorage.setItem('cj_geo_later', String(Date.now())); } catch(e){} });
-$('#geoBtn').addEventListener('click', () => { closeSettings && closeSettings(); geoPerm === 'denied' ? geoHelp() : geoAsk(); });
+$('#geoSetBtn').addEventListener('click', () => { closeSettings && closeSettings(); geoPerm === 'denied' ? geoHelp() : geoAsk(); });   // (avant : même id que « Arrêts autour de moi » → ce bouton ne faisait rien)
 // au 1er lancement (et au plus une fois par semaine si « plus tard ») : demande claire, avec un bouton
 setTimeout(async () => {
   const st = await geoCheck();
@@ -4983,7 +4988,7 @@ const statSeen = {};
 idb.get('stats').then(v => { if (v && typeof v === 'object') STATS = Object.assign(v, STATS); });
 /* 📈 habitudes par ligne, type de jour (semaine / samedi / dimanche) et tranche de 3 h : [mesures, somme des retards (s)].
    Sert à annoncer une arrivée réaliste quand le car n'est pas encore suivi en direct. */
-let STATSW = {}, statsWT = null;
+let STATSW = {};
 idb.get('statsw').then(v => { if (v && typeof v === 'object') STATSW = Object.assign(v, STATSW); });
 const DAYTYPE = ['en semaine', 'le samedi', 'le dimanche'];
 function wSlot(ms){ const d = reuDate(ms); return (d.wd <= 4 ? 0 : d.wd === 5 ? 1 : 2) * 8 + Math.floor(d.h / 3); }
@@ -6813,7 +6818,6 @@ function wantedGps(){
 function shareFix(p){ onLiveFix(p); autoCheck(); rideTick(); sendShare(); adaptGps(); }
 function shareGeoErr(e){
   if (e && e.code === 1){ if (shareCfg.on) setShareOn(false); else stopShare(); geoDenied(); }
-  else gpsWeak = true;
 }
 function adaptGps(force){
   if (!shareOwnWatch) return;
@@ -7197,7 +7201,6 @@ function renderAvion(){
   const box = $('#avionBody'); if (!box) return;
   const a = avion || { mode: 'dep', lead: 120 };
   const local = ms => { if (!ms) return ''; const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60e3); return d.toISOString().slice(0, 16); };
-  const names = stopGroups.map(g => g.name);
   box.innerHTML = `<div class="av-mode"><button class="chip${a.mode === 'dep' ? ' on' : ''}" data-avmode="dep">🛫 Je prends l’avion</button><button class="chip${a.mode === 'arr' ? ' on' : ''}" data-avmode="arr">🛬 J’atterris</button></div>
     <div class="av-form">
       <label>${a.mode === 'dep' ? 'Heure de décollage' : 'Heure d’atterrissage'}<input type="datetime-local" class="set-in" id="avAt" value="${local(a.at)}"></label>
@@ -8200,7 +8203,7 @@ function renderSmsSheet(){
   const on = !!(smsPending && Date.now() <= smsPending.until && smsNums().length);
   document.body.classList.toggle('sms-on', on);
   if (!on){ el.hidden = true; smsPending = smsPending && Date.now() <= smsPending.until ? smsPending : null; return; }
-  const txt = smsText(smsPending.ev), n = smsNums().length;
+  const txt = smsText(smsPending.ev);
   $('#smsTitle').textContent = smsPending.ev.k === 'check' ? '📱 Rassurer tes proches' : smsPending.ev.k === 'depart' ? '📱 Prévenir tes proches que tu es dans le car' : smsPending.ev.k === 'late' ? '📱 Prévenir tes proches de ton retard' : '📱 Prévenir tes proches que tu es descendu';
   $('#smsPrev').textContent = txt;
   // un SMS séparé par proche (pas de conversation de groupe) : un bouton chacun

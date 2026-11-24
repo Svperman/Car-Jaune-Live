@@ -213,6 +213,19 @@ await t('📡 suivi en direct : code de 8 caractères, journal envoyé par paque
     return [code, window.__liveCode, a, b, c, /En direct · code/.test(txt), live, trip0 === trip1, document.querySelectorAll('#liveOn').length + document.querySelectorAll('#claudeOn').length]; })()`);
   return (/^[A-Z2-9]{8}$/.test(r[0]) && r[1] === r[0] && r[2] >= 3 && r[3] === r[2] && r[4] === r[2] + 1 && r[5] && r[6] === null && r[7] && r[8] === 2) || JSON.stringify(r);
 });
+await t('🧹 aucun identifiant en double (le bouton Localisation des réglages ne faisait rien)', async () => {
+  const r = await page.evaluate(`(() => { const c = {}; document.querySelectorAll('[id]').forEach(e => c[e.id] = (c[e.id] || 0) + 1);
+    return Object.keys(c).filter(k => c[k] > 1); })()`);
+  return r.length === 0 || 'en double : ' + r.join(', ');
+});
+await t('🧹 « Toute l’île » sur une carte pas encore à sa taille : pas de position NaN', async () => {
+  const r = await page.evaluate(`(() => { const el = document.querySelector('#map'), w = el.style.width, h = el.style.height;
+    el.style.width = '0px'; el.style.height = '0px'; map.invalidateSize(false);
+    let err = ''; try { map.flyToBounds(REUNION, { duration:.8 }); map.flyTo([-21, 55.5], 12); } catch(e){ err = e.message; }
+    el.style.width = w; el.style.height = h; map.invalidateSize(false);
+    const c = map.getCenter(); return err || (isFinite(c.lat) && isFinite(c.lng) ? '' : 'centre NaN'); })()`);
+  return r === '' || r;
+});
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await browser.close();
 if (fails.length){ console.log(`✗ ${fails.length} problème(s)`); process.exit(1); }
