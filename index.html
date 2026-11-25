@@ -6542,6 +6542,7 @@ function urbDraw(force){
   const sk = z + '|' + list.map(x => x[0].id + x[1]).join(',');
   if (sk === urb.stopKey && !force) return;
   urb.stopKey = sk; urbStopLayer.clearLayers();
+  document.querySelectorAll('.pap-tt').forEach(e => e.remove());   // étiquettes du téléphérique : jamais en double
   const dark = document.documentElement.classList.contains('dark');
   list.forEach(([N, i]) => {
     const s = N.stops[i];

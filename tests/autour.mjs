@@ -115,7 +115,7 @@ for (const [nom, vp] of [['téléphone', { width: 390, height: 844 }], ['ordinat
     await page.evaluate("document.querySelector('[data-go-papang]').click(); 1");
     await page.waitForTimeout(2500);
     const r = await page.evaluate(`[view, map.getBounds().contains([-20.9037, 55.4835]), [...document.querySelectorAll('.pap-tt')].map(x => x.textContent.replace('🚡', '').trim())]`);
-    return (r[0] === 'map' && r[1] && r[2].length === 5) || JSON.stringify(r);
+    return (r[0] === 'map' && r[1] && r[2].length === 5 && new Set(r[2]).size === 5) || JSON.stringify(r);
   });
   await t(P + 'aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' | '));
   await ctx.close();
