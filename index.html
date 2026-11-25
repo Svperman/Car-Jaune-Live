@@ -1032,6 +1032,14 @@
   }
   @media (max-width:860px), (max-height:500px) and (max-width:1000px){ html.dark .tab{color:#AEB4BC} html.dark .tab.on{color:var(--titre)} }
 
+  /* carte « Épuré » (façon Transit) : fond discret, cars en pastilles bordées de blanc, lignes avec liseré blanc */
+  html.dark .gl-epure{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.88)}
+  html.tmap .bus-mk .pill2{border:2px solid #fff;border-radius:11px;box-shadow:0 2px 7px rgba(0,0,0,.32)}
+  html.tmap.dark .bus-mk .pill2{border-color:#1E2228}
+  html.tmap .bus-mk .arrow{border-bottom-color:#4A525C}
+  html.tmap.dark .bus-mk .arrow{border-bottom-color:#E8EBEE}
+  html.tmap .leaflet-container{background:#F2F3F0}
+  html.tmap.dark .leaflet-container{background:#1B1E22}
   /* ---------- « Autour de toi » : panneau glissant façon appli de transport (lignes proches en grosses cartes) ---------- */
   .nsheet{position:absolute;left:0;right:0;bottom:0;z-index:650;height:var(--nsh,42%);display:flex;flex-direction:column;
     background:var(--carte);border-radius:18px 18px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.16);transition:height .28s cubic-bezier(.2,.8,.2,1);touch-action:none;overscroll-behavior:contain}
@@ -1851,6 +1859,7 @@ const ESRI_PLAN = sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/servic
 // Carte vectorielle (nette à tous les zooms). Sa bibliothèque (MapLibre, ~800 ko) se charge APRÈS l'affichage de l'appli
 // (−250 ms à l'ouverture sur un téléphone lent). Si le téléphone ne sait pas l'afficher (WebGL) ou si le style ne charge pas,
 // on repasse tout seul sur le plan Esri.
+const TMAP = () => document.documentElement.classList.contains('tmap'), DARKM = () => document.documentElement.classList.contains('dark');
 const GL_OK = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch(e){ return false; } })();
 const GL_ATTR = '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> · données <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap</a>' + SRC;
 let glLib = null;
@@ -1860,7 +1869,9 @@ function loadGlLib(){
   return glLib = (window.maplibregl ? Promise.resolve() : add('lib/maplibre-gl.js')).then(() => L.maplibreGL ? null : add('lib/leaflet-maplibre-gl.js'))
     .then(() => !!(window.maplibregl && L.maplibreGL)).catch(() => false);
 }
+let baseFallback = false;            // plan de secours affiché tout seul : ce n'est pas un choix à retenir
 const PlanGL = L.Layer.extend({
+  initialize(o){ this._o = Object.assign({ style:'https://tiles.openfreemap.org/styles/liberty' }, o || {}); },
   getAttribution(){ return GL_ATTR; },
   onAdd(m){
     this._actif = true;
@@ -1868,10 +1879,11 @@ const PlanGL = L.Layer.extend({
       if (!this._actif) return;
       if (!ok){ this._fallback(m); return; }
       if (!this._gl){
-        this._gl = L.maplibreGL({ style:'https://tiles.openfreemap.org/styles/liberty', interactive:false });
+        this._gl = L.maplibreGL({ style: this._o.style, interactive:false });
         this._gl.on('add', () => {
+          const c = this._gl.getContainer && this._gl.getContainer(); if (c && this._o.cls) c.classList.add(this._o.cls);
           const g = this._gl.getMaplibreMap && this._gl.getMaplibreMap(); if (!g || g.__cj) return; g.__cj = true;
-          g.on('load', () => { this._loaded = true; });
+          g.on('load', () => { this._loaded = true; try { if (this._o.tint) this._o.tint(g); } catch(e){} });
           g.on('error', () => { if (!this._loaded && this._actif) this._fallback(m); });   // style injoignable (pas de réseau, site en panne)
         });
       }
@@ -1879,15 +1891,36 @@ const PlanGL = L.Layer.extend({
     });
   },
   onRemove(m){ this._actif = false; if (this._gl && m.hasLayer(this._gl)) m.removeLayer(this._gl); },
-  _fallback(m){ if (m.hasLayer(this)) m.removeLayer(this); if (!m.hasLayer(ESRI_PLAN)) ESRI_PLAN.addTo(m); }
+  _fallback(m){ baseFallback = true; if (m.hasLayer(this)) m.removeLayer(this); if (!m.hasLayer(ESRI_PLAN)) ESRI_PLAN.addTo(m); baseFallback = false; }
 });
+/* « Épuré » (demande du 25/11 : la carte comme dans Transit) : fond gris clair très discret (OpenFreeMap Positron, gratuit,
+   sans clé) pour que les lignes, les arrêts et les cars ressortent ; eau en bleu doux, parcs et forêts en vert pâle.
+   Le soir, la même carte passe en sombre (couleurs inversées), sans autre téléchargement. */
+function tintEpure(g){
+  (g.getStyle().layers || []).forEach(l => {
+    const id = l.id.toLowerCase();
+    try {
+      if (l.type === 'fill' && /water/.test(id)) g.setPaintProperty(l.id, 'fill-color', '#C6E3F2');
+      else if (l.type === 'fill' && /park|wood|forest|grass|nature_reserve/.test(id)) g.setPaintProperty(l.id, 'fill-color', '#DDEFD6');
+      else if (l.type === 'line' && /water|river|stream/.test(id)) g.setPaintProperty(l.id, 'line-color', '#B5DAEE');
+    } catch(e){}
+  });
+}
+const GL_EPURE = GL_OK ? new PlanGL({ style:'https://tiles.openfreemap.org/styles/positron', cls:'gl-epure', tint: tintEpure }) : null;
 const GL_PLAN = GL_OK ? new PlanGL() : null;
-const BASES = GL_PLAN ? { 'Plan': GL_PLAN, 'Plan Esri': ESRI_PLAN } : { 'Plan': ESRI_PLAN };
+const BASES = GL_PLAN ? { 'Épuré': GL_EPURE, 'Plan': GL_PLAN, 'Plan Esri': ESRI_PLAN } : { 'Plan': ESRI_PLAN };
 BASES['Satellite'] = sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
   maxZoom:19, attribution:'Imagerie © Esri' + SRC });
-let baseName = 'Plan';
-try { const b = localStorage.getItem('cj_base'); if (BASES[b]) baseName = b; else if (b) localStorage.setItem('cj_base', 'Plan'); } catch(e){}   // anciens « Plan détaillé / Plan clair » → Plan
+let baseName = BASES['Épuré'] ? 'Épuré' : 'Plan';
+try {
+  const b = localStorage.getItem('cj_base');
+  // une seule fois : ceux qui avaient le plan par défaut passent au nouveau fond épuré (un choix « Satellite » ou « Plan Esri » est gardé)
+  if (localStorage.getItem('cj_base2') !== '1'){ localStorage.setItem('cj_base2', '1'); if (b === 'Plan' || !b) localStorage.removeItem('cj_base'); }
+  const b2 = localStorage.getItem('cj_base');
+  if (BASES[b2]) baseName = b2; else if (b2) localStorage.removeItem('cj_base');
+} catch(e){}
 BASES[baseName].addTo(map);
+document.documentElement.classList.toggle('tmap', baseName === 'Épuré');
 L.control.layers(BASES, null, { position:'bottomright' }).addTo(map);
 L.control.zoom({ position:'topleft', zoomInTitle:'Zoom avant', zoomOutTitle:'Zoom arrière' }).addTo(map);
 map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
@@ -1898,7 +1931,7 @@ function frenchControls(){
 }
 map.on('popupopen', e => { const c = e.popup.getElement().querySelector('.leaflet-popup-close-button'); if (c){ c.setAttribute('aria-label', 'Fermer'); c.title = 'Fermer'; } });
 setTimeout(frenchControls, 0);
-map.on('baselayerchange', e => { try { localStorage.setItem('cj_base', e.name); } catch(err){} });
+map.on('baselayerchange', e => { if (!baseFallback) try { localStorage.setItem('cj_base', e.name); } catch(err){} document.documentElement.classList.toggle('tmap', e.name === 'Épuré'); try { drawShapes(true); stopDrawKey = ''; drawStops(); } catch(err){} });
 const shapeLayer = L.layerGroup().addTo(map);
 
 /* Noms des villes : bien lisibles sur l'île entière, ils s'effacent petit à petit quand on zoome */
@@ -4421,7 +4454,9 @@ function isDark(){
 }
 function applyLook(){
   const d = isDark();
+  const was = document.documentElement.classList.contains('dark');
   document.documentElement.classList.toggle('dark', d);
+  if (was !== d) try { drawShapes(true); stopDrawKey = ''; drawStops(); } catch(e){}
   document.documentElement.classList.toggle('big', look.text === 'big');
   document.documentElement.classList.toggle('huge', look.text === 'huge');
   const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = d ? '#1E2228' : '#FFFFFF';   // barre d'état Android assortie à l'en-tête
@@ -5064,8 +5099,9 @@ function drawStops(){
   const dark = document.documentElement.classList.contains('dark');
   list.forEach(g => {
     const gare = isGare(g);
-    L.circleMarker([g.lat, g.lon], { renderer: stopRenderer, radius: gare ? 8 : (z >= 16 ? 6 : 5), weight: gare ? 3 : 2.5,
-      color: dark ? '#F2F4F7' : '#222', fillColor: gare ? '#F6BE00' : (dark ? '#1E2228' : '#fff'), fillOpacity: 1 })
+    const tm = TMAP() && !gare;
+    L.circleMarker([g.lat, g.lon], { renderer: stopRenderer, radius: gare ? 8 : (z >= 16 ? 6 : 5), weight: gare ? 3 : tm ? 2 : 2.5,
+      color: tm ? (dark ? '#C8CED4' : '#5A6470') : dark ? '#F2F4F7' : '#222', fillColor: gare ? '#F6BE00' : (dark ? '#1E2228' : '#fff'), fillOpacity: 1 })
       .bindTooltip(g.name, { direction:'top', offset:[0, -6] })
       .on('click', e => openStopPopup(g, e.latlng))
       .addTo(stopLayer);
@@ -5701,6 +5737,9 @@ function drawShapes(force){
       if (F){                                                     // mes lignes : bien visibles
         L.polyline(line, { color:'#222', weight:8, opacity:.35, interactive:false }).addTo(shapeLayer);
         L.polyline(line, { color:col, weight:5, opacity:.95, interactive:false }).addTo(shapeLayer);
+      } else if (TMAP()){                                          // carte épurée : trait plein avec liseré, comme les plans de réseau
+        L.polyline(line, { color: DARKM() ? '#1E2228' : '#fff', weight: z >= 13 ? 8 : 5, opacity:.95, interactive:false }).addTo(shapeLayer);
+        L.polyline(line, { color:col, weight: z >= 13 ? 5 : 3, opacity:1, interactive:false }).addTo(shapeLayer);
       } else L.polyline(line, { color:col, weight: z >= 13 ? 4 : 2.5, opacity: z >= 13 ? .85 : .6, interactive:false }).addTo(shapeLayer);
     });
   });

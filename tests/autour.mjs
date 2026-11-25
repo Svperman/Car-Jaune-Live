@@ -92,6 +92,10 @@ for (const [nom, vp] of [['téléphone', { width: 390, height: 844 }], ['ordinat
       return [off, !document.querySelector('#nearSheet').hidden]; })()`);
     return (r[0] && r[1]) || JSON.stringify(r);
   });
+  await t(P + 'carte « Épuré » par défaut ; le plan de secours n’écrase pas le choix', async () => {
+    const r = await page.evaluate("[Object.keys(BASES)[0], baseName, localStorage.getItem('cj_base')]");
+    return (r[0] === 'Épuré' && r[1] === 'Épuré' && r[2] !== 'Plan Esri') || JSON.stringify(r);
+  });
   await t(P + 'aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' | '));
   await ctx.close();
 }
