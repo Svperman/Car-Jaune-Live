@@ -1,0 +1,50 @@
+# Car Jaune Live — vérifier chaque jour que les horaires des cars jaunes concordent avec ceux de Transit.
+# Utilise la clé gratuite de l'API publique Transit, rangée dans les secrets du dépôt (TRANSIT_API_KEY) :
+# jamais dans le code, le dépôt est public. Rien n'est copié dans l'appli, on produit seulement un rapport.
+# Le rapport est dans l'onglet Actions (résumé du passage). S'il y a beaucoup d'écarts, un ticket est ouvert.
+
+name: Vérifier les horaires avec Transit
+
+on:
+  schedule:
+    - cron: '13 4 * * *'          # tous les jours à 8 h 13 heure de La Réunion
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: verif-transit
+  cancel-in-progress: true
+
+jobs:
+  verif:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Comparer les départs aux grandes gares
+        env:
+          TRANSIT_API_KEY: ${{ secrets.TRANSIT_API_KEY }}
+        run: |
+          if [ -z "$TRANSIT_API_KEY" ]; then
+            echo "Pas de clé TRANSIT_API_KEY dans les secrets du dépôt : vérification sautée." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo 0 > transit-ecarts.txt; exit 0
+          fi
+          npm init -y >/dev/null
+          npm install --no-save fflate@0.8.2
+          node tools/verif-transit.mjs
+      - name: Ticket si beaucoup d'écarts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(cat transit-ecarts.txt 2>/dev/null || echo 0)
+          [ "$n" -gt 0 ] || { echo "Horaires concordants : rien à signaler."; exit 0; }
+          titre="Écarts d'horaires Car Jaune avec Transit"
+          num=$(gh issue list --state open --search "in:title \"$titre\"" --json number -q '.[0].number')
+          if [ -n "$num" ]; then gh issue comment "$num" --body-file transit-rapport.md
+          else gh issue create --title "$titre" --body-file transit-rapport.md; fi
