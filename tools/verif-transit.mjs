@@ -13,10 +13,10 @@ const KEY = process.env.TRANSIT_API_KEY;
 if (!KEY){ console.error('TRANSIT_API_KEY manquante (secret GitHub).'); process.exit(2); }
 const API = 'https://external.transitapp.com/v3/public/';
 const GTFS_URLS = ['https://pysae.com/api/v2/groups/car-jaune/gtfs/pub', 'https://transport.data.gouv.fr/resources/80934/download'];
-const GARES = /^Gare (de St-Denis|de St-Pierre|de St-Paul|de St-Benoît|du Port)$/i;   // les arrêts où presque toutes les lignes passent
+const GARES = /^Gare de St-(Denis|Pierre|Paul|Benoît)$/i;   // les arrêts où presque toutes les lignes passent
 const HORIZON = 3 * 3600;          // on compare les 3 prochaines heures
 const TOL = 2 * 60;                // ± 2 min = même départ
-const PAUSE = 13000;               // l'offre gratuite limite le nombre d'appels par minute
+const PAUSE = 7000;                // l'offre gratuite limite le nombre d'appels par minute
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const UA = { 'User-Agent': 'CarJauneLive/1.0 (+github.com/Svperman/Car-Jaune-Live)' };
@@ -103,14 +103,15 @@ try {
   for (const [nom, g] of Object.entries(gares)){
     const ns = await transit('nearby_stops', { lat: g.lat, lon: g.lon, max_distance: 200 });
     await sleep(PAUSE);
-    const ids = (ns.stops || []).filter(s => (s.distance == null || s.distance <= 200)).map(s => s.global_stop_id).slice(0, 3);
+    // chez Transit, une gare = plusieurs quais (un par ligne) ; on garde ceux du réseau Car Jaune (identifiants « CJFR: »)
+    const ids = (ns.stops || []).filter(s => /^CJ/i.test(s.global_stop_id || '') && (s.distance == null || s.distance <= 200)).map(s => s.global_stop_id).slice(0, 12);
     if (process.env.DEBUG) console.error('DEBUG nearby', nom, JSON.stringify((ns.stops || []).slice(0, 8).map(s => [s.global_stop_id, s.stop_name, s.distance, s.route_type])));
     const leurs = [];
     for (const id of ids){
       const sd = await transit('stop_departures', { global_stop_id: id, time: Math.floor(now / 1000), remove_cancelled: 'true', should_update_realtime: 'false', max_num_departures: 30 });
-      if (process.env.DEBUG) console.error('DEBUG dep', id, JSON.stringify(sd).slice(0, 1500));
+      if (process.env.DEBUG) console.error('DEBUG dep', id, (sd.route_departures || []).map(r => r.route_short_name + ':' + (r.itineraries || []).reduce((n, it) => n + (it.schedule_items || []).length, 0)).join(' '));
       await sleep(PAUSE);
-      (sd.route_departures || []).filter(r => /car\s*jaune/i.test(r.route_network_name || '') || /car\s*jaune/i.test(r.route_long_name || ''))
+      (sd.route_departures || []).filter(r => /^CJ/i.test(r.global_route_id || '') || /car\s*jaune/i.test(r.route_network_name || ''))
         .forEach(r => (r.itineraries || []).forEach(it => (it.schedule_items || []).forEach(x => {
           const ts = (x.scheduled_departure_time || x.departure_time) * 1000;
           if (ts >= now && ts <= now + HORIZON * 1000 && !leurs.some(y => y.ligne === r.route_short_name && Math.abs(y.t - ts) < 30e3))
@@ -129,7 +130,7 @@ try {
     total += nous.length + seulEux.length; communs += c; ecarts += seulNous.length + seulEux.length;
     const fmt = l => l.length ? l.sort((a, b) => a.t - b.t).slice(0, 12).map(x => `${x.ligne} ${hm(x.t)}`).join(', ') + (l.length > 12 ? ` (+${l.length - 12})` : '') : '—';
     log(`| ${nom} | ${c} | ${fmt(seulNous)} | ${fmt(seulEux)} |`);
-    if (!leurs.length && nous.length) details.push(`- ${nom} : Transit n'a renvoyé aucun départ Car Jaune (arrêt non trouvé à moins de 200 m, ou réseau absent).`);
+    if (!leurs.length && nous.length) details.push(`- ${nom} : Transit n'a renvoyé aucun départ Car Jaune (${ids.length} quai(s) trouvé(s)).`);
   }
   const taux = total ? Math.round(100 * communs / Math.max(1, communs + ecarts)) : 100;
   log(`\n**Concordance : ${taux} %** (${communs} départs identiques, ${ecarts} écarts).`);
