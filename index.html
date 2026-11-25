@@ -6507,16 +6507,16 @@ function urbLoad(id){
 const urbVisibleNets = () => !urb.index ? [] : urb.index.nets.filter(n => urbOn[n.id]);
 function bboxIn(bb, bounds){ return bounds.intersects(L.latLngBounds([bb[0], bb[1]], [bb[2], bb[3]])); }
 
-/** Lignes (zoom ≥ 12) et arrêts (zoom ≥ 15) des réseaux visibles à l'écran. */
+/** Lignes (zoom ≥ 11) et arrêts (zoom ≥ 15) des réseaux visibles à l'écran. */
 function urbDraw(force){
   if (!urb.index) return;
   const z = map.getZoom(), b = map.getBounds();
   const nets = urbVisibleNets().filter(n => bboxIn(n.bbox, b.pad(0.3)));
   if (z >= 11) nets.forEach(n => { if (!urb.nets[n.id]) urbLoad(n.id); });
-  const key = (z >= 12 ? 'L' : '') + nets.map(n => n.id + (urb.nets[n.id] ? '+' : '')).join(',');
+  const key = (z >= 11 ? 'L' + Math.min(14, Math.floor(z)) : '') + nets.map(n => n.id + (urb.nets[n.id] ? '+' : '')).join(',');
   if (force || key !== urb.drawKey){
     urb.drawKey = key; urbLineLayer.clearLayers();
-    if (z >= 12) nets.forEach(n => {
+    if (z >= 11) nets.forEach(n => {
       const N = urb.nets[n.id]; if (!N) return;
       if (!N.lines) N.lines = Object.keys(N.shapes).map(ri => ({ r: N.R[ri], pts: N.shapes[ri].map(decodePoly) }));
       if (N.id === 'papang'){                                   // téléphérique : bien visible, câble en pointillés sur liseré
@@ -6526,7 +6526,9 @@ function urbDraw(force){
         }));
         return;
       }
-      N.lines.forEach(l => l.pts.forEach(p => L.polyline(p, { renderer: urbRenderer, color: '#' + l.r.c, weight: 2, opacity: .3, interactive: false }).addTo(urbLineLayer)));
+      // assez visibles sur le fond épuré (gris clair + relief), mais sous les cars jaunes
+      const w = z >= 14 ? 3 : z >= 13 ? 2.5 : 2, op = z >= 14 ? .75 : z >= 13 ? .6 : .45;
+      N.lines.forEach(l => l.pts.forEach(p => L.polyline(p, { renderer: urbRenderer, color: '#' + l.r.c, weight: w, opacity: op, interactive: false }).addTo(urbLineLayer)));
     });
   }
   // arrêts
