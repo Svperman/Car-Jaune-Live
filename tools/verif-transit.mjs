@@ -75,8 +75,11 @@ function nosDeparts(files, now){
   const trips = {}; parseCsv(f['trips.txt']).forEach(t => { trips[t.trip_id] = t; });
   const gares = {}; parseCsv(f['stops.txt']).forEach(s => { if (GARES.test(s.stop_name)) (gares[s.stop_name] = gares[s.stop_name] || { ids: new Set(), lat: +s.stop_lat, lon: +s.stop_lon, dep: [] }).ids.add(s.stop_id); });
   const jourJ = reu(now), veille = reu(now - 864e5);
-  parseCsv(f['stop_times.txt']).forEach(st => {
+  const sts = parseCsv(f['stop_times.txt']), last = {};
+  sts.forEach(st => { const q = +st.stop_sequence; if (!(last[st.trip_id] >= q)) last[st.trip_id] = q; });
+  sts.forEach(st => {
     const g = Object.values(gares).find(x => x.ids.has(st.stop_id)); if (!g) return;
+    if (+st.stop_sequence === last[st.trip_id] || st.pickup_type === '1') return;   // terminus / descente seule : pas un départ
     const t = trips[st.trip_id]; if (!t) return;
     const s = secs(st.departure_time || st.arrival_time); if (s == null) return;
     for (const o of [jourJ, veille]){                       // une course « 25:10 » d'hier compte aujourd'hui
@@ -109,7 +112,7 @@ try {
     const leurs = [];
     for (const id of ids){
       const sd = await transit('stop_departures', { global_stop_id: id, time: Math.floor(now / 1000), remove_cancelled: 'true', should_update_realtime: 'false', max_num_departures: 30 });
-      if (process.env.DEBUG) console.error('DEBUG dep', id, (sd.route_departures || []).map(r => r.route_short_name + ':' + (r.itineraries || []).reduce((n, it) => n + (it.schedule_items || []).length, 0)).join(' '));
+      if (process.env.DEBUG) console.error('DEBUG dep', id, (sd.route_departures || []).map(r => r.route_short_name + ':' + (r.itineraries || []).map(it => (it.schedule_items || []).map(x => hm(x.departure_time * 1000)).join('/')).join('|')).join(' '));
       await sleep(PAUSE);
       (sd.route_departures || []).filter(r => /^CJ/i.test(r.global_route_id || '') || /car\s*jaune/i.test(r.route_network_name || ''))
         .forEach(r => (r.itineraries || []).forEach(it => (it.schedule_items || []).forEach(x => {
