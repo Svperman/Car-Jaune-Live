@@ -76,7 +76,7 @@ await t('Fiches : dimanche (ou pas de service) sans erreur', async () => {
   await page.evaluate("document.querySelector('#ficheModal').hidden = true; 1");
   return ((r[0] > 0 || r[1]) && r[2] === 'Dimanche') || JSON.stringify(r);
 });
-await t('Fiches : les 5 réseaux et leurs lignes', async () => {
+await t('Fiches : tous les réseaux et leurs lignes', async () => {
   await page.evaluate("setView('fiches'); 1");
   const n = await page.evaluate('document.querySelectorAll("#urbFiches details.urb-fc").length');
   await page.evaluate(`document.querySelector('#urbFiches details[data-net="karouest"] summary').click(); 1`);
@@ -85,7 +85,7 @@ await t('Fiches : les 5 réseaux et leurs lignes', async () => {
   await page.waitForTimeout(300);
   const r = await page.evaluate('[document.querySelectorAll("#urbFiches details[data-net=karouest] .urb-line").length, !document.querySelector("#ficheModal").hidden, /Kar/.test(document.querySelector("#ficheModalBox").innerText)]');
   await page.evaluate("document.querySelector('#ficheModal').hidden = true; 1");
-  return (n === 5 && r[1] && r[2]) || JSON.stringify([n, r]);
+  return (n === await page.evaluate('urb.index.nets.length') && r[1] && r[2]) || JSON.stringify([n, r]);
 });
 // ---------- ≈ bus estimés d'après l'horaire ----------
 await t('≈ bus estimés : Citalis un mardi à 8 h, sur le tracé', async () => {

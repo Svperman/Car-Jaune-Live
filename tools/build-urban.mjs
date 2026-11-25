@@ -108,8 +108,11 @@ export function buildNet(net, zipBytes, today = new Date()){
   rr.forEach(r => {
     routeIdx[r.route_id] = routes.length;
     const c = hex(r.route_color, net.color);
-    routes.push([r.route_id, r.route_short_name || r.route_id, nice(r.route_long_name), c,
-      hex(r.route_text_color, (parseInt(c.slice(0, 2), 16) * .3 + parseInt(c.slice(2, 4), 16) * .59 + parseInt(c.slice(4), 16) * .11) > 160 ? '1A1A1A' : 'FFFFFF')]);
+    const lum = h => parseInt(h.slice(0, 2), 16) * .3 + parseInt(h.slice(2, 4), 16) * .59 + parseInt(h.slice(4), 16) * .11;
+    const auto = lum(c) > 160 ? '1A1A1A' : 'FFFFFF';
+    let tc = hex(r.route_text_color, auto);
+    if (Math.abs(lum(tc) - lum(c)) < 90) tc = auto;            // texte illisible fourni (ex. noir sur rouge) : on choisit
+    routes.push([r.route_id, r.route_short_name || r.route_id, nice(r.route_long_name), c, tc]);
   });
 
   // trajets
