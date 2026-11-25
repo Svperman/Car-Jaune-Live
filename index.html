@@ -1031,6 +1031,79 @@
     .live .pill{padding:6px 10px}
   }
   @media (max-width:860px), (max-height:500px) and (max-width:1000px){ html.dark .tab{color:#AEB4BC} html.dark .tab.on{color:var(--titre)} }
+
+  /* ---------- « Autour de toi » : panneau glissant façon appli de transport (lignes proches en grosses cartes) ---------- */
+  .nsheet{position:absolute;left:0;right:0;bottom:0;z-index:650;height:var(--nsh,42%);display:flex;flex-direction:column;
+    background:var(--carte);border-radius:18px 18px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.16);transition:height .28s cubic-bezier(.2,.8,.2,1);touch-action:none;overscroll-behavior:contain}
+  .nsheet.drag{transition:none}
+  .nsheet[hidden]{display:none}
+  .ns-grab{flex:none;height:22px;display:flex;align-items:center;justify-content:center;cursor:grab;border:0;background:none;width:100%;padding:0}
+  .ns-grab i{width:40px;height:5px;border-radius:3px;background:var(--ligne)}
+  .ns-top{flex:none;padding:0 14px 8px;display:flex;gap:8px;align-items:center}
+  .ns-search{flex:1;display:flex;align-items:center;gap:8px;height:44px;border-radius:22px;border:0;background:var(--fond);color:var(--gris);font:inherit;font-size:16px;font-weight:600;padding:0 16px;cursor:pointer;text-align:left}
+  .ns-search b{color:var(--titre);font-weight:700}
+  .ns-me{flex:none;width:44px;height:44px;border-radius:22px;border:0;background:var(--jaune);color:#222;font-size:19px;cursor:pointer}
+  .ns-h{flex:none;display:flex;align-items:baseline;justify-content:space-between;padding:2px 16px 6px}
+  .ns-h b{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris)}
+  .ns-h small{font-size:12px;color:var(--gris)}
+  .ns-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 10px calc(10px + env(safe-area-inset-bottom));touch-action:pan-y}
+  .ns-card{width:100%;display:flex;align-items:stretch;gap:0;border:0;padding:0;margin:0 0 8px;border-radius:14px;overflow:hidden;background:var(--fond);cursor:pointer;font:inherit;text-align:left;color:var(--texte)}
+  .ns-card:active{transform:scale(.985)}
+  .ns-l{flex:none;width:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:var(--lc);color:var(--lt);font-weight:800;font-size:22px;letter-spacing:-.02em;padding:8px 4px}
+  .ns-l small{font-size:10px;font-weight:700;opacity:.85;letter-spacing:0;text-transform:uppercase;max-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ns-mid{flex:1;min-width:0;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .ns-dir{font-size:16px;font-weight:700;color:var(--titre);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ns-mid small{font-size:12.5px;color:var(--gris);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ns-t{flex:none;min-width:74px;padding:8px 12px 8px 4px;display:flex;flex-direction:column;align-items:flex-end;justify-content:center}
+  .ns-t .ns-m{display:flex;align-items:baseline;gap:3px;color:var(--titre)}
+  .ns-t .ns-m b{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+  .ns-t .ns-m span{font-size:12px;font-weight:700}
+  .ns-t .ns-m.now b{font-size:19px;color:var(--ok)}
+  .ns-t em{font-style:normal;font-size:12px;color:var(--gris);font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
+  .ns-live{width:14px;height:14px;align-self:flex-start;margin-top:-2px;color:var(--ok);flex:none}
+  .ns-live path{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+  .ns-live .w1{animation:nsPulse 1.6s infinite}
+  .ns-live .w2{animation:nsPulse 1.6s .3s infinite}
+  @keyframes nsPulse{0%,100%{opacity:.25}50%{opacity:1}}
+  .nsheet[data-snap=full]{z-index:1001}
+  /* mode GO : dans le car */
+  .nsheet.go .ns-top,.nsheet.go .ns-h{display:none}
+  .go-head{display:flex;align-items:center;gap:12px;margin:2px 4px 10px}
+  .go-l{flex:none;min-width:58px;height:58px;border-radius:14px;background:var(--lc);color:var(--lt);font-weight:800;font-size:26px;display:flex;align-items:center;justify-content:center;padding:0 8px}
+  .go-head b{display:block;font-size:19px;color:var(--titre);line-height:1.2}
+  .go-head small{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--gris);margin-top:3px}
+  .go-tgt{background:var(--jaune);color:#222;border-radius:16px;padding:12px 16px;margin:0 2px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .go-tgt small{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;opacity:.75}
+  .go-tgt b{font-size:18px;display:block;line-height:1.2}
+  .go-cd{text-align:right;flex:none;line-height:1}
+  .go-cd b{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums}
+  .go-cd span{display:block;font-size:12px;font-weight:700;margin-top:3px}
+  .go-tip{background:var(--fond);border-radius:14px;padding:10px 14px;margin:0 2px 12px;font-size:14px;color:var(--texte)}
+  .go-stops{list-style:none;margin:0;padding:0 2px}
+  .go-stops li{position:relative}
+  .go-stops li::before{content:'';position:absolute;left:15px;top:0;bottom:0;width:4px;background:var(--lc)}
+  .go-stops li:first-child::before{top:50%}
+  .go-stops li:last-child::before{bottom:50%}
+  .go-stops button{position:relative;width:100%;display:flex;align-items:center;gap:12px;border:0;background:none;font:inherit;color:var(--texte);padding:9px 6px 9px 6px;cursor:pointer;text-align:left;border-radius:10px}
+  .go-stops button:active{background:var(--fond)}
+  .go-dot{flex:none;width:22px;height:22px;border-radius:50%;background:var(--carte);border:4px solid var(--lc);z-index:1}
+  .go-stops .nx .go-dot{background:var(--lc)}
+  .go-stops .tg .go-dot{background:var(--jaune);border-color:#222}
+  .go-stops span{flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .go-stops .nx span,.go-stops .tg span{font-weight:700;color:var(--titre)}
+  .go-stops time{flex:none;font-size:14px;font-variant-numeric:tabular-nums;color:var(--gris)}
+  .go-stops .nx time{color:var(--titre);font-weight:700}
+  .ns-empty{padding:18px 10px;text-align:center;color:var(--gris);font-size:14px}
+  .ns-empty .btn{margin-top:10px}
+  .ns-sep{font-size:12px;font-weight:700;color:var(--gris);margin:10px 6px 6px;text-transform:uppercase;letter-spacing:.05em}
+  @media (max-width:860px){ #mapCard .leaflet-bottom{bottom:var(--nsb,0px);transition:bottom .28s} }
+  @media (min-width:861px){
+    .nsheet{left:12px;right:auto;top:12px;bottom:12px;width:370px;height:auto!important;border-radius:16px;box-shadow:0 4px 22px rgba(0,0,0,.18)}
+    .ns-grab{display:none}
+    .ns-top{padding-top:12px}
+    #mapCard .leaflet-left{left:390px}
+  }
+  @media (prefers-reduced-motion:reduce){ .nsheet{transition:none} .ns-live path{animation:none} }
 </style>
 </head>
 <body>
@@ -1066,6 +1139,12 @@
       <div id="list"></div>
     </aside>
     <div id="mapCard"><div id="map"></div>
+      <div class="nsheet" id="nearSheet" data-snap="mid" hidden>
+        <button class="ns-grab" id="nsGrab" aria-label="Agrandir ou réduire la liste"><i></i></button>
+        <div class="ns-top"><button class="ns-search" id="nsSearch">🔎 <b>Où vas-tu ?</b></button><button class="ns-me" id="nsMe" title="Autour de ma position" aria-label="Autour de ma position">📍</button></div>
+        <div class="ns-h"><b id="nsTitle">Autour de toi</b><small id="nsWhere"></small></div>
+        <div class="ns-list" id="nsList" aria-live="polite"></div>
+      </div>
       <div class="tf-legend" id="tfLegend" hidden><span><i style="background:#2E9E44"></i>fluide</span><span><i style="background:#F2A100"></i>ralenti</span><span><i style="background:#D9480F"></i>bouchon</span><span><i style="background:#8B0000"></i>bloqué</span></div></div>
   </section>
 
@@ -1310,6 +1389,7 @@
         <div class="tf-key" id="tfKeyEdit"><input class="set-in" id="tfKey" placeholder="colle ta clé gratuite (developer.tomtom.com)" autocomplete="off" spellcheck="false"><button class="btn small" id="tfKeySave">OK</button></div></div>
       <div class="set-row"><div class="set-l"><b>🗺️ Trajet en direct</b><small>dans le car : le parcours sur la carte, arrêts passés en gris, prochains arrêts avec leur heure</small></div><label class="switch"><input type="checkbox" id="liveOn" checked><span></span></label></div>
       <div class="set-row"><div class="set-l"><b>🔎 Ouvrir en vue simple</b><small>ton prochain car en très grand dès l’ouverture</small></div><label class="switch"><input type="checkbox" id="simpleOn"><span></span></label></div>
+      <div class="set-row"><div class="set-l"><b>🚏 Autour de toi</b><small>sur la carte, le panneau des lignes qui passent près de toi, avec les minutes en gros</small></div><label class="switch"><input type="checkbox" id="nsOn" checked><span></span></label></div>
       <div class="set-row col"><div class="set-l"><b>Bus urbains sur la carte</b><small>lignes dès que tu zoomes, arrêts avec leurs prochains départs · 📡 bus en direct · ≈ bus estimés d’après l’horaire</small></div><div class="chk-row" id="urbNets"></div></div>
     </div>
   </details>
@@ -1531,7 +1611,7 @@ const I18N_FRAG = {
   'Part de':'Leaves','Arrive à':'Arrives at','Prochain arrêt :':'Next stop:','prochain arrêt':'next stop','Prochain arrêt':'Next stop','Parti à':'Left at',
   'Réseau fermé · horaires théoriques':'Network closed · scheduled times','actualisation auto':'auto refresh','Temps réel à':'Real time at','Temps réel':'Real time',
   'Pas vu en circulation':'Not seen running','peut-être supprimé':'maybe cancelled','estimé (position GPS)':'estimated (GPS position)','Pas d’info retard':'No delay info',
-  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.','Aucun départ prévu dans les prochaines heures.':'No departure planned in the next few hours.','Voir en direct dans Transit':'See live in Transit','Ce réseau ne publie pas ses bus en direct : Transit les montre':'This network does not publish live buses: Transit shows them','Transit ne s’est pas ouvert : touche ici pour l’installer':'Transit did not open: tap here to install it','Aucun départ prévu à cet arrêt dans les prochaines heures.':'No departure from this stop in the next few hours.',
+  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.','Aucun départ prévu dans les prochaines heures.':'No departure planned in the next few hours.','Voir en direct dans Transit':'See live in Transit','Autour de toi':'Around you','ta position':'your location','centre de la carte':'map centre','Je cherche les lignes autour…':'Looking for lines nearby…','Aucune ligne ne passe près de toi dans les 3 prochaines heures.':'No line stops near you in the next 3 hours.','Aucune ligne ici. Déplace la carte, ou montre ta position.':'No line here. Move the map, or show your location.','Ma position':'My location','Où vas-tu ?':'Where to?','vers':'to','Tu es dans ce car':'You are on this bus','Descends à':'Get off at','Touche l’arrêt où tu descends : je te préviens juste avant.':'Tap the stop where you get off: I will warn you just before.','ton arrêt':'your stop','prochain':'next','Ce réseau ne publie pas ses bus en direct : Transit les montre':'This network does not publish live buses: Transit shows them','Transit ne s’est pas ouvert : touche ici pour l’installer':'Transit did not open: tap here to install it','Aucun départ prévu à cet arrêt dans les prochaines heures.':'No departure from this stop in the next few hours.',
   'Plus de départ prévu aujourd’hui.':'No more departures today.','Aucun car direct de':'No direct bus from','dans les prochaines 24 h':'in the next 24 h',
   'Plus rapide avec une correspondance':'Faster with a connection','Avec une correspondance':'With a connection','changement à':'change at','d’attente':'wait',
   'à pied':'on foot','départ':'departure','Voir le car':'See the bus','📍 Voir le car':'📍 See the bus','Dernier car':'Last bus','dernier car':'last bus',
@@ -2249,6 +2329,7 @@ function setView(v, silent){
   $('#crumbCur').textContent = VIEW_NAMES[v];
   $('.crumb').classList.toggle('hide', v === 'map');          // plus de place pour la carte
   if (v === 'map') setTimeout(fixMapSize, 50);
+  try { nsShow(); } catch(e){}
   if (v === 'board') renderBoard();
   if (v === 'trip'){ renderTrip(); try { renderClasses(); } catch(e){} }
   if (v === 'avion'){ renderFlights(); loadFlights(); setTimeout(() => { initPlaneMap(); if (plMap) plMap.invalidateSize(); renderPlanes(); loadPlanes(); }, 50); }
@@ -6700,6 +6781,246 @@ async function urbFillFiche(d){
 document.addEventListener('toggle', e => { const d = e.target; if (d.classList && d.classList.contains('urb-fc') && d.open) urbFillFiche(d); }, true);
 document.addEventListener('change', e => { if (e.target.closest('[data-urb]')){ urbRenderFiches(); } });
 urbIndex().then(() => { urbRenderFiches(); urbStopsLoad(); });
+
+/* ====================== « Autour de toi » : les lignes qui passent près de moi, en grosses cartes ======================
+   Panneau glissant sur la carte (téléphone : 3 hauteurs au doigt ; ordinateur : colonne à gauche).
+   Une carte par ligne et direction, à l'arrêt le plus proche : minutes en gros, 📡 quand l'heure vient du car.
+   Cars jaunes + bus urbains (Citalis, Kar’Ouest, Alternéo, Car’Sud, Estival). */
+let nsOn = true;
+try { nsOn = localStorage.getItem('cj_ns') !== '0'; } catch(e){}
+const ns = { rows: [], at: 0, pos: null, from: '', busy: false, snap: 'mid' };
+try { ns.snap = localStorage.getItem('cj_ns_snap') || 'mid'; } catch(e){}
+const NS_LIVE = '<svg class="ns-live" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="12.5" r="1.7" fill="currentColor"/><path class="w1" d="M3.5 8a4.5 4.5 0 0 1 4.5 4.5"/><path class="w2" d="M3.5 3.5a9 9 0 0 1 9 9"/></svg>';
+const NS_WALK = 80;                                  // mètres par minute à pied
+const NS_SNAP = { mini: 118, mid: .44, full: .9 };   // hauteur visible (px ou part de la carte)
+const nsPhone = () => window.matchMedia('(max-width:860px)').matches;
+
+/** Partie de la carte cachée en bas par la barre d'onglets (téléphone). */
+function nsOff(){
+  const t = document.querySelector('.tabs'), mc = $('#mapCard');
+  if (!t || !nsPhone()) return 0;
+  return Math.max(0, Math.round(mc.getBoundingClientRect().bottom - t.getBoundingClientRect().top));
+}
+function nsHeight(snap){
+  const H = ($('#mapCard').clientHeight || window.innerHeight) - nsOff(), v = NS_SNAP[snap];
+  return Math.round(v > 1 ? v : H * v);
+}
+function nsApply(px){
+  const el = $('#nearSheet'), mc = $('#mapCard');
+  if (!nsPhone()){ el.style.removeProperty('--nsh'); el.style.bottom = ''; mc.style.setProperty('--nsb', '0px'); return; }
+  const off = nsOff();
+  el.style.bottom = off + 'px';
+  el.style.setProperty('--nsh', px + 'px');
+  mc.style.setProperty('--nsb', off + Math.min(px, nsHeight('mid')) + 'px');   // boutons de la carte au-dessus du panneau
+}
+function nsSetSnap(snap, keep){
+  ns.snap = snap; $('#nearSheet').dataset.snap = snap; nsApply(nsHeight(snap));
+  if (!keep) try { localStorage.setItem('cj_ns_snap', snap); } catch(e){}
+}
+function nsShow(){
+  const el = $('#nearSheet'); if (!el) return;
+  const on = nsOn && view === 'map';
+  if (el.hidden === !on) return;
+  el.hidden = !on;
+  if (on){ nsSetSnap(ns.snap, true); nsRefresh(); } else $('#mapCard').style.setProperty('--nsb', '0px');
+}
+
+/* ---- glisser au doigt ---- */
+(() => {
+  const el = $('#nearSheet'); if (!el) return;
+  let y0 = 0, h0 = 0, t0 = 0, moved = false, on = false;
+  const start = e => {
+    if (!nsPhone() || e.target.closest('.ns-top button')) return;
+    on = true; moved = false; y0 = e.clientY; h0 = el.getBoundingClientRect().height; t0 = Date.now();
+    el.classList.add('drag');
+  };
+  const move = e => {
+    if (!on) return;
+    const dy = e.clientY - y0; if (Math.abs(dy) > 4) moved = true;
+    const H = $('#mapCard').clientHeight - nsOff();
+    nsApply(Math.max(70, Math.min(H * .94, h0 - dy)));
+  };
+  const end = e => {
+    if (!on) return; on = false; el.classList.remove('drag');
+    if (!moved) return;
+    const h = el.getBoundingClientRect().height, v = (y0 - e.clientY) / Math.max(1, Date.now() - t0);   // px/ms, >0 vers le haut
+    const order = ['mini', 'mid', 'full'];
+    let best = order.reduce((b, k) => Math.abs(nsHeight(k) - h) < Math.abs(nsHeight(b) - h) ? k : b, 'mid');
+    if (Math.abs(v) > .5 && best === ns.snap){ const i = order.indexOf(ns.snap); best = order[Math.max(0, Math.min(2, i + (v > 0 ? 1 : -1)))]; }   // petit coup rapide : cran suivant
+    nsSetSnap(best);
+  };
+  ['nsGrab'].forEach(id => $('#' + id).addEventListener('pointerdown', start));
+  el.querySelector('.ns-top').addEventListener('pointerdown', start);
+  el.querySelector('.ns-h').addEventListener('pointerdown', start);
+  // dans la liste : on ne déplace le panneau que si la liste est tout en haut et qu'on tire vers le bas, ou qu'il n'est pas déployé
+  const list = $('#nsList');
+  list.addEventListener('pointerdown', e => {
+    if (!nsPhone() || e.pointerType === 'mouse') return;
+    if (ns.snap !== 'full' || list.scrollTop <= 0){ const y = e.clientY;
+      const mv = ev => { const dy = ev.clientY - y; if ((ns.snap !== 'full' && Math.abs(dy) > 8) || (ns.snap === 'full' && dy > 8 && list.scrollTop <= 0)){
+          window.removeEventListener('pointermove', mv); start({ clientY: y, target: list }); move(ev); } };
+      window.addEventListener('pointermove', mv);
+      window.addEventListener('pointerup', () => window.removeEventListener('pointermove', mv), { once: true });
+    }
+  });
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', end);
+  window.addEventListener('pointercancel', end);
+  $('#nsGrab').addEventListener('click', () => { if (!moved) nsSetSnap(ns.snap === 'full' ? 'mid' : ns.snap === 'mid' ? 'full' : 'mid'); });
+  list.style.touchAction = 'pan-y';
+  list.addEventListener('scroll', () => { if (ns.snap !== 'full' && list.scrollTop > 30 && nsPhone()) nsSetSnap('full'); }, { passive: true });
+  window.addEventListener('resize', () => { if (!el.hidden) nsSetSnap(ns.snap, true); });
+})();
+
+$('#nsSearch').addEventListener('click', () => { setView('trip'); setTimeout(() => { const b = $('#tripB'); if (b){ b.focus(); b.select && b.select(); } }, 120); });
+$('#nsMe').addEventListener('click', () => {
+  if (!meShown){ setMeShown(true); }
+  else if (myPos) map.flyTo([myPos.lat, myPos.lon], Math.max(map.getZoom(), 16), { duration: .7 });
+  ns.at = 0; setTimeout(nsRefresh, 1500);
+});
+
+/** Où chercher : ma position si elle est récente, sinon le centre de la carte. */
+function nsWhere(){
+  if (myPos && Date.now() - (myFixAt || 0) < 10 * 60e3) return { lat: myPos.lat, lon: myPos.lon, me: true };
+  const c = map.getCenter(); return { lat: c.lat, lon: c.lng, me: false };
+}
+async function nsRefresh(force){
+  if (!nsOn || view !== 'map' || document.hidden || ns.busy) return;
+  const p = nsWhere();
+  const far = !ns.pos || distM(p.lat, p.lon, ns.pos.lat, ns.pos.lon) > 150 || ns.pos.me !== p.me;
+  if (!force && !far && Date.now() - ns.at < 60e3){ nsRender(); return; }
+  ns.busy = true; ns.pos = p;
+  if (!ns.rows.length) nsRender(true);
+  const out = [];
+  try {
+    // cars jaunes : les arrêts à moins de 1,5 km (au moins le plus proche s'il est à moins de 4 km)
+    let near = (stopGroups && stopGroups.length) ? nearbyStops(p.lat, p.lon, 6).filter((x, i) => x.d <= 1500 || (i === 0 && x.d <= 4000)) : [];
+    if (near.length){
+      let data = {};
+      try { data = JSON.parse(await call('getStopBoard', near.flatMap(x => x.g.ids).slice(0, 120))); } catch(e){}
+      const saved = board.data; board.data = data;
+      near.forEach(x => {
+        let rows = [];
+        try { const pool = gtfsRows(x.g); rows = ficheRows(x.g, pool) || pool; } catch(e){}
+        rows.forEach(r => out.push({ key: 'cj|' + r.route.s + '|' + r.dest, route: r.route, dest: r.dest, eff: r.eff, live: r.real != null && !r.ghost,
+          stop: x.g.name, open: x.g.name, d: x.d, net: '' }));
+      });
+      board.data = saved;
+    }
+    // bus urbains : arrêts à moins de 600 m, réseaux dont la zone contient le point
+    const ix = await urbIndex();
+    const groups = await urbStopsLoad();
+    const nets = ((ix && ix.nets) || []).filter(n => n.bbox && p.lat >= n.bbox[0] - .01 && p.lat <= n.bbox[2] + .01 && p.lon >= n.bbox[1] - .01 && p.lon <= n.bbox[3] + .01);
+    for (const n of nets){
+      const ug = (groups || []).filter(g => g.urb.net === n.id).map(g => ({ g, d: distM(p.lat, p.lon, g.lat, g.lon) })).filter(x => x.d <= 600).sort((a, b) => a.d - b.d).slice(0, 4);
+      if (!ug.length) continue;
+      const N = await urbLoad(n.id); if (!N) continue;
+      if (N.rt && (!urb.rtAt[N.id] || Date.now() - urb.rtAt[N.id] > 30e3)) try { await urbRtFetch(N.id); } catch(e){}
+      ug.forEach(x => urbDepartures(N, x.g.urb.idx, Date.now(), 30).forEach(r => out.push({ key: n.id + '|' + r.route.s + '|' + r.dest, route: r.route, dest: r.dest, eff: r.eff,
+        live: !!(r.live && r.live.delay != null), stop: x.g.stop, open: x.g.name, d: x.d, net: N.name })));
+    }
+  } catch(e){}
+  ns.rows = out; ns.at = Date.now(); ns.busy = false;
+  nsRender();
+}
+function nsRender(loading){
+  const box = $('#nsList'); if (!box || $('#nearSheet').hidden) return;
+  if (nsGoRender()) return;
+  const p = ns.pos || nsWhere(), now = Date.now();
+  $('#nsWhere').textContent = p.me ? tr('ta position') : tr('centre de la carte');
+  if (loading){ box.innerHTML = `<div class="ns-empty">${tr('Je cherche les lignes autour…')}</div>`; return; }
+  // une carte par ligne + direction, à l'arrêt le plus proche où elle passe
+  const by = new Map();
+  ns.rows.filter(r => r.eff > now - 60e3).sort((a, b) => a.d - b.d || a.eff - b.eff).forEach(r => {
+    let c = by.get(r.key);
+    if (!c){ c = { ...r, times: [] }; by.set(r.key, c); }
+    if (r.stop === c.stop && c.times.length < 3 && !c.times.some(t => Math.abs(t.eff - r.eff) < 60e3)) c.times.push({ eff: r.eff, live: r.live });
+  });
+  const cards = [...by.values()].filter(c => c.times.length && c.times[0].eff < now + 3 * 3600e3)
+    .map(c => (c.times.sort((a, b) => a.eff - b.eff), c))
+    .sort((a, b) => Math.round(a.d / 250) - Math.round(b.d / 250) || a.times[0].eff - b.times[0].eff).slice(0, 14);
+  if (!cards.length){
+    box.innerHTML = `<div class="ns-empty">${p.me ? tr('Aucune ligne ne passe près de toi dans les 3 prochaines heures.') : tr('Aucune ligne ici. Déplace la carte, ou montre ta position.')}
+      ${p.me ? '' : `<br><button class="btn small" data-ns-me>📍 ${tr('Ma position')}</button>`}</div>`;
+    return;
+  }
+  const mm = t => { const m = Math.round((t.eff - now) / 60000); return m; };
+  box.innerHTML = cards.map(c => {
+    const t0 = c.times[0], m0 = mm(t0), walk = Math.max(1, Math.round(c.d / NS_WALK));
+    const big = m0 <= 0 ? `<span class="ns-m now"><b>${tr('À quai')}</b></span>`
+      : m0 < 60 ? `<span class="ns-m">${t0.live ? NS_LIVE : ''}<b>${m0}</b><span>min</span></span>`
+      : `<span class="ns-m">${t0.live ? NS_LIVE : ''}<b style="font-size:22px">${fmtHM(t0.eff)}</b></span>`;
+    const nx = c.times.slice(1).map(t => mm(t) < 60 ? { t: String(Math.max(0, mm(t))), m: true } : { t: fmtHM(t.eff), m: false });
+    const more = nx.length ? nx.map(x => x.t).join(' · ') + (nx[nx.length - 1].m ? ' min' : '') : '';
+    const lbl = `${c.net || 'Car jaune'} ligne ${c.route.s} vers ${c.dest} : ${m0 <= 0 ? 'à quai' : m0 < 60 ? 'dans ' + m0 + ' minutes' : 'à ' + fmtHM(t0.eff)}${t0.live ? ', en direct' : ', horaire prévu'}, arrêt ${c.stop} à ${walk} minutes à pied`;
+    return `<button class="ns-card" data-ns-open="${esc(c.open)}" style="--lc:#${esc(c.route.c || 'F6BE00')};--lt:#${esc(c.route.t || '222222')}" aria-label="${esc(lbl)}">
+      <span class="ns-l">${esc(c.route.s)}${c.net ? `<small>${esc(c.net)}</small>` : ''}</span>
+      <span class="ns-mid"><b class="ns-dir">${esc(c.dest || '—')}</b><small>🚶 ${walk} min · ${esc(c.stop)}</small></span>
+      <span class="ns-t">${big}${more ? `<em>${more}</em>` : ''}</span></button>`;
+  }).join('');
+}
+
+/* ---- mode GO : quand l'appli me sait dans un car, le panneau devient l'écran de trajet ---- */
+function nsGoVeh(){
+  if (typeof onBus === 'undefined' || !onBus) return null;
+  const v = vehicles.find(x => x.id === onBus);
+  const G = v && v.tripId ? tripGeom(v.tripId, v.routeId) : null;
+  return G && G.stops && G.stops.length ? { v, G } : null;
+}
+function nsGoRender(){
+  const go = nsGoVeh(), el = $('#nearSheet');
+  el.classList.toggle('go', !!go);
+  if (!go) return false;
+  const { v, G } = go, now = Date.now(), box = $('#nsList');
+  let from = v.est ? v.est.next : -1;
+  if (from < 0){ let best = 0, bd = Infinity; G.stops.forEach((st, i) => { const d = distM(v.lat, v.lon, st.lat, st.lon); if (d < bd){ bd = d; best = i; } }); from = Math.min(G.stops.length - 1, best + (bd < 80 ? 1 : 0)); }
+  const base = v.est ? v.est.base : serviceDayMs(v.startDate, G.stops[0].sec);
+  const dl = Math.max(0, v.delay || 0) * 1000;
+  const ds = typeof descState === 'function' ? descState(v) : null;
+  const tgtName = ds ? ds.name : '';
+  const ti = S.trips[v.tripId] || [], dest = ti[1] || (S.stops[G.stops[G.stops.length - 1].id] || [])[0] || '';
+  const rt = v.route || { s: '?', c: 'F6BE00', t: '222222' };
+  const del = v.delay != null ? fmtDelay(v.delay, !!v.est) : null;
+  const tgtIdx = tgtName ? G.stops.findIndex((st, i) => i >= from && (findGroup((S.stops[st.id] || [])[0] || '') || {}).name === tgtName) : -1;
+  const upto = Math.min(G.stops.length, Math.max(from + 9, tgtIdx + 2));
+  const list = G.stops.slice(from, upto);
+  const etaMin = ds && ds.eta ? Math.max(0, Math.round((ds.eta - now) / 60000)) : null;
+  box.innerHTML = `<div class="go-head" style="--lc:#${esc(rt.c)};--lt:#${esc(rt.t)}"><span class="go-l">${esc(rt.s)}</span>
+      <div><b>${tr('vers')} ${esc(dest)}</b><small>${NS_LIVE}${tr('Tu es dans ce car')}${del ? ` · <span class="delay ${del.c}">${del.t}</span>` : ''}</small></div></div>
+    ${ds ? `<div class="go-tgt"><div><small>${tr('Descends à')}</small><b>${esc(ds.name)}</b></div>
+      <div class="go-cd">${ds.left <= 0 ? `<b>🛎️</b><span>${tr('prochain arrêt')}</span>` : `<b>${ds.left}</b><span>${ds.left > 1 ? tr('arrêts') : tr('arrêt')}${etaMin != null ? ' · ' + etaMin + ' min' : ''}</span>`}</div></div>`
+      : `<div class="go-tip">🛎️ ${tr('Touche l’arrêt où tu descends : je te préviens juste avant.')}</div>`}
+    <ol class="go-stops" style="--lc:#${esc(rt.c)}">${list.map((st, k) => {
+      const name = (S.stops[st.id] || [])[0] || '', g = findGroup(name), i = from + k;
+      const cls = i === tgtIdx ? 'tg' : k === 0 ? 'nx' : '';
+      return `<li><button class="${cls}" data-go-stop="${esc(g ? g.name : name)}" aria-label="${esc(name)}, ${fmtHM(base + st.sec * 1000 + dl)}${cls === 'tg' ? ', ' + tr('ton arrêt') : ''}"><i class="go-dot"></i><span>${i === tgtIdx ? '🛎️ ' : ''}${esc(name)}</span><time>${k === 0 ? tr('prochain') + ' · ' : ''}${fmtHM(base + st.sec * 1000 + dl)}</time></button></li>`;
+    }).join('')}</ol>`;
+  return true;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-go-stop]'); if (!b) return;
+  const n = b.dataset.goStop; setDescPick(descPick && descPick.name === n ? null : n); nsGoRender();
+});
+let nsWasGo = false;
+setInterval(() => {
+  const el = $('#nearSheet'); if (!el || el.hidden || document.hidden) return;
+  const go = !!nsGoVeh();
+  if (go !== nsWasGo){ nsWasGo = go; if (go && ns.snap === 'mini') nsSetSnap('mid', true); if (!go) nsRender(); }
+  if (go) nsGoRender();
+}, 5000);
+document.addEventListener('click', e => {
+  const o = e.target.closest('[data-ns-open]');
+  if (o){ const g = anyStopGroup(o.dataset.nsOpen); if (!g) return;
+    $('#stopInput').value = g.name; selectStop(g); setView('board'); return; }
+  if (e.target.closest('[data-ns-me]')) $('#nsMe').click();
+});
+$('#nsOn').checked = nsOn;
+$('#nsOn').addEventListener('change', e => { nsOn = e.target.checked; try { localStorage.setItem('cj_ns', nsOn ? '1' : '0'); } catch(err){} nsShow(); });
+map.on('moveend', () => { if (!ns.pos || ns.pos.me || $('#nearSheet').hidden) return; clearTimeout(ns.mt); ns.mt = setTimeout(() => nsRefresh(), 700); });
+setInterval(() => { if (!$('#nearSheet').hidden && !document.hidden) { nsRender(); if (Date.now() - ns.at > 60e3) nsRefresh(); } }, 15e3);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) nsRefresh(); });
+setTimeout(nsShow, 400);
+
 
 /* ---------- ≈ Bus estimés : où devrait être chaque bus d'après l'horaire officiel ----------
    Citalis, Kar’Ouest et Estival ne publient pas la position de leurs bus : on la déduit des horaires

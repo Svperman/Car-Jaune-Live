@@ -42,9 +42,9 @@ await t('boutons + et −', async () => {
 });
 await t('toucher deux fois la carte : zoom +', async () => {
   await p.evaluate("map.setView([-21.0, 55.5], 12, { animate:false }); 1"); await p.waitForTimeout(200);
-  await cdp.send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{ x:200, y:450 }] }); await cdp.send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] });
+  await cdp.send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{ x:200, y:300 }] }); await cdp.send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] });
   await p.waitForTimeout(120);
-  await cdp.send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{ x:200, y:450 }] }); await cdp.send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] });
+  await cdp.send('Input.dispatchTouchEvent', { type:'touchStart', touchPoints:[{ x:200, y:300 }] }); await cdp.send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] });
   await p.waitForTimeout(700);
   const z = await p.evaluate('map.getZoom()'); return z > 12.5 || 'zoom ' + z;
 });
