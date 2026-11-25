@@ -118,6 +118,11 @@ await t('popup d’un arrêt urbain', async () => {
   const h = await page.evaluate('document.querySelector(".leaflet-popup-content").innerText');
   return /Citalis/.test(h) || h;
 });
+await t('horaires périmés : message clair au lieu de « aucun départ »', async () => {
+  const r = await page.evaluate(`(() => { const N = { name: 'Citalis', to: '20200101' };
+    return [urbNoDep(N, Date.now(), 'Aucun départ prévu dans les prochaines heures.'), urbNoDep({ name: 'X', to: '20991231' }, Date.now(), 'Aucun départ prévu dans les prochaines heures.')]; })()`);
+  return (/s’arrêtent au 01\/01\/2020/.test(r[0]) && /^Aucun départ/.test(r[1])) || JSON.stringify(r);
+});
 await t('Alternéo : bus en direct (via serveur)', async () => {
   await page.evaluate("map.setView([-21.3393, 55.4781], 14, { animate:false }); urb.rtAt = {}; 1");
   await page.evaluate("urbRtFetch('alterneo')");

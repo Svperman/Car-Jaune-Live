@@ -1529,7 +1529,7 @@ const I18N_FRAG = {
   'Part de':'Leaves','Arrive à':'Arrives at','Prochain arrêt :':'Next stop:','prochain arrêt':'next stop','Prochain arrêt':'Next stop','Parti à':'Left at',
   'Réseau fermé · horaires théoriques':'Network closed · scheduled times','actualisation auto':'auto refresh','Temps réel à':'Real time at','Temps réel':'Real time',
   'Pas vu en circulation':'Not seen running','peut-être supprimé':'maybe cancelled','estimé (position GPS)':'estimated (GPS position)','Pas d’info retard':'No delay info',
-  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.',
+  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.','Aucun départ prévu dans les prochaines heures.':'No departure planned in the next few hours.','Aucun départ prévu à cet arrêt dans les prochaines heures.':'No departure from this stop in the next few hours.',
   'Plus de départ prévu aujourd’hui.':'No more departures today.','Aucun car direct de':'No direct bus from','dans les prochaines 24 h':'in the next 24 h',
   'Plus rapide avec une correspondance':'Faster with a connection','Avec une correspondance':'With a connection','changement à':'change at','d’attente':'wait',
   'à pied':'on foot','départ':'departure','Voir le car':'See the bus','📍 Voir le car':'📍 See the bus','Dernier car':'Last bus','dernier car':'last bus',
@@ -6407,6 +6407,12 @@ function urbDepartures(N, stopIdxs, fromMs, max){
   rows.sort((a, b) => a.eff - b.eff);
   return rows.slice(0, max || 6);
 }
+/** Message « aucun départ » : précise quand les horaires publiés par le réseau sont arrivés à leur fin. */
+function urbNoDep(N, now, txt){
+  if (!N.to || ymd(reuDate(now)) <= N.to) return tr(txt);
+  return LANG === 'en' ? `${esc(N.name)} timetables end on ${ymdTxt(N.to)}: new ones will appear as soon as they are published.`
+    : `Les horaires publiés par ${esc(N.name)} s’arrêtent au ${ymdTxt(N.to)} : les nouveaux arriveront dès leur mise en ligne.`;
+}
 function urbStopPopup(N, i, ll){
   const s = N.stops[i];
   // même arrêt (les deux sens) : même nom à moins de 250 m
@@ -6422,7 +6428,7 @@ function urbStopPopup(N, i, ll){
         const dl = r.live && r.live.delay != null ? fmtDelay(r.live.delay) : null;
         return `<div class="sp-row">${badge(r.route)}<span class="sp-d">${esc(r.dest)}</span><b class="sp-t${m <= 2 ? ' soon' : ''}">${m <= 0 ? 'À quai' : m < 60 ? m + ' min' : fmtHM(r.eff)}</b>${
           r.live ? `<span title="Bus suivi en direct">📡</span>` : ''}${dl ? `<span class="delay ${dl.c}">${dl.t}</span>` : ''}</div>`; }).join('') + '</div>'
-        : '<div class="muted">Aucun départ prévu dans les prochaines heures.</div>'}
+        : `<div class="muted">${urbNoDep(N, now, 'Aucun départ prévu dans les prochaines heures.')}</div>`}
       <div class="muted sm">${N.rt ? '📡 bus en direct quand ils émettent, sinon horaire officiel' : 'Horaires officiels (ce réseau ne publie pas de position en direct)'}</div>`);
   };
   paint();
@@ -6576,7 +6582,7 @@ function renderUrbBoard(card, g){
     <button class="see" data-urbmap="${esc(g.name)}">🗺️ Voir sur la carte</button></div>` : '';
   const rows = urbDepartures(N, u.idx, now, 40);
   const src = `<p class="src-note">Horaires officiels ${esc(u.name)} (transport.data.gouv.fr)${N.rt ? ', corrigés en direct quand le bus est suivi 📡' : ''} · touche une ligne pour sa fiche complète</p>`;
-  if (!rows.length){ card.innerHTML = head + lineBtns + src + `<div class="placeholder"><div class="big">🌙</div>Aucun départ prévu à cet arrêt dans les prochaines heures.</div>`; return; }
+  if (!rows.length){ card.innerHTML = head + lineBtns + src + `<div class="placeholder"><div class="big">🌙</div>${urbNoDep(N, now, 'Aucun départ prévu à cet arrêt dans les prochaines heures.')}</div>`; return; }
   let lastDay = midnightMs(now), html = '';
   rows.forEach(r => {
     const day = midnightMs(r.eff);

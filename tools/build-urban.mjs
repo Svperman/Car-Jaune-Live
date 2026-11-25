@@ -199,13 +199,19 @@ export function buildNet(net, zipBytes, today = new Date()){
   });
   Object.values(cal).forEach(c => { if (c[2] > maxDate) maxDate = c[2]; if (c[1] < minDate) minDate = c[1]; });
 
+  // courses dont le service ne circule plus (calendrier terminé, aucune date à venir) : inutiles, on les retire
+  const alive = new Set(Object.keys(cal).map(Number));
+  Object.values(dates).forEach(o => o[0].forEach(x => alive.add(x)));
+  const keep = tripsS.map((t, i) => alive.has(t[2]) ? i : -1).filter(i => i >= 0);
+  const tripsK = keep.map(i => tripsS[i]), tripIdsK = tripIdsS ? keep.map(i => tripIdsS[i]) : undefined;
+
   let s = 90, w = 180, n = -90, e = -180;
   stops.forEach(p => { s = Math.min(s, p[1]); n = Math.max(n, p[1]); w = Math.min(w, p[2]); e = Math.max(e, p[2]); });
 
   const out = { v: 1, id: net.id, name: net.name, zone: net.zone, color: net.color, rt: !!net.rt,
     from: minDate, to: maxDate, bbox: [r5(s), r5(w), r5(n), r5(e)],
-    routes, stops, pats, tps, trips: tripsS, heads, cal, dates, shapes };
-  if (net.rt) out.tripIds = tripIdsS;
+    routes, stops, pats, tps, trips: tripsK, heads, cal, dates, shapes };
+  if (net.rt) out.tripIds = tripIdsK;
   return out;
 }
 
