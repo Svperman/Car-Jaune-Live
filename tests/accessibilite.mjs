@@ -32,7 +32,7 @@ for (const mode of ['', '?user=1']) {
       if (!n || (decorOnly && !el.getAttribute('aria-label') && !el.title)) bad.push((el.id ? '#' + el.id : el.tagName.toLowerCase() + '.' + String(el.className).split(' ')[0]) + ' «' + n + '»');
     });
     const buses = [...document.querySelectorAll('.leaflet-marker-icon .bus-mk')].map(b => b.closest('.leaflet-marker-icon'));
-    return { bad: [...new Set(bad)], buses: buses.length, busNamed: buses.filter(b => /Car jaune ligne/.test(b.getAttribute('aria-label') || '')).length,
+    return { bad: [...new Set(bad)], buses: buses.length, busNamed: buses.filter(b => /Car jaune ligne|Bus \S+ ligne/.test(b.getAttribute('aria-label') || '')).length,   // cars jaunes et bus urbains
       cur: document.querySelector('.tab[aria-current=page]') ? document.querySelector('.tab[aria-current=page]').dataset.view : null,
       toast: document.querySelector('#toast').getAttribute('aria-live') };
   });

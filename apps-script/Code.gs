@@ -104,7 +104,8 @@ const API_ = {
   getFlights:        function () { return getFlights(); },
   getPlanes:         function () { return getPlanes(); },
   liveDiag:          function (code, lines) { return liveDiag(code, lines); },
-  getLiveDiag:       function (code, from) { return getLiveDiag(code, from); }
+  getLiveDiag:       function (code, from) { return getLiveDiag(code, from); },
+  getUrbanRt:        function (net) { return getUrbanRt(String(net || '')); }
 };
 
 function api_(action, args) {
@@ -134,6 +135,26 @@ function getRealtime() {
     fetchedAt: Date.now()
   };
   cachePut_(cache, 'rt', JSON.stringify(out), RT_TTL);
+  return out;
+}
+
+/**
+ * Réseaux urbains avec positions en direct (open data transport.data.gouv.fr).
+ * Citalis, Kar'Ouest et Estival ne publient que leurs horaires (lus directement par l'appli).
+ */
+const URBAN_RT = {
+  alterneo: ['https://proxy.transport.data.gouv.fr/resource/alterneo-civis-gtfs-rt-vehicle-position'],
+  carsud:   ['https://zenbus.net/gtfs/rt/poll.proto?src=true&dataset=carsud-reunion']
+};
+function getUrbanRt(net) {
+  const urls = URBAN_RT[net];
+  if (!urls) throw new Error('Réseau sans temps réel');
+  const cache = CacheService.getScriptCache();
+  const key = 'urt_' + net;
+  const cached = cacheGet_(cache, key);
+  if (cached) return JSON.parse(cached);
+  const out = { b64: Utilities.base64Encode(fetchFirst_(urls).getContent()), fetchedAt: Date.now() };
+  cachePut_(cache, key, JSON.stringify(out), 15);
   return out;
 }
 
@@ -1062,7 +1083,7 @@ function weight_(row) { return (row || []).reduce(function (a, c) { return a + (
 /* ------------------------------------------------------------------ */
 /*  Version du serveur (l'appli affiche un voyant « à jour »)          */
 /* ------------------------------------------------------------------ */
-const SERVER_VERSION = '2026-11-08.3';
+const SERVER_VERSION = '2026-11-25.1';
 function getVersion() {
   let trigger = false;
   try { trigger = ScriptApp.getProjectTriggers().some(function (t) { return t.getHandlerFunction() === 'pushTick'; }); } catch (e) {}
