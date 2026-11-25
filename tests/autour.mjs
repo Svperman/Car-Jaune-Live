@@ -33,7 +33,9 @@ for (const [nom, vp] of [['téléphone', { width: 390, height: 844 }], ['ordinat
     const r = await page.evaluate(`[...document.querySelectorAll('#nsList .ns-card')].map(c => [c.querySelector('.ns-l').childNodes[0].textContent, c.querySelector('.ns-l small') ? c.querySelector('.ns-l small').textContent : 'CJ', c.querySelector('.ns-m').innerText.replace(/\\s+/g, ' '), c.getAttribute('aria-label')])`);
     const cj = r.filter(x => x[1] === 'CJ'), cit = r.filter(x => x[1] === 'Citalis');
     console.log('    ', r.length, 'cartes ·', cj.map(x => x[0] + ' ' + x[2]).join(', '));
-    return (cj.length > 0 && cit.length > 0 && r.every(x => /ligne .+ vers .+ arrêt .+ à pied/.test(x[3]))) || JSON.stringify(r.slice(0, 4));
+    // le soir, Citalis peut ne plus rouler : on exige ses cartes seulement s'il a des départs dans les 3 h
+    const citPrevu = await page.evaluate("ns.rows.some(x => x.net === 'Citalis' && x.eff < Date.now() + 3 * 3600e3)");
+    return (cj.length > 0 && (cit.length > 0 || !citPrevu) && r.every(x => /ligne .+ vers .+ arrêt .+ à pied/.test(x[3]))) || JSON.stringify(r.slice(0, 4));
   });
   await t(P + 'une seule carte par ligne et direction', async () => {
     const r = await page.evaluate(`(() => { const k = [...document.querySelectorAll('#nsList .ns-card')].map(c => c.querySelector('.ns-l').textContent + '|' + c.querySelector('.ns-dir').textContent); return k.length === new Set(k).size || k.join(' ; '); })()`);
