@@ -118,6 +118,22 @@ await t('popup d’un arrêt urbain', async () => {
   const h = await page.evaluate('document.querySelector(".leaflet-popup-content").innerText');
   return /Citalis/.test(h) || h;
 });
+await t('Citalis : bouton « Voir en direct dans Transit » (arrêt + tableau), absent sur Alternéo', async () => {
+  const r = await page.evaluate(`(async () => {
+    let q = null; openTransit = x => { q = x; };
+    const N = urb.nets.citalis; urbStopPopup(N, 0);
+    await new Promise(r => setTimeout(r, 200));
+    const b = document.querySelector('.leaflet-popup-content [data-transit]');
+    if (!b) return 'pas de bouton dans la popup';
+    b.click();
+    const A = await urbLoad('alterneo'); map.closePopup(); urbStopPopup(A, 0);
+    await new Promise(r => setTimeout(r, 200));
+    const surAlt = !!document.querySelector('.leaflet-popup-content [data-transit]');
+    map.closePopup();
+    return [q, surAlt];
+  })()`);
+  return (Array.isArray(r) && /^-2\d\.\d{5},55\.\d{5}$/.test(r[0]) && r[1] === false) || JSON.stringify(r);
+});
 await t('horaires périmés : message clair au lieu de « aucun départ »', async () => {
   const r = await page.evaluate(`(() => { const N = { name: 'Citalis', to: '20200101' };
     return [urbNoDep(N, Date.now(), 'Aucun départ prévu dans les prochaines heures.'), urbNoDep({ name: 'X', to: '20991231' }, Date.now(), 'Aucun départ prévu dans les prochaines heures.')]; })()`);

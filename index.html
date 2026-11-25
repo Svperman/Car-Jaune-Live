@@ -523,6 +523,8 @@
   .urb-at{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 8px}
   .urb-at .lbl{font-size:12px;color:var(--gris)}
   .urb-lb{background:none;border:0;padding:2px;cursor:pointer}
+  .transit-go{display:inline-block;margin-left:6px}
+  .leaflet-popup-content .transit-go{margin:6px 0 0;display:block}
   #suggest li .urb-dot{vertical-align:middle}
   .al-link{border:none;background:none;color:var(--titre);font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
 
@@ -1529,7 +1531,7 @@ const I18N_FRAG = {
   'Part de':'Leaves','Arrive à':'Arrives at','Prochain arrêt :':'Next stop:','prochain arrêt':'next stop','Prochain arrêt':'Next stop','Parti à':'Left at',
   'Réseau fermé · horaires théoriques':'Network closed · scheduled times','actualisation auto':'auto refresh','Temps réel à':'Real time at','Temps réel':'Real time',
   'Pas vu en circulation':'Not seen running','peut-être supprimé':'maybe cancelled','estimé (position GPS)':'estimated (GPS position)','Pas d’info retard':'No delay info',
-  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.','Aucun départ prévu dans les prochaines heures.':'No departure planned in the next few hours.','Aucun départ prévu à cet arrêt dans les prochaines heures.':'No departure from this stop in the next few hours.',
+  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.','Aucun départ prévu dans les prochaines heures.':'No departure planned in the next few hours.','Voir en direct dans Transit':'See live in Transit','Ce réseau ne publie pas ses bus en direct : Transit les montre':'This network does not publish live buses: Transit shows them','Transit ne s’est pas ouvert : touche ici pour l’installer':'Transit did not open: tap here to install it','Aucun départ prévu à cet arrêt dans les prochaines heures.':'No departure from this stop in the next few hours.',
   'Plus de départ prévu aujourd’hui.':'No more departures today.','Aucun car direct de':'No direct bus from','dans les prochaines 24 h':'in the next 24 h',
   'Plus rapide avec une correspondance':'Faster with a connection','Avec une correspondance':'With a connection','changement à':'change at','d’attente':'wait',
   'à pied':'on foot','départ':'departure','Voir le car':'See the bus','📍 Voir le car':'📍 See the bus','Dernier car':'Last bus','dernier car':'last bus',
@@ -6429,7 +6431,7 @@ function urbStopPopup(N, i, ll){
         return `<div class="sp-row">${badge(r.route)}<span class="sp-d">${esc(r.dest)}</span><b class="sp-t${m <= 2 ? ' soon' : ''}">${m <= 0 ? 'À quai' : m < 60 ? m + ' min' : fmtHM(r.eff)}</b>${
           r.live ? `<span title="Bus suivi en direct">📡</span>` : ''}${dl ? `<span class="delay ${dl.c}">${dl.t}</span>` : ''}</div>`; }).join('') + '</div>'
         : `<div class="muted">${urbNoDep(N, now, 'Aucun départ prévu dans les prochaines heures.')}</div>`}
-      <div class="muted sm">${N.rt ? '📡 bus en direct quand ils émettent, sinon horaire officiel' : 'Horaires officiels (ce réseau ne publie pas de position en direct)'}</div>`);
+      <div class="muted sm">${N.rt ? '📡 bus en direct quand ils émettent, sinon horaire officiel' : 'Horaires officiels (ce réseau ne publie pas de position en direct)'}</div>${N.rt ? '' : transitBtn(s[1], s[2])}`);
   };
   paint();
   if (N.rt){ urbRtFetch(N.id).then(paint).catch(() => {}); }
@@ -6579,7 +6581,7 @@ function renderUrbBoard(card, g){
     urbRtFetch(N.id).then(() => { if (view === 'board' && board.group === g) renderBoard(); }).catch(() => { urb.rtAt[N.id] = now + 100000; });
   const lines = urbLinesAt(N, u.idx);
   const lineBtns = lines.length ? `<div class="urb-at"><span class="lbl">Lignes :</span>${lines.map(ri => `<button class="urb-lb" data-urbline="${esc(N.id)}|${ri}" title="Fiche horaire de la ligne ${esc(N.R[ri].s)}">${badge(N.R[ri])}</button>`).join('')}
-    <button class="see" data-urbmap="${esc(g.name)}">🗺️ Voir sur la carte</button></div>` : '';
+    <button class="see" data-urbmap="${esc(g.name)}">🗺️ Voir sur la carte</button>${N.rt ? '' : transitBtn(g.lat, g.lon)}</div>` : (N.rt ? '' : `<div class="urb-at">${transitBtn(g.lat, g.lon)}</div>`);
   const rows = urbDepartures(N, u.idx, now, 40);
   const src = `<p class="src-note">Horaires officiels ${esc(u.name)} (transport.data.gouv.fr)${N.rt ? ', corrigés en direct quand le bus est suivi 📡' : ''} · touche une ligne pour sa fiche complète</p>`;
   if (!rows.length){ card.innerHTML = head + lineBtns + src + `<div class="placeholder"><div class="big">🌙</div>${urbNoDep(N, now, 'Aucun départ prévu à cet arrêt dans les prochaines heures.')}</div>`; return; }
@@ -6596,6 +6598,24 @@ function renderUrbBoard(card, g){
   });
   card.innerHTML = head + lineBtns + src + `<table class="board"><thead><tr><th>Départ</th><th>Ligne</th><th>Direction</th><th>Horaire</th><th>Info</th></tr></thead><tbody>${html}</tbody></table>`;
 }
+/* ---------- passer la main à Transit (réseaux sans direct ouvert : Citalis, Kar’Ouest, Estival) ---------- */
+// Adresse officielle de Transit (transitapp.com/apis) : ouvre l'appli sur les lignes autour d'un point, sans clé ni copie de données.
+const TRANSIT_STORE = /android/i.test(navigator.userAgent) ? 'https://play.google.com/store/apps/details?id=com.thetransitapp.droid' : 'https://apps.apple.com/app/id498151501';
+const transitBtn = (lat, lon) => `<button class="see transit-go" data-transit="${(+lat).toFixed(5)},${(+lon).toFixed(5)}" title="${tr('Ce réseau ne publie pas ses bus en direct : Transit les montre')}">📡 ${tr('Voir en direct dans Transit')}</button>`;
+function openTransit(q){
+  let parti = false;
+  const vu = () => { if (document.hidden) parti = true; };
+  document.addEventListener('visibilitychange', vu);
+  setTimeout(() => {
+    document.removeEventListener('visibilitychange', vu);
+    if (!parti) toast(tr('Transit ne s’est pas ouvert : touche ici pour l’installer'), () => window.open(TRANSIT_STORE, '_blank'));
+  }, 1800);
+  location.href = 'transit://routes?q=' + encodeURIComponent(q);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-transit]'); if (!b) return;
+  e.preventDefault(); openTransit(b.dataset.transit);
+});
 $('#boardCard').addEventListener('click', e => {
   const m = e.target.closest('[data-urbmap]'); if (!m) return;
   const g = anyStopGroup(m.dataset.urbmap); if (!g || !g.urb) return;
