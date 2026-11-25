@@ -1080,6 +1080,11 @@
   .ns-search{flex:1;display:flex;align-items:center;gap:8px;height:44px;border-radius:22px;border:0;background:var(--fond);color:var(--gris);font:inherit;font-size:16px;font-weight:600;padding:0 16px;cursor:pointer;text-align:left}
   .ns-search b{color:var(--titre);font-weight:700}
   .ns-me{flex:none;width:44px;height:44px;border-radius:22px;border:0;background:var(--jaune);color:#222;font-size:19px;cursor:pointer}
+  .leaflet-tooltip.pap-tt{font-weight:800;font-size:12.5px;padding:2px 7px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .ns-chips{flex:none;display:flex;gap:8px;padding:0 14px 8px;overflow-x:auto}
+  .ns-chip{flex:none;border:0;border-radius:18px;background:var(--fond);color:var(--titre);font:inherit;font-size:14px;font-weight:700;padding:7px 14px;cursor:pointer}
+  .ns-chip:active{transform:scale(.96)}
+  .nsheet.go .ns-chips{display:none}
   .ns-h{flex:none;display:flex;align-items:baseline;justify-content:space-between;padding:2px 16px 6px}
   .ns-h b{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--gris)}
   .ns-h small{font-size:12px;color:var(--gris)}
@@ -1179,6 +1184,7 @@
       <div class="nsheet" id="nearSheet" data-snap="mid" hidden>
         <button class="ns-grab" id="nsGrab" aria-label="Agrandir ou réduire la liste"><i></i></button>
         <div class="ns-top"><button class="ns-menu" id="nsMenu" title="Menu" aria-label="Menu">🚌</button><button class="ns-search" id="nsSearch">🔎 <b>Où vas-tu ?</b></button><button class="ns-me" id="nsMe" title="Autour de ma position" aria-label="Autour de ma position">📍</button></div>
+        <div class="ns-chips"><button class="ns-chip" data-go-papang>🚡 <span>Téléphérique Papang</span></button></div>
         <div class="ns-h"><b id="nsTitle">Autour de toi</b><small id="nsWhere"></small></div>
         <div class="ns-list" id="nsList" aria-live="polite"></div>
       </div>
@@ -1649,7 +1655,7 @@ const I18N_FRAG = {
   'Part de':'Leaves','Arrive à':'Arrives at','Prochain arrêt :':'Next stop:','prochain arrêt':'next stop','Prochain arrêt':'Next stop','Parti à':'Left at',
   'Réseau fermé · horaires théoriques':'Network closed · scheduled times','actualisation auto':'auto refresh','Temps réel à':'Real time at','Temps réel':'Real time',
   'Pas vu en circulation':'Not seen running','peut-être supprimé':'maybe cancelled','estimé (position GPS)':'estimated (GPS position)','Pas d’info retard':'No delay info',
-  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.','Aucun départ prévu dans les prochaines heures.':'No departure planned in the next few hours.','Voir en direct dans Transit':'See live in Transit','Autour de toi':'Around you','ta position':'your location','centre de la carte':'map centre','Je cherche les lignes autour…':'Looking for lines nearby…','Aucune ligne ne passe près de toi dans les 3 prochaines heures.':'No line stops near you in the next 3 hours.','Aucune ligne ici. Déplace la carte, ou montre ta position.':'No line here. Move the map, or show your location.','Ma position':'My location','Où vas-tu ?':'Where to?','Menu':'Menu','ce mois-ci':'this month','voir mon bilan':'see my summary','Aucun trajet !':'No trip yet!','le mode':'the','s’allume tout seul dans le car':'mode turns on by itself on the bus','Se déplacer':'Get around','Cars jaunes':'Yellow buses','Bus de ville':'City buses','Vue simple':'Simple view','Favoris':'Favourites','Mes lignes':'My lines','Arrêts favoris':'Favourite stops','Trajets favoris':'Favourite trips','vers':'to','Tu es dans ce car':'You are on this bus','Descends à':'Get off at','Touche l’arrêt où tu descends : je te préviens juste avant.':'Tap the stop where you get off: I will warn you just before.','ton arrêt':'your stop','prochain':'next','Ce réseau ne publie pas ses bus en direct : Transit les montre':'This network does not publish live buses: Transit shows them','Transit ne s’est pas ouvert : touche ici pour l’installer':'Transit did not open: tap here to install it','Aucun départ prévu à cet arrêt dans les prochaines heures.':'No departure from this stop in the next few hours.',
+  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.','Aucun départ prévu dans les prochaines heures.':'No departure planned in the next few hours.','Voir en direct dans Transit':'See live in Transit','Autour de toi':'Around you','ta position':'your location','centre de la carte':'map centre','Je cherche les lignes autour…':'Looking for lines nearby…','Aucune ligne ne passe près de toi dans les 3 prochaines heures.':'No line stops near you in the next 3 hours.','Aucune ligne ici. Déplace la carte, ou montre ta position.':'No line here. Move the map, or show your location.','Ma position':'My location','Où vas-tu ?':'Where to?','Téléphérique':'Cable car','Téléphérique Papang':'Papang cable car','Téléphérique indisponible pour le moment (pas de connexion ?).':'Cable car unavailable right now (no connection?).','Menu':'Menu','ce mois-ci':'this month','voir mon bilan':'see my summary','Aucun trajet !':'No trip yet!','le mode':'the','s’allume tout seul dans le car':'mode turns on by itself on the bus','Se déplacer':'Get around','Cars jaunes':'Yellow buses','Bus de ville':'City buses','Vue simple':'Simple view','Favoris':'Favourites','Mes lignes':'My lines','Arrêts favoris':'Favourite stops','Trajets favoris':'Favourite trips','vers':'to','Tu es dans ce car':'You are on this bus','Descends à':'Get off at','Touche l’arrêt où tu descends : je te préviens juste avant.':'Tap the stop where you get off: I will warn you just before.','ton arrêt':'your stop','prochain':'next','Ce réseau ne publie pas ses bus en direct : Transit les montre':'This network does not publish live buses: Transit shows them','Transit ne s’est pas ouvert : touche ici pour l’installer':'Transit did not open: tap here to install it','Aucun départ prévu à cet arrêt dans les prochaines heures.':'No departure from this stop in the next few hours.',
   'Plus de départ prévu aujourd’hui.':'No more departures today.','Aucun car direct de':'No direct bus from','dans les prochaines 24 h':'in the next 24 h',
   'Plus rapide avec une correspondance':'Faster with a connection','Avec une correspondance':'With a connection','changement à':'change at','d’attente':'wait',
   'à pied':'on foot','départ':'departure','Voir le car':'See the bus','📍 Voir le car':'📍 See the bus','Dernier car':'Last bus','dernier car':'last bus',
@@ -6513,21 +6519,33 @@ function urbDraw(force){
     if (z >= 12) nets.forEach(n => {
       const N = urb.nets[n.id]; if (!N) return;
       if (!N.lines) N.lines = Object.keys(N.shapes).map(ri => ({ r: N.R[ri], pts: N.shapes[ri].map(decodePoly) }));
+      if (N.id === 'papang'){                                   // téléphérique : bien visible, câble en pointillés sur liseré
+        N.lines.forEach(l => l.pts.forEach(p => {
+          L.polyline(p, { renderer: urbRenderer, color: '#fff', weight: 8, opacity: .95, interactive: false }).addTo(urbLineLayer);
+          L.polyline(p, { renderer: urbRenderer, color: '#' + l.r.c, weight: 4, opacity: 1, dashArray: '10 6', interactive: false }).addTo(urbLineLayer);
+        }));
+        return;
+      }
       N.lines.forEach(l => l.pts.forEach(p => L.polyline(p, { renderer: urbRenderer, color: '#' + l.r.c, weight: 2, opacity: .3, interactive: false }).addTo(urbLineLayer)));
     });
   }
   // arrêts
-  if (z < 15){ if (urb.stopKey){ urbStopLayer.clearLayers(); urb.stopKey = ''; } return; }
-  const bb = b.pad(0.2), list = [];
-  nets.forEach(n => { const N = urb.nets[n.id]; if (N) N.stops.forEach((s, i) => { if (list.length < 300 && bb.contains([s[1], s[2]])) list.push([N, i]); }); });
+  // (les 5 stations du téléphérique Papang se voient plus tôt, dès le zoom 13)
+  const papOk = z >= 13 && nets.some(n => n.id === 'papang');
+  if (z < 15 && !papOk){ if (urb.stopKey){ urbStopLayer.clearLayers(); urb.stopKey = ''; } return; }
+  const bb = b.pad(0.2), list = [], seen = new Set();
+  [...nets].sort((a, b) => (b.id === 'papang') - (a.id === 'papang')).forEach(n => { const N = urb.nets[n.id]; if (!N || (z < 15 && n.id !== 'papang')) return;   // le téléphérique d'abord (limite de 300 arrêts)
+    N.stops.forEach((s, i) => { if (N.id === 'papang'){ if (seen.has(s[0])) return; seen.add(s[0]); }
+      if (list.length < 300 && bb.contains([s[1], s[2]])) list.push([N, i]); }); });
   const sk = z + '|' + list.map(x => x[0].id + x[1]).join(',');
   if (sk === urb.stopKey && !force) return;
   urb.stopKey = sk; urbStopLayer.clearLayers();
   const dark = document.documentElement.classList.contains('dark');
   list.forEach(([N, i]) => {
     const s = N.stops[i];
-    L.circleMarker([s[1], s[2]], { renderer: urbRenderer, radius: z >= 16 ? 4 : 3, weight: 1.5, color: '#' + N.color, fillColor: dark ? '#1E2228' : '#fff', fillOpacity: 1 })
-      .bindTooltip(`${s[0]} · ${N.name}`, { direction: 'top', offset: [0, -5] })
+    const pap = N.id === 'papang', col = pap ? (N.R[0] && N.R[0].c) || N.color : N.color;
+    L.circleMarker([s[1], s[2]], { renderer: urbRenderer, radius: pap ? 7 : z >= 16 ? 4 : 3, weight: pap ? 3 : 1.5, color: '#' + col, fillColor: dark ? '#1E2228' : '#fff', fillOpacity: 1 })
+      .bindTooltip(pap ? `🚡 ${esc(s[0])}` : `${s[0]} · ${N.name}`, pap ? { permanent: true, direction: 'right', offset: [8, 0], className: 'pap-tt' } : { direction: 'top', offset: [0, -5] })
       .on('click', e => urbStopPopup(N, i, e.latlng)).addTo(urbStopLayer);
   });
 }
@@ -6874,7 +6892,7 @@ const ns = { rows: [], at: 0, pos: null, from: '', busy: false, snap: 'mid' };
 try { ns.snap = localStorage.getItem('cj_ns_snap') || 'mid'; } catch(e){}
 const NS_LIVE = '<svg class="ns-live" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="12.5" r="1.7" fill="currentColor"/><path class="w1" d="M3.5 8a4.5 4.5 0 0 1 4.5 4.5"/><path class="w2" d="M3.5 3.5a9 9 0 0 1 9 9"/></svg>';
 const NS_WALK = 80;                                  // mètres par minute à pied
-const NS_SNAP = { mini: 118, mid: .44, full: .9 };   // hauteur visible (px ou part de la carte)
+const NS_SNAP = { mini: 160, mid: .44, full: .9 };   // hauteur visible (px ou part de la carte)
 const nsPhone = () => window.matchMedia('(max-width:860px)').matches;
 
 /** Partie de la carte cachée en bas par la barre d'onglets (téléphone). */
@@ -6981,6 +6999,7 @@ function renderMenu(){
       <button class="mn-t" data-mn="trip">${mnIc('c', MN_C.ciel, '📍')}${mnIc('a', MN_C.vert, '🧭')}<b>${tr('Mon trajet')}</b></button>
       <button class="mn-t" data-mn="avion">${mnIc('b', MN_C.ciel, '🛫')}${mnIc('a', MN_C.bleu, '✈️')}<b>${tr('Avions')}</b></button>
       <button class="mn-t" data-mn="trafic">${mnIc('c', MN_C.orange, '📰')}${mnIc('a', MN_C.gris, '🚦')}<b>${tr('Infos trafic')}</b></button>
+      <button class="mn-t" data-mn="papang">${mnIc('b', MN_C.vert, '⛰️')}${mnIc('a', MN_C.rouge, '🚡')}<b>${tr('Téléphérique')}</b></button>
       <button class="mn-t" data-mn="simple">${mnIc('b', MN_C.violet, '👀')}${mnIc('a', MN_C.jaune, '🔎')}<b>${tr('Vue simple')}</b></button>
     </div>
     <div class="mn-h">${tr('Favoris')}</div>
@@ -6996,6 +7015,7 @@ $('#menuOv').addEventListener('click', e => {
   const k = b.dataset.mn; closeMenu();
   if (k === 'close') return;
   if (k === 'simple') return openSimple();
+  if (k === 'papang') return goPapang();
   if (k === 'reglages') return openSettings();
   if (k === 'bilan'){ setView('trip'); setTimeout(() => { const d = $('#bilanCard'); if (d){ d.open = true; try { renderBilan(); } catch(err){} d.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, 150); return; }
   if (k === 'lignes') return setView('fiches');
@@ -7004,6 +7024,21 @@ $('#menuOv').addEventListener('click', e => {
   setView(k);
 });
 $('#nsMenu').addEventListener('click', openMenu);
+/* ---------- 🚡 « Téléphérique Papang » : un bouton qui montre tout de suite la ligne et ses 5 stations ---------- */
+async function goPapang(){
+  if (!urbOn.papang){ urbOn.papang = true; try { localStorage.setItem('cj_urb', JSON.stringify(urbOn)); } catch(e){} try { urbRenderSettings(); } catch(e){} }
+  setView('map');
+  if (nsPhone() && ns.snap !== 'mini') nsSetSnap('mini', true);
+  const N = await urbLoad('papang');
+  if (!N){ toast(tr('Téléphérique indisponible pour le moment (pas de connexion ?).')); return; }
+  const b = N.bbox;
+  setTimeout(() => {
+    map.flyToBounds([[b[0], b[1]], [b[2], b[3]]], { paddingTopLeft: [nsPhone() ? 40 : 430, 70], paddingBottomRight: [nsPhone() ? 120 : 90, (nsPhone() ? nsHeight('mini') + nsOff() : 0) + 40], maxZoom: 16, duration: .9 });
+    setTimeout(() => { try { urbDraw(true); } catch(e){} }, 1000);
+  }, 150);
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-go-papang]')) goPapang(); });
+
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#menuOv').hidden) closeMenu(); });
 $('#nsSearch').addEventListener('click', () => { setView('trip'); setTimeout(() => { const b = $('#tripB'); if (b){ b.focus(); b.select && b.select(); } }, 120); });
 $('#nsMe').addEventListener('click', () => {

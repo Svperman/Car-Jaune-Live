@@ -71,7 +71,7 @@ for (const [nom, vp] of [['téléphone', { width: 390, height: 844 }], ['ordinat
       const r2 = await page.evaluate("[ns.snap, document.querySelector('#nearSheet').getBoundingClientRect().height]");
       await page.evaluate("nsSetSnap('mid'); 1"); await page.waitForTimeout(350);
       const lay = await page.evaluate(`(() => { const s = document.querySelector('#nearSheet').getBoundingClientRect(), b = document.querySelector('#mapCard .leaflet-bottom.leaflet-right').getBoundingClientRect(), t = document.querySelector('.tabs').getBoundingClientRect(); return [b.bottom <= s.top + 2, s.bottom <= t.top + 2]; })()`);
-      return (r1[0] === 'full' && r1[1] > h0 && r2[0] === 'mini' && r2[1] < 140 && lay[0] && lay[1]) || JSON.stringify([h0, r1, r2, lay]);
+      return (r1[0] === 'full' && r1[1] > h0 && r2[0] === 'mini' && r2[1] < 180 && lay[0] && lay[1]) || JSON.stringify([h0, r1, r2, lay]);
     });
   }
   await t(P + 'mode GO dans le car : ligne, arrêts qui défilent, toucher un arrêt = me prévenir', async () => {
@@ -110,6 +110,12 @@ for (const [nom, vp] of [['téléphone', { width: 390, height: 844 }], ['ordinat
     const o = r[1], ok = r[0] >= 12 && o.board[0] === 'board' && o.fiches[0] === 'fiches' && o.trip[0] === 'trip' && o.avion[0] === 'avion' && o.trafic[0] === 'trafic'
       && o.arrets[0] === 'board' && o.lignes[0] === 'fiches' && Object.values(o).every(x => x[1]) && r[2];
     return ok || JSON.stringify(r);
+  });
+  await t(P + 'bouton 🚡 Téléphérique Papang : carte centrée sur la ligne, 5 stations nommées', async () => {
+    await page.evaluate("document.querySelector('[data-go-papang]').click(); 1");
+    await page.waitForTimeout(2500);
+    const r = await page.evaluate(`[view, map.getBounds().contains([-20.9037, 55.4835]), [...document.querySelectorAll('.pap-tt')].map(x => x.textContent.replace('🚡', '').trim())]`);
+    return (r[0] === 'map' && r[1] && r[2].length === 5) || JSON.stringify(r);
   });
   await t(P + 'aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' | '));
   await ctx.close();
