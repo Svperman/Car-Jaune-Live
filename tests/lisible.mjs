@@ -12,7 +12,8 @@ const t = async (label, fn) => { try { const r = await fn(); if (r !== true) fai
 const lines = () => p.evaluate("shapeLayer.getLayers().map(l => l.options.color + '/' + l.options.weight)");
 await t('sans trajet : lignes fines, dans leur couleur, pas de bandeau', async () => {
   await p.evaluate("trip.a = ''; trip.b = ''; tfTripCache = { key:'', lines:[] }; selected.clear(); drawShapes(true); 1");
-  const l = await lines(), bar = await p.evaluate("document.querySelector('#focusBar').hidden");
+  // (carte « Épuré » : chaque ligne a en plus un liseré blanc/sombre dessous, qu'on ne compte pas)
+  const l = (await lines()).filter(x => !/^#(fff|1E2228)\//.test(x)), bar = await p.evaluate("document.querySelector('#focusBar').hidden");
   return (l.length && l.every(x => !x.startsWith('#222') && +x.split('/')[1] <= 4) && !l.some(x => x.startsWith('#8A94A0')) && bar) || JSON.stringify([l, bar]);
 });
 await t('avec mon trajet : E1 en couleur, les autres lignes en gris, bandeau « Mes lignes »', async () => {
