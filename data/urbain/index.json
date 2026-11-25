@@ -1,5 +1,5 @@
 {
- "builtAt": 1795599799835,
+ "builtAt": 1795611002213,
  "nets": [
   {
    "id": "citalis",
@@ -100,7 +100,27 @@
    "trips": 717,
    "kb": 127,
    "v": "b73b4522df"
+  },
+  {
+   "id": "papang",
+   "name": "Papang",
+   "zone": "Téléphérique · CINOR",
+   "color": "009FE3",
+   "rt": false,
+   "bbox": [
+    -20.91528,
+    55.47799,
+    -20.89368,
+    55.48756
+   ],
+   "from": "20251201",
+   "to": "20280301",
+   "lines": 1,
+   "stops": 10,
+   "trips": 1648,
+   "kb": 30,
+   "v": "58d344472b"
   }
  ],
- "sv": "b071cad58a"
+ "sv": "d70dde00fd"
 }
