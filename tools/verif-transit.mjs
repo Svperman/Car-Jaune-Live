@@ -104,9 +104,11 @@ try {
     const ns = await transit('nearby_stops', { lat: g.lat, lon: g.lon, max_distance: 200 });
     await sleep(PAUSE);
     const ids = (ns.stops || []).filter(s => (s.distance == null || s.distance <= 200)).map(s => s.global_stop_id).slice(0, 3);
+    if (process.env.DEBUG) console.error('DEBUG nearby', nom, JSON.stringify((ns.stops || []).slice(0, 8).map(s => [s.global_stop_id, s.stop_name, s.distance, s.route_type])));
     const leurs = [];
     for (const id of ids){
-      const sd = await transit('stop_departures', { global_stop_id: id, time: Math.floor(now / 1000), remove_cancelled: 'true', should_update_realtime: 'false' });
+      const sd = await transit('stop_departures', { global_stop_id: id, time: Math.floor(now / 1000), remove_cancelled: 'true', should_update_realtime: 'false', max_num_departures: 30 });
+      if (process.env.DEBUG) console.error('DEBUG dep', id, JSON.stringify(sd).slice(0, 1500));
       await sleep(PAUSE);
       (sd.route_departures || []).filter(r => /car\s*jaune/i.test(r.route_network_name || '') || /car\s*jaune/i.test(r.route_long_name || ''))
         .forEach(r => (r.itineraries || []).forEach(it => (it.schedule_items || []).forEach(x => {

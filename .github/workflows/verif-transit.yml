@@ -9,6 +9,10 @@ on:
   schedule:
     - cron: '13 4 * * *'          # tous les jours à 8 h 13 heure de La Réunion
   workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Afficher les réponses brutes de Transit'
+        default: ''
 
 permissions:
   contents: read
@@ -30,6 +34,7 @@ jobs:
       - name: Comparer les départs aux grandes gares
         env:
           TRANSIT_API_KEY: ${{ secrets.TRANSIT_API_KEY }}
+          DEBUG: ${{ inputs.debug }}
         run: |
           if [ -z "$TRANSIT_API_KEY" ]; then
             echo "Pas de clé TRANSIT_API_KEY dans les secrets du dépôt : vérification sautée." | tee -a "$GITHUB_STEP_SUMMARY"
@@ -39,6 +44,7 @@ jobs:
           npm install --no-save fflate@0.8.2
           node tools/verif-transit.mjs
       - name: Ticket si beaucoup d'écarts
+        if: ${{ !inputs.debug }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
