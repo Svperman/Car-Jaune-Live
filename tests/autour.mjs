@@ -96,6 +96,21 @@ for (const [nom, vp] of [['téléphone', { width: 390, height: 844 }], ['ordinat
     const r = await page.evaluate("[Object.keys(BASES)[0], baseName, localStorage.getItem('cj_base')]");
     return (r[0] === 'Épuré' && r[1] === 'Épuré' && r[2] !== 'Plan Esri') || JSON.stringify(r);
   });
+  await t(P + 'menu façon Transit : tuiles, chaque tuile ouvre la bonne page', async () => {
+    const r = await page.evaluate(`(async () => {
+      document.querySelector('#nsMenu').click(); await new Promise(r => setTimeout(r, 150));
+      const tiles = [...document.querySelectorAll('#menuBox [data-mn]')].map(b => b.dataset.mn);
+      const out = {};
+      for (const k of ['board', 'fiches', 'trip', 'avion', 'trafic', 'arrets', 'lignes']){
+        openMenu(); document.querySelector('#menuBox [data-mn="' + k + '"]').click(); await new Promise(r => setTimeout(r, 120));
+        out[k] = [view, document.querySelector('#menuOv').hidden];
+      }
+      openMenu(); document.querySelector('#menuBox [data-mn="reglages"]').click(); const set = !document.querySelector('#settingsModal').hidden; closeSettings();
+      setView('map'); return [tiles.length, out, set]; })()`);
+    const o = r[1], ok = r[0] >= 12 && o.board[0] === 'board' && o.fiches[0] === 'fiches' && o.trip[0] === 'trip' && o.avion[0] === 'avion' && o.trafic[0] === 'trafic'
+      && o.arrets[0] === 'board' && o.lignes[0] === 'fiches' && Object.values(o).every(x => x[1]) && r[2];
+    return ok || JSON.stringify(r);
+  });
   await t(P + 'aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' | '));
   await ctx.close();
 }

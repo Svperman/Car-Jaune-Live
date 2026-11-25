@@ -1038,8 +1038,37 @@
   html.tmap.dark .bus-mk .pill2{border-color:#1E2228}
   html.tmap .bus-mk .arrow{border-bottom-color:#4A525C}
   html.tmap.dark .bus-mk .arrow{border-bottom-color:#E8EBEE}
-  html.tmap .leaflet-container{background:#F2F3F0}
-  html.tmap.dark .leaflet-container{background:#1B1E22}
+  html.tmap .leaflet-container,html.tmap #map{background:#A9D4EF}
+  html.tmap.dark .leaflet-container,html.tmap.dark #map{background:#0F2230}
+  .leaflet-relief-pane{mix-blend-mode:multiply}
+  html.dark .leaflet-relief-pane{mix-blend-mode:normal;filter:invert(1);opacity:.32}
+  /* ---------- Menu (façon Transit) : grosses tuiles sur fond jaune ---------- */
+  #menuOv{position:fixed;inset:0;z-index:3000;background:var(--jaune);overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(14px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom))}
+  #menuOv[hidden]{display:none}
+  html.dark #menuOv{background:#2A2410}
+  .mn-in{max-width:760px;margin:0 auto}
+  .mn-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .mn-top h2{margin:0;font-size:30px;font-weight:800;color:#2B2B2B;letter-spacing:-.02em}
+  html.dark .mn-top h2,html.dark .mn-h{color:#F6BE00}
+  .mn-x{width:46px;height:46px;border-radius:23px;border:0;background:rgba(255,255,255,.75);font-size:20px;font-weight:800;cursor:pointer;color:#222}
+  .mn-bil{display:flex;align-items:center;gap:14px;width:100%;border:0;background:var(--carte);border-radius:24px;padding:16px 18px;margin-bottom:22px;cursor:pointer;text-align:left;font:inherit;box-shadow:0 3px 0 rgba(0,0,0,.08)}
+  .mn-bil b{display:block;font-size:22px;font-weight:800;color:var(--titre);line-height:1.15}
+  .mn-bil small{display:block;font-size:13px;font-weight:800;color:var(--gris);text-transform:uppercase;letter-spacing:.03em;margin-top:3px}
+  .mn-bil .go{display:inline-block;background:#1E8A4C;color:#fff;border-radius:7px;padding:0 6px;font-style:italic}
+  .mn-bil .n{flex:none;margin-left:auto;min-width:54px;height:54px;border-radius:27px;background:#1E8A4C;color:#fff;font-size:22px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 12px}
+  .mn-h{font-size:27px;font-weight:800;color:#2B2B2B;margin:6px 4px 12px;letter-spacing:-.01em}
+  .mn-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+  @media (min-width:700px){ .mn-grid{grid-template-columns:repeat(3,1fr)} }
+  .mn-t{position:relative;aspect-ratio:1/1;border:0;border-radius:28px;background:var(--carte);cursor:pointer;font:inherit;text-align:left;padding:16px;display:flex;align-items:flex-end;overflow:hidden;box-shadow:0 3px 0 rgba(0,0,0,.08);transition:transform .12s}
+  .mn-t:active{transform:scale(.96)}
+  .mn-t b{position:relative;z-index:1;font-size:23px;font-weight:800;line-height:1.1;color:var(--titre);letter-spacing:-.01em}
+  .mn-ic{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:30%;box-shadow:0 6px 14px rgba(0,0,0,.18);line-height:1}
+  .mn-ic.a{width:84px;height:84px;font-size:44px;right:16px;top:20px;transform:rotate(-8deg)}
+  .mn-ic.b{width:60px;height:60px;font-size:30px;left:38px;top:10px;transform:rotate(9deg)}
+  .mn-ic.c{width:48px;height:48px;font-size:24px;left:20px;top:70px;transform:rotate(-12deg)}
+  .mn-badge{position:absolute;font-size:30px;font-weight:800;color:#fff;border-radius:14px;padding:2px 12px;box-shadow:0 5px 12px rgba(0,0,0,.18)}
+  .mn-t .mn-sub{position:absolute;left:16px;right:16px;top:16px;font-size:13px;color:var(--gris);font-weight:700;z-index:1}
+  .ns-menu{flex:none;width:44px;height:44px;border-radius:22px;border:3px solid var(--carte);background:var(--jaune);font-size:21px;cursor:pointer;box-shadow:0 0 0 1px var(--ligne);display:flex;align-items:center;justify-content:center;padding:0}
   /* ---------- « Autour de toi » : panneau glissant façon appli de transport (lignes proches en grosses cartes) ---------- */
   .nsheet{position:absolute;left:0;right:0;bottom:0;z-index:650;height:var(--nsh,42%);display:flex;flex-direction:column;
     background:var(--carte);border-radius:18px 18px 0 0;box-shadow:0 -4px 18px rgba(0,0,0,.16);transition:height .28s cubic-bezier(.2,.8,.2,1);touch-action:none;overscroll-behavior:contain}
@@ -1149,7 +1178,7 @@
     <div id="mapCard"><div id="map"></div>
       <div class="nsheet" id="nearSheet" data-snap="mid" hidden>
         <button class="ns-grab" id="nsGrab" aria-label="Agrandir ou réduire la liste"><i></i></button>
-        <div class="ns-top"><button class="ns-search" id="nsSearch">🔎 <b>Où vas-tu ?</b></button><button class="ns-me" id="nsMe" title="Autour de ma position" aria-label="Autour de ma position">📍</button></div>
+        <div class="ns-top"><button class="ns-menu" id="nsMenu" title="Menu" aria-label="Menu">🚌</button><button class="ns-search" id="nsSearch">🔎 <b>Où vas-tu ?</b></button><button class="ns-me" id="nsMe" title="Autour de ma position" aria-label="Autour de ma position">📍</button></div>
         <div class="ns-h"><b id="nsTitle">Autour de toi</b><small id="nsWhere"></small></div>
         <div class="ns-list" id="nsList" aria-live="polite"></div>
       </div>
@@ -1456,6 +1485,7 @@
   <div class="sf-ic" aria-hidden="true">✅</div><div class="sf-t" id="safeT">Tout va bien ?</div><div class="sf-s" id="safeTxt"></div>
   <div class="sf-btns"><button class="btn" id="safeOk">👍 Oui, tout va bien</button><button class="btn ghost" id="safeHelp">📱 Prévenir mes proches</button></div></div></div>
 <button id="followBar" hidden aria-label="Centrer la carte sur ton proche"></button>
+<div id="menuOv" hidden role="dialog" aria-modal="true" aria-label="Menu"><div class="mn-in" id="menuBox"></div></div>
 <div id="simpleOv" hidden role="dialog" aria-modal="true" aria-label="Vue simple : mon prochain car"><button class="round" id="simpleClose" aria-label="Fermer la vue simple">✕</button><div id="simpleBox"></div></div>
 <button id="vigiBar" hidden aria-label="Vigilance météo : voir le détail"></button>
 <div id="busAsk" hidden role="status" aria-live="polite"></div>
@@ -1619,7 +1649,7 @@ const I18N_FRAG = {
   'Part de':'Leaves','Arrive à':'Arrives at','Prochain arrêt :':'Next stop:','prochain arrêt':'next stop','Prochain arrêt':'Next stop','Parti à':'Left at',
   'Réseau fermé · horaires théoriques':'Network closed · scheduled times','actualisation auto':'auto refresh','Temps réel à':'Real time at','Temps réel':'Real time',
   'Pas vu en circulation':'Not seen running','peut-être supprimé':'maybe cancelled','estimé (position GPS)':'estimated (GPS position)','Pas d’info retard':'No delay info',
-  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.','Aucun départ prévu dans les prochaines heures.':'No departure planned in the next few hours.','Voir en direct dans Transit':'See live in Transit','Autour de toi':'Around you','ta position':'your location','centre de la carte':'map centre','Je cherche les lignes autour…':'Looking for lines nearby…','Aucune ligne ne passe près de toi dans les 3 prochaines heures.':'No line stops near you in the next 3 hours.','Aucune ligne ici. Déplace la carte, ou montre ta position.':'No line here. Move the map, or show your location.','Ma position':'My location','Où vas-tu ?':'Where to?','vers':'to','Tu es dans ce car':'You are on this bus','Descends à':'Get off at','Touche l’arrêt où tu descends : je te préviens juste avant.':'Tap the stop where you get off: I will warn you just before.','ton arrêt':'your stop','prochain':'next','Ce réseau ne publie pas ses bus en direct : Transit les montre':'This network does not publish live buses: Transit shows them','Transit ne s’est pas ouvert : touche ici pour l’installer':'Transit did not open: tap here to install it','Aucun départ prévu à cet arrêt dans les prochaines heures.':'No departure from this stop in the next few hours.',
+  'Aucun départ prévu à cet arrêt dans les prochaines 24 h.':'No departure from this stop in the next 24 h.','Aucun départ dans les prochaines heures.':'No departure in the next few hours.','Aucun départ prévu dans les prochaines heures.':'No departure planned in the next few hours.','Voir en direct dans Transit':'See live in Transit','Autour de toi':'Around you','ta position':'your location','centre de la carte':'map centre','Je cherche les lignes autour…':'Looking for lines nearby…','Aucune ligne ne passe près de toi dans les 3 prochaines heures.':'No line stops near you in the next 3 hours.','Aucune ligne ici. Déplace la carte, ou montre ta position.':'No line here. Move the map, or show your location.','Ma position':'My location','Où vas-tu ?':'Where to?','Menu':'Menu','ce mois-ci':'this month','voir mon bilan':'see my summary','Aucun trajet !':'No trip yet!','le mode':'the','s’allume tout seul dans le car':'mode turns on by itself on the bus','Se déplacer':'Get around','Cars jaunes':'Yellow buses','Bus de ville':'City buses','Vue simple':'Simple view','Favoris':'Favourites','Mes lignes':'My lines','Arrêts favoris':'Favourite stops','Trajets favoris':'Favourite trips','vers':'to','Tu es dans ce car':'You are on this bus','Descends à':'Get off at','Touche l’arrêt où tu descends : je te préviens juste avant.':'Tap the stop where you get off: I will warn you just before.','ton arrêt':'your stop','prochain':'next','Ce réseau ne publie pas ses bus en direct : Transit les montre':'This network does not publish live buses: Transit shows them','Transit ne s’est pas ouvert : touche ici pour l’installer':'Transit did not open: tap here to install it','Aucun départ prévu à cet arrêt dans les prochaines heures.':'No departure from this stop in the next few hours.',
   'Plus de départ prévu aujourd’hui.':'No more departures today.','Aucun car direct de':'No direct bus from','dans les prochaines 24 h':'in the next 24 h',
   'Plus rapide avec une correspondance':'Faster with a connection','Avec une correspondance':'With a connection','changement à':'change at','d’attente':'wait',
   'à pied':'on foot','départ':'departure','Voir le car':'See the bus','📍 Voir le car':'📍 See the bus','Dernier car':'Last bus','dernier car':'last bus',
@@ -1897,15 +1927,28 @@ const PlanGL = L.Layer.extend({
    sans clé) pour que les lignes, les arrêts et les cars ressortent ; eau en bleu doux, parcs et forêts en vert pâle.
    Le soir, la même carte passe en sombre (couleurs inversées), sans autre téléchargement. */
 function tintEpure(g){
+  // couleurs façon Transit : terre vert pâle, mer bleu clair, forêts un peu plus vertes, routes blanches discrètes
   (g.getStyle().layers || []).forEach(l => {
     const id = l.id.toLowerCase();
     try {
-      if (l.type === 'fill' && /water/.test(id)) g.setPaintProperty(l.id, 'fill-color', '#C6E3F2');
-      else if (l.type === 'fill' && /park|wood|forest|grass|nature_reserve/.test(id)) g.setPaintProperty(l.id, 'fill-color', '#DDEFD6');
-      else if (l.type === 'line' && /water|river|stream/.test(id)) g.setPaintProperty(l.id, 'line-color', '#B5DAEE');
+      if (l.type === 'background') g.setPaintProperty(l.id, 'background-color', '#EEF3E3');
+      else if (l.type === 'fill' && /water|ocean|sea/.test(id)) g.setPaintProperty(l.id, 'fill-color', '#A9D4EF');
+      else if (l.type === 'fill' && /wood|forest/.test(id)) { g.setPaintProperty(l.id, 'fill-color', '#D3E8C2'); g.setPaintProperty(l.id, 'fill-opacity', .7); }
+      else if (l.type === 'fill' && /park|grass|nature|reserve/.test(id)) g.setPaintProperty(l.id, 'fill-color', '#DCEDCC');
+      else if (l.type === 'fill' && /residential|landuse|urban/.test(id)) g.setPaintProperty(l.id, 'fill-color', '#E9ECDD');
+      else if (l.type === 'fill' && /building/.test(id)) g.setPaintProperty(l.id, 'fill-color', '#E2E4D6');
+      else if (l.type === 'line' && /water|river|stream|canal/.test(id)) g.setPaintProperty(l.id, 'line-color', '#9CCCEB');
+      else if (l.type === 'line' && /boundary|admin/.test(id)) g.setLayoutProperty(l.id, 'visibility', 'none');   // pas de traits de frontières
+      else if (l.type === 'symbol' && /place|city|town|village/.test(id)){ g.setPaintProperty(l.id, 'text-color', '#7A828C'); g.setPaintProperty(l.id, 'text-halo-color', 'rgba(255,255,255,.85)'); }
+      else if (l.type === 'symbol' && /water.*name|ocean|sea|marine/.test(id)) g.setPaintProperty(l.id, 'text-color', '#7FB3D6');
     } catch(e){}
   });
 }
+/* Relief ombré (montagnes, cirques, remparts) par-dessus le fond épuré, comme dans Transit : Esri World Hillshade, gratuit, sans clé. */
+map.createPane('relief'); map.getPane('relief').style.zIndex = 250; map.getPane('relief').style.pointerEvents = 'none';
+const RELIEF = sharpTiles('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', { ...TILE_OPTS,
+  pane:'relief', maxZoom:19, maxNativeZoom:16, opacity:.5, attribution:'Relief © Esri' });
+function reliefSync(on){ try { if (on && !map.hasLayer(RELIEF)) RELIEF.addTo(map); else if (!on && map.hasLayer(RELIEF)) map.removeLayer(RELIEF); } catch(e){} }
 const GL_EPURE = GL_OK ? new PlanGL({ style:'https://tiles.openfreemap.org/styles/positron', cls:'gl-epure', tint: tintEpure }) : null;
 const GL_PLAN = GL_OK ? new PlanGL() : null;
 const BASES = GL_PLAN ? { 'Épuré': GL_EPURE, 'Plan': GL_PLAN, 'Plan Esri': ESRI_PLAN } : { 'Plan': ESRI_PLAN };
@@ -1920,7 +1963,7 @@ try {
   if (BASES[b2]) baseName = b2; else if (b2) localStorage.removeItem('cj_base');
 } catch(e){}
 BASES[baseName].addTo(map);
-document.documentElement.classList.toggle('tmap', baseName === 'Épuré');
+document.documentElement.classList.toggle('tmap', baseName === 'Épuré'); reliefSync(baseName === 'Épuré');
 L.control.layers(BASES, null, { position:'bottomright' }).addTo(map);
 L.control.zoom({ position:'topleft', zoomInTitle:'Zoom avant', zoomOutTitle:'Zoom arrière' }).addTo(map);
 map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
@@ -1931,7 +1974,7 @@ function frenchControls(){
 }
 map.on('popupopen', e => { const c = e.popup.getElement().querySelector('.leaflet-popup-close-button'); if (c){ c.setAttribute('aria-label', 'Fermer'); c.title = 'Fermer'; } });
 setTimeout(frenchControls, 0);
-map.on('baselayerchange', e => { if (!baseFallback) try { localStorage.setItem('cj_base', e.name); } catch(err){} document.documentElement.classList.toggle('tmap', e.name === 'Épuré'); try { drawShapes(true); stopDrawKey = ''; drawStops(); } catch(err){} });
+map.on('baselayerchange', e => { if (!baseFallback) try { localStorage.setItem('cj_base', e.name); } catch(err){} document.documentElement.classList.toggle('tmap', e.name === 'Épuré'); reliefSync(e.name === 'Épuré'); try { drawShapes(true); stopDrawKey = ''; drawStops(); } catch(err){} });
 const shapeLayer = L.layerGroup().addTo(map);
 
 /* Noms des villes : bien lisibles sur l'île entière, ils s'effacent petit à petit quand on zoome */
@@ -2311,7 +2354,7 @@ const VIEW_NAMES = { map:'Carte en direct', trip:'Mon trajet', board:"Horaires �
 /* ---------- bouton « retour » d'Android (et retour du navigateur) ----------
    Ferme la fenêtre ouverte (réglages, signalement, prochain car, cloche…) ou revient à la carte,
    au lieu de quitter l'appli. */
-const BACK_OV = ['settingsModal', 'ficheModal', 'repSheet', 'nextSheet', 'bellMenu', 'smsSheet', 'geoSheet', 'msgSheet', 'descAlarm', 'signOv', 'safeOv', 'simpleOv'];
+const BACK_OV = ['settingsModal', 'ficheModal', 'repSheet', 'nextSheet', 'bellMenu', 'smsSheet', 'geoSheet', 'msgSheet', 'descAlarm', 'signOv', 'safeOv', 'simpleOv', 'menuOv'];
 let backSkip = 0;
 const BACK_ON = !IN_GAS || !!window.__testBack;    // (Apps Script : la page est dans un cadre, on ne touche pas à l'historique)
 const backOpen = () => BACK_OV.filter(id => { const e = document.getElementById(id); return e && !e.hidden; });
@@ -6400,7 +6443,7 @@ const URB_RT = {
   alterneo: 'https://proxy.transport.data.gouv.fr/resource/alterneo-civis-gtfs-rt-vehicle-position',
   carsud:   'https://zenbus.net/gtfs/rt/poll.proto?src=true&dataset=carsud-reunion'
 };
-const URB_ALL = ['citalis', 'karouest', 'alterneo', 'carsud', 'estival'];
+const URB_ALL = ['citalis', 'karouest', 'alterneo', 'carsud', 'estival', 'papang'];
 let urbOn = {};
 try { urbOn = JSON.parse(localStorage.getItem('cj_urb') || 'null') || {}; } catch(e){}
 URB_ALL.forEach(id => { if (urbOn[id] == null) urbOn[id] = true; });          // tous visibles au départ
@@ -6911,6 +6954,57 @@ function nsShow(){
   window.addEventListener('resize', () => { if (!el.hidden) nsSetSnap(ns.snap, true); });
 })();
 
+
+/* ====================== Menu façon Transit : tout Car Jaune Live en grosses tuiles ====================== */
+const MN_C = { bleu:'#1D4FA8', orange:'#F28C28', vert:'#2E9E5B', ciel:'#5BB8E8', gris:'#4A505A', rouge:'#E85D4A', jaune:'#F6BE00', violet:'#7B5BD6' };
+const mnIc = (cls, col, emo) => `<span class="mn-ic ${cls}" style="background:${col}" aria-hidden="true">${emo}</span>`;
+function openMenu(){ renderMenu(); $('#menuOv').hidden = false; }
+function closeMenu(){ $('#menuOv').hidden = true; }
+function renderMenu(){
+  const now = Date.now(), mo = reuDate(now);
+  const mine = (typeof rides !== 'undefined' ? rides : []).filter(r => { const o = reuDate(r.t0 || r.t1 || 0); return o.y === mo.y && o.m === mo.m; });
+  const cnt = {}; (typeof rides !== 'undefined' ? rides : []).slice(-80).forEach(r => { if (r.l) cnt[r.l] = (cnt[r.l] || 0) + 1; });
+  let topL = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 3);
+  if (!topL.length) topL = ['E1', 'O1', 'S1'].filter(x => Object.values(S.routes || {}).some(r => r.s === x));
+  const rt = x => Object.values(S.routes || {}).find(r => r.s === x) || { s: x, c: 'F6BE00', t: '222222' };
+  const pos = [['left:-6px;top:14px;transform:rotate(-8deg)'], ['left:40px;top:76px;transform:rotate(4deg)'], ['right:-4px;top:110px;transform:rotate(-10deg)']];
+  const badges = topL.map((x, i) => { const r = rt(x); return `<span class="mn-badge" style="${pos[i]};background:#${esc(r.c)};color:#${esc(r.t)}">${esc(x)}</span>`; }).join('');
+  const nf = (favs || []).length, nt = (typeof tripFavs !== 'undefined' ? tripFavs : []).length;
+  $('#menuBox').innerHTML = `<div class="mn-top"><h2>${tr('Menu')}</h2><button class="mn-x" data-mn="close" aria-label="${tr('Fermer')}">✕</button></div>
+    <button class="mn-bil" data-mn="bilan">${mine.length
+      ? `<span><b>${mine.length} ${mine.length > 1 ? tr('trajets') : tr('trajet')} ${tr('ce mois-ci')}</b><small>${tr('voir mon bilan')}</small></span><span class="n">${mine.length}</span>`
+      : `<span><b>${tr('Aucun trajet !')}</b><small>${tr('le mode')} <span class="go">GO</span> ${tr('s’allume tout seul dans le car')}</small></span><span class="n">0</span>`}</button>
+    <div class="mn-h">${tr('Se déplacer')}</div>
+    <div class="mn-grid">
+      <button class="mn-t" data-mn="board">${mnIc('b', MN_C.orange, '🕒')}${mnIc('a', MN_C.jaune, '🚌')}<b>${tr('Cars jaunes')}</b></button>
+      <button class="mn-t" data-mn="fiches">${mnIc('b', MN_C.rouge, '🚏')}${mnIc('a', MN_C.bleu, '🚍')}<b>${tr('Bus de ville')}</b></button>
+      <button class="mn-t" data-mn="trip">${mnIc('c', MN_C.ciel, '📍')}${mnIc('a', MN_C.vert, '🧭')}<b>${tr('Mon trajet')}</b></button>
+      <button class="mn-t" data-mn="avion">${mnIc('b', MN_C.ciel, '🛫')}${mnIc('a', MN_C.bleu, '✈️')}<b>${tr('Avions')}</b></button>
+      <button class="mn-t" data-mn="trafic">${mnIc('c', MN_C.orange, '📰')}${mnIc('a', MN_C.gris, '🚦')}<b>${tr('Infos trafic')}</b></button>
+      <button class="mn-t" data-mn="simple">${mnIc('b', MN_C.violet, '👀')}${mnIc('a', MN_C.jaune, '🔎')}<b>${tr('Vue simple')}</b></button>
+    </div>
+    <div class="mn-h">${tr('Favoris')}</div>
+    <div class="mn-grid">
+      <button class="mn-t" data-mn="lignes">${badges}<b>${tr('Mes lignes')}</b></button>
+      <button class="mn-t" data-mn="arrets">${nf ? `<span class="mn-sub">${nf} ${nf > 1 ? tr('arrêts') : tr('arrêt')}</span>` : ''}${mnIc('b', '#57C08A', '⭐')}${mnIc('a', MN_C.vert, '🚏')}<b>${tr('Arrêts favoris')}</b></button>
+      <button class="mn-t" data-mn="trajets">${nt ? `<span class="mn-sub">${nt} ${nt > 1 ? tr('trajets') : tr('trajet')}</span>` : ''}${mnIc('c', '#57C08A', '❤️')}${mnIc('a', MN_C.vert, '🏠')}<b>${tr('Trajets favoris')}</b></button>
+      <button class="mn-t" data-mn="reglages">${mnIc('b', MN_C.ciel, '🔔')}${mnIc('a', MN_C.gris, '⚙️')}<b>${tr('Réglages')}</b></button>
+    </div>`;
+}
+$('#menuOv').addEventListener('click', e => {
+  const b = e.target.closest('[data-mn]'); if (!b) return;
+  const k = b.dataset.mn; closeMenu();
+  if (k === 'close') return;
+  if (k === 'simple') return openSimple();
+  if (k === 'reglages') return openSettings();
+  if (k === 'bilan'){ setView('trip'); setTimeout(() => { const d = $('#bilanCard'); if (d){ d.open = true; try { renderBilan(); } catch(err){} d.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, 150); return; }
+  if (k === 'lignes') return setView('fiches');
+  if (k === 'arrets'){ setView('board'); setTimeout(() => { const f = $('#favs'); if (f) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 150); return; }
+  if (k === 'trajets'){ setView('trip'); setTimeout(() => { const f = $('#tripFavs'); if (f) f.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 150); return; }
+  setView(k);
+});
+$('#nsMenu').addEventListener('click', openMenu);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#menuOv').hidden) closeMenu(); });
 $('#nsSearch').addEventListener('click', () => { setView('trip'); setTimeout(() => { const b = $('#tripB'); if (b){ b.focus(); b.select && b.select(); } }, 120); });
 $('#nsMe').addEventListener('click', () => {
   if (!meShown){ setMeShown(true); }

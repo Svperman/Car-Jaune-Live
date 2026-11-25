@@ -15,8 +15,8 @@ await page.goto(BASE + '/_test.html');
 await page.waitForTimeout(2500);
 const t = async (label, fn) => { try { const r = await fn(); if (r !== true) fails.push(label + ' : ' + r); else console.log('✓ ' + label); } catch(e){ fails.push(label + ' : ' + e.message.split('\n')[0]); } };
 
-await t('index des 5 réseaux', async () => { const n = await page.evaluate('urb.index && urb.index.nets.map(n => n.id).join(",")'); return n === 'citalis,karouest,alterneo,carsud,estival' || n; });
-await t('réglages : 5 cases', async () => { const n = await page.evaluate('document.querySelectorAll("#urbNets [data-urb]").length'); return n === 5 || n; });
+await t('index des 5 réseaux', async () => { const n = await page.evaluate('urb.index && urb.index.nets.map(n => n.id).join(",")'); return /^citalis,karouest,alterneo,carsud,estival(,papang)?$/.test(n) || n; });
+await t('réglages : 5 cases', async () => { const n = await page.evaluate('document.querySelectorAll("#urbNets [data-urb]").length'); return n === await page.evaluate('urb.index.nets.length') || n; });
 for (const [id, ll] of [['citalis', [-20.8789, 55.4481]], ['karouest', [-21.0094, 55.2697]], ['alterneo', [-21.3393, 55.4781]], ['carsud', [-21.2776, 55.5177]], ['estival', [-21.0341, 55.7124]]]){
   await t(id + ' : lignes et arrêts à l’écran', async () => {
     await page.evaluate(`map.setView([${ll}], 16, { animate:false }); 1`);

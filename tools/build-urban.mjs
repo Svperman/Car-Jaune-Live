@@ -1,4 +1,4 @@
-// Car Jaune Live — préparation des réseaux urbains (Citalis, Kar'Ouest, Alternéo, Car'Sud, Estival).
+// Car Jaune Live — préparation des réseaux urbains (Citalis, Kar'Ouest, Alternéo, Car'Sud, Estival, téléphérique Papang).
 // Télécharge les horaires officiels (GTFS, transport.data.gouv.fr) et écrit des fichiers compacts dans data/urbain/,
 // lus directement par l'appli (pas besoin du serveur Apps Script pour les horaires).
 // Usage : node tools/build-urban.mjs            (lancé chaque semaine par .github/workflows/urban-data.yml)
@@ -17,8 +17,20 @@ export const NETS = [
   { id: 'carsud',   name: 'Car’Sud',   zone: 'Sud · CASUD',    color: '7AB51D', rt: true,
     url: 'https://www.data.gouv.fr/api/1/datasets/r/8f3642e3-9fc3-45ed-af46-8c532966ace3' },
   { id: 'estival',  name: 'Estival',   zone: 'Est · CIREST',   color: 'F39200',
-    url: 'https://www.data.gouv.fr/api/1/datasets/r/3b659ebb-8c17-46f4-a8ac-78c4129a4a29' }
+    url: 'https://www.data.gouv.fr/api/1/datasets/r/3b659ebb-8c17-46f4-a8ac-78c4129a4a29' },
+  // téléphérique Papang (Citalis) : son propre jeu de données ; adresse du fichier lue sur data.gouv.fr à chaque passage
+  { id: 'papang',   name: 'Papang',    zone: 'Téléphérique · CINOR', color: '009FE3',
+    dataset: 'citalis-telepherique-papang' }
 ];
+/** Adresse du fichier GTFS d'un jeu de données data.gouv.fr (pour ceux dont le fichier change d'adresse à chaque mise à jour). */
+async function datasetUrl(slug){
+  const r = await fetch('https://www.data.gouv.fr/api/1/datasets/' + slug + '/', { headers: { 'User-Agent': 'CarJauneLive/1.0 (+github.com/Svperman/Car-Jaune-Live)' } });
+  if (!r.ok) throw new Error('data.gouv HTTP ' + r.status);
+  const res = ((await r.json()).resources || []).filter(x => /gtfs/i.test(x.format || '') || /\.zip(\?|$)/i.test(x.url || '') || /gtfs/i.test(x.title || ''));
+  if (!res.length) throw new Error('pas de fichier GTFS dans ' + slug);
+  res.sort((a, b) => String(b.last_modified || '').localeCompare(String(a.last_modified || '')));
+  return res[0].latest || res[0].url;
+}
 
 /* ---------- CSV (guillemets gérés) ---------- */
 function parseCsv(text){
@@ -119,6 +131,13 @@ export function buildNet(net, zipBytes, today = new Date()){
     if (!tripInfo[st.trip_id]) return;
     (seq[st.trip_id] = seq[st.trip_id] || []).push([+st.stop_sequence, st.stop_id, toMin(st.departure_time || st.arrival_time), toMin(st.arrival_time || st.departure_time), st.pickup_type === '1']);
   });
+  // courses « à fréquence » (téléphérique : une cabine par minute) : une course modèle + frequencies.txt → toutes les courses
+  const freq = {};
+  parseCsv(files['frequencies.txt']).forEach(f => {
+    if (!tripInfo[f.trip_id]) return;
+    const a = toMin(f.start_time), b = toMin(f.end_time), h = Math.max(1, Math.round((+f.headway_secs || 600) / 60));
+    if (a != null && b != null && b > a) (freq[f.trip_id] = freq[f.trip_id] || []).push([a, b, h]);
+  });
   const stopIdx = {}, stops = [];
   const addStop = id => {
     if (id in stopIdx) return stopIdx[id];
@@ -147,8 +166,10 @@ export function buildNet(net, zipBytes, today = new Date()){
     const tk = off.join(',');
     if (!(tk in tpIdx)){ tpIdx[tk] = tps.length; tps.push(off); }
     const ti = tripInfo[tid];
-    trips.push([ti.r, ti.h, ti.s, patIdx[pk], tpIdx[tk], t0, ti.d]);
-    if (net.rt) tripIds.push(tid);
+    const starts = [];
+    if (freq[tid]) freq[tid].forEach(([a, b, h]) => { for (let m = a; m < b; m += h) starts.push(m); });
+    else starts.push(t0);
+    starts.forEach(m => { trips.push([ti.r, ti.h, ti.s, patIdx[pk], tpIdx[tk], m, ti.d]); if (net.rt) tripIds.push(tid); });
     const k = ti.r + '|' + ti.d;
     (routeDirPats[k] = routeDirPats[k] || {})[patIdx[pk]] = (routeDirPats[k][patIdx[pk]] || 0) + 1;
     if (ti.sh) (shapeUse[k] = shapeUse[k] || {})[ti.sh] = (shapeUse[k][ti.sh] || 0) + 1;
@@ -281,7 +302,7 @@ async function main(){
       let bytes;
       if (local) bytes = new Uint8Array(readFileSync(local + '/' + net.id + '.zip'));
       else {
-        const r = await fetch(net.url, { redirect: 'follow', headers: { 'User-Agent': 'CarJauneLive/1.0 (+github.com/Svperman/Car-Jaune-Live)' } });
+        const r = await fetch(net.url || await datasetUrl(net.dataset), { redirect: 'follow', headers: { 'User-Agent': 'CarJauneLive/1.0 (+github.com/Svperman/Car-Jaune-Live)' } });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         bytes = new Uint8Array(await r.arrayBuffer());
       }
