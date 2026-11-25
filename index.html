@@ -798,6 +798,14 @@
   .fl-st.st-annule{background:rgba(198,40,40,.15);color:#C62828}.fl-st.st-embarquement{background:rgba(246,190,0,.2);color:#9A6B00}.fl-st.st-envol{background:rgba(21,101,192,.15);color:#1565C0}
   html.dark .fl-st.st-embarquement{color:#F6BE00}html.dark .fl-st.st-envol{color:#64A8FF}
   .fl-bus{width:40px;height:40px;font-size:18px}
+  .fl-live{display:block;font-size:12px;color:#1565C0;font-weight:700;margin-top:2px;cursor:pointer}
+  html.dark .fl-live{color:#64A8FF}
+  .pl-card .fl-top b{font-size:16px}
+  #planeMap{height:340px;border-radius:12px;overflow:hidden;background:#dfe7ee}
+  @media (min-width:861px){ #planeMap{height:420px} }
+  .pl-leg{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12px;color:var(--gris)}
+  .pl-leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  .plane svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.45));transition:transform .4s}
   #flBody .src-note{margin-top:10px}
   .fl-mine{box-shadow:inset 3px 0 0 var(--jaune)}
   .linkbtn{border:0;background:none;padding:0;margin:0;color:inherit;font:inherit;font-weight:800;text-decoration:underline;cursor:pointer}
@@ -1165,6 +1173,11 @@
         <summary><span class="sa-i">✈️</span><span class="sa-t"><b>Prendre l’avion à Roland-Garros</b><small id="avionSum">ton vol → le car jaune à prendre</small></span><span class="sa-c" aria-hidden="true">›</span></summary>
         <div class="cls-body" id="avionBody"></div>
       </details>
+      <div class="card pl-card">
+        <div class="fl-top"><b>🗺️ Carte des avions</b><span class="muted" id="plInfo">chargement…</span></div>
+        <div id="planeMap" role="img" aria-label="Carte des avions autour de La Réunion"></div>
+        <div class="pl-leg"><span><i style="background:#E8710A"></i>arrive à Roland-Garros</span><span><i style="background:#1565C0"></i>part de Roland-Garros</span><span><i style="background:#7B8794"></i>autre avion</span></div>
+      </div>
       <div class="card fl-card">
         <div class="fl-top"><div class="seg" id="flSeg"><button data-fl-dir="arr" class="on">🛬 Arrivées</button><button data-fl-dir="dep">🛫 Départs</button></div>
           <button class="round" id="flRefresh" title="Actualiser" aria-label="Actualiser les vols">↻</button></div>
@@ -1505,6 +1518,7 @@ const I18N_FRAG = {
   'temps pour rejoindre l’arrêt / arriver avant le cours':'time to reach the stop / arrive before class',
   '🔌 En charge : garder l’appli ouverte':'🔌 While charging: keep the app open','l’écran reste allumé tant que le chargeur est branché':'the screen stays on while the charger is plugged in',
   '📡 Suivi en direct par Claude':'📡 Live tracking by Claude','pendant un trajet, le journal (position, car repéré, alertes) est envoyé toutes les 30 s pour corriger les bugs en direct · 3 h maximum':'during a trip, the log (position, detected bus, alerts) is sent every 30 s to fix bugs live · 3 h max',
+  '🗺️ Carte des avions':'🗺️ Plane map','arrive à Roland-Garros':'landing at Roland-Garros','part de Roland-Garros':'leaving Roland-Garros','autre avion':'other plane',
   'Avions':'Planes','Alertes et sons':'Alerts & sounds','Proches et voyageurs':'Family & riders','Affichage':'Display','Appli et téléphone':'App & phone','🏙️ Cars dans ma ville':'🏙️ Buses in my town','🕒 Prochains cars':'🕒 Next buses','📄 Fiches horaires':'📄 Timetables','🚧 Trafic':'🚧 Traffic','✈️ Avions':'✈️ Planes',' & fiches':' & timetables',' trafic & avions':' traffic & planes','Infos':'Info','Avions à Roland-Garros':'Planes at Roland-Garros','🛬 Arrivées':'🛬 Arrivals','🛫 Départs':'🛫 Departures','Chargement des vols…':'Loading flights…',
   'Les arrivées et départs en direct, et le car jaune à prendre pour ton vol (touche 🚌).':'Live arrivals and departures, and the yellow bus to take for your flight (tap 🚌).',
   '🟧 Girouette des avions':'🟧 Plane ticker','🗣️ Annoncer les avions à voix haute':'🗣️ Announce planes out loud',
@@ -2209,7 +2223,7 @@ function setView(v, silent){
   if (v === 'map') setTimeout(fixMapSize, 50);
   if (v === 'board') renderBoard();
   if (v === 'trip'){ renderTrip(); try { renderClasses(); } catch(e){} }
-  if (v === 'avion'){ renderFlights(); loadFlights(); }
+  if (v === 'avion'){ renderFlights(); loadFlights(); setTimeout(() => { initPlaneMap(); if (plMap) plMap.invalidateSize(); renderPlanes(); loadPlanes(); }, 50); }
   if (!silent) savePrefs();
 }
 document.querySelector('.tabs').addEventListener('click', e => {
@@ -7359,13 +7373,88 @@ function renderFlights(){
       `<button class="round fl-bus" data-fl="${flDir}|${i}" title="${flDir === 'arr' ? 'Le car jaune pour rentrer après ce vol' : 'Le car jaune pour arriver à temps'}" aria-label="Car jaune pour le vol ${esc(f.n)}">🚌</button>`;
     return `<div class="fl-row${flDone(f) ? ' fini' : ''}${mine && mine === f.n ? ' fl-mine' : ''}">
       <div class="fl-h">${moved ? `<s>${esc(f.h)}</s><b class="nv">${fmtHM(t)}</b>` : `<b>${esc(f.h)}</b>`}${day}</div>
-      <div class="fl-m"><b>${esc(f.v)}</b><small>${esc(f.c)} · ${esc(f.n)}</small></div>
+      <div class="fl-m"><b>${esc(f.v)}</b><small>${esc(f.c)} · ${esc(f.n)}</small>${planeLine(f, flDir)}</div>
       <span class="fl-st st-${esc(f.e)}">${esc(f.st || 'Prévu')}</span>${bus || '<span></span>'}</div>`;
   }).join('');
   box.innerHTML = (html || `<p class="muted">Aucun vol ${flDir === 'arr' ? 'à l’arrivée' : 'au départ'} pour le moment.</p>`)
     + (flights.err ? `<p class="src-note">⚠️ ${esc(flights.err)}</p>` : '')
     + `<p class="src-note">Source : site de l’aéroport, via Roland Garros Live · mis à jour à ${fmtHM(flights.at || flAt)} · <a href="${RGL_URL}" target="_blank" rel="noopener">tout voir</a></p>`;
 }
+/* ====================== 🗺️ Carte des avions (demande du 25/11) ======================
+   Positions OpenSky via mon appli Roland Garros Live (serveur → getPlanes, gardées 25 s).
+   Un avion est relié à son vol grâce à son indicatif (UU975 → REU975). Mise à jour toutes les 30 s, onglet Avions ouvert. */
+const RUN_POS = [-20.8871, 55.5103];
+const IATA_OACI = { UU:'REU', AF:'AFR', MK:'MAU', SS:'CRL', BF:'FBU', MD:'MDG', ZD:'EWR', '4Z':'LNK', TK:'THY', EK:'UAE', TO:'TVF', HM:'SEY', '3U':'CSC', ET:'ETH', KQ:'KQA', SA:'SAA', QR:'QTR' };
+let planes = { at: 0, avions: [], err: null }, planesAt = 0, planesBusy = false, plMap = null, plLayer = null;
+const plMk = {};
+const callOf = n => { const m = String(n || '').match(/^([A-Z0-9]{2})(\d+)([A-Z]?)$/); return m && IATA_OACI[m[1]] ? IATA_OACI[m[1]] + parseInt(m[2], 10) + m[3] : null; };
+const normCs = cs => { const m = String(cs || '').trim().match(/^([A-Z]{3})0*(\d+)([A-Z]?)$/); return m ? m[1] + m[2] + m[3] : String(cs || '').trim(); };
+function planeOfFlight(f){
+  if (!f || Math.abs(f.ts - Date.now()) > 14 * 3600e3) return null;
+  const cs = callOf(f.n); return cs ? planes.avions.find(a => normCs(a.cs) === cs) || null : null;
+}
+function flightOfPlane(a){
+  const cs = normCs(a.cs);
+  for (const [dir, list] of [['arr', flights.arr], ['dep', flights.dep]]){
+    const f = list.find(x => callOf(x.n) === cs && Math.abs(x.ts - Date.now()) < 14 * 3600e3);
+    if (f) return { f, dir };
+  }
+  return null;
+}
+function planeLine(f, dir){
+  const a = planeOfFlight(f); if (!a) return '';
+  const d = Math.round(distM(RUN_POS[0], RUN_POS[1], a.lat, a.lon) / 1000);
+  const eta = dir === 'arr' && !a.sol && a.v > 30 ? ` · ~${Math.max(1, Math.round(d / (a.v * 3.6) * 60 + 4))} min` : '';
+  return `<span class="fl-live" data-plane="${esc(a.cs)}">${a.sol ? `🛬 au sol${d < 5 ? ' à Roland-Garros' : ` · ${d} km`}` : `✈️ en vol · ${d} km${eta}`} · voir sur la carte</span>`;
+}
+async function loadPlanes(force){
+  if (planesBusy || (!force && Date.now() - planesAt < 25e3)) return;
+  planesBusy = true;
+  try { const o = JSON.parse(await call('getPlanes')); planes = { at: o.at || Date.now(), avions: o.avions || [], err: o.err || null }; }
+  catch(e){ planes.err = errMsg(e); }
+  planesAt = Date.now(); planesBusy = false;
+  renderPlanes();
+  if (view === 'avion') renderFlights();
+}
+function planeIcon(cap, color, sol){
+  const t = sol ? 20 : 28;
+  return L.divIcon({ className:'plane', iconSize:[t, t], iconAnchor:[t / 2, t / 2],
+    html:`<svg width="${t}" height="${t}" viewBox="0 0 24 24" style="transform:rotate(${cap || 0}deg)"><path fill="${color}" stroke="#fff" stroke-width=".8" d="M12 1.5c.9 0 1.5.9 1.5 2v6l8 4.8v2.1l-8-2.4v5.2l2.2 1.7V22L12 21l-3.7 1v-1.6l2.2-1.7v-5.2l-8 2.4v-2.1l8-4.8v-6c0-1.1.6-2 1.5-2z"/></svg>` });
+}
+function initPlaneMap(){
+  if (plMap || !$('#planeMap') || typeof L === 'undefined') return;
+  plMap = L.map('planeMap', { zoomControl:true, attributionControl:true, rotate:false, rotateControl:false, touchRotate:false }).setView([-20.95, 55.5], 8);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom:13, attribution:'Plan © Esri · avions : OpenSky Network via Roland Garros Live' }).addTo(plMap);
+  L.circleMarker(RUN_POS, { radius:7, color:'#fff', weight:2, fillColor:'#0B3D6B', fillOpacity:1 }).addTo(plMap)
+    .bindPopup('<b>Aéroport Roland-Garros (RUN)</b><br>Sainte-Marie');
+  plLayer = L.layerGroup().addTo(plMap);
+}
+function renderPlanes(){
+  const info = $('#plInfo');
+  if (info) info.textContent = !planesAt ? 'chargement…' : `${planes.avions.length} avion${planes.avions.length > 1 ? 's' : ''} autour de l’île · ${fmtHM(planes.at || planesAt)}` + (planes.err ? ` · ⚠️ ${planes.err}` : '');
+  if (!plMap) return;
+  const seen = {};
+  planes.avions.forEach(a => {
+    const id = a.cs || (a.lat + ',' + a.lon); seen[id] = 1;
+    const fl = flightOfPlane(a), color = fl ? (fl.dir === 'arr' ? '#E8710A' : '#1565C0') : '#7B8794';
+    const d = Math.round(distM(RUN_POS[0], RUN_POS[1], a.lat, a.lon) / 1000), ft = Math.round((a.alt || 0) / 0.3048 / 100) * 100;
+    const trend = a.vz > 1 ? ' ↗ monte' : a.vz < -1 ? ' ↘ descend' : '';
+    const pop = `<b>${esc(a.cs || 'Avion')}</b>` + (fl ? `<br>${esc(fl.f.c)} ${esc(fl.f.n)} — ${fl.dir === 'arr' ? 'de' : 'vers'} ${esc(fl.f.v)}<br>prévu ${esc(fl.f.h)} · ${esc(fl.f.st || 'Prévu')}` : '')
+      + `<br>${a.sol ? 'au sol' : `${ft} ft · ${Math.round((a.v || 0) * 3.6)} km/h${trend}`}<br>${d} km de Roland-Garros`;
+    if (plMk[id]) plMk[id].setLatLng([a.lat, a.lon]).setIcon(planeIcon(a.cap, color, a.sol)).setPopupContent(pop);
+    else plMk[id] = L.marker([a.lat, a.lon], { icon: planeIcon(a.cap, color, a.sol), title: a.cs || 'Avion' }).bindPopup(pop).addTo(plLayer);
+  });
+  Object.keys(plMk).forEach(id => { if (!seen[id]){ plLayer.removeLayer(plMk[id]); delete plMk[id]; } });
+}
+function showPlane(cs){
+  initPlaneMap(); const m = plMk[cs]; if (!m) return;
+  $('#planeMap').scrollIntoView({ block:'center', behavior:'smooth' });
+  setTimeout(() => { plMap.invalidateSize(); plMap.setView(m.getLatLng(), Math.max(plMap.getZoom(), 9)); m.openPopup(); }, 350);
+}
+document.addEventListener('click', e => { const p = e.target.closest('[data-plane]'); if (p) showPlane(p.dataset.plane); });
+setInterval(() => { if (view === 'avion' && document.visibilityState === 'visible') loadPlanes(); }, 30e3);
+
 /* 🗣️ les avions annoncés à voix haute, comme dans un aérogare (une fois par événement) */
 let airVoice = (() => { try { return localStorage.getItem('cj_airvoice') !== '0'; } catch(e){ return true; } })();
 const planeSaid = {}; let planeFirst = true;

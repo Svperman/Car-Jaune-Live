@@ -226,6 +226,13 @@ await t('🧹 « Toute l’île » sur une carte pas encore à sa taille : pas d
     const c = map.getCenter(); return err || (isFinite(c.lat) && isFinite(c.lng) ? '' : 'centre NaN'); })()`);
   return r === '' || r;
 });
+await t('🗺️ carte des avions : avions placés, reliés à leur vol (couleur), lien depuis la liste des vols', async () => {
+  const r = await page.evaluate(`(async () => { setView('avion'); await new Promise(ok => setTimeout(ok, 200)); await loadPlanes(true); flDir = 'arr'; renderFlights();
+    const col = id => (plMk[id] && plMk[id].getElement() ? plMk[id].getElement().innerHTML.match(/fill="(#[0-9A-F]+)"/i)[1] : '');
+    return [Object.keys(plMk).sort().join(','), col('REU975'), col('XYZ12'), [...document.querySelectorAll('#flBody .fl-live')].map(x => x.textContent).join(' | '),
+      !!document.querySelector('#planeMap .leaflet-control-rotate')]; })()`);
+  return (r[0] === 'AFR652,REU975,XYZ12' && r[1].toUpperCase() === '#E8710A' && r[2].toUpperCase() === '#7B8794' && /en vol · \d+ km · ~\d+ min/.test(r[3]) && /au sol à Roland-Garros/.test(r[3]) && !r[4]) || JSON.stringify(r);
+});
 await t('aucune erreur JavaScript', async () => errs.length === 0 || errs.join(' / '));
 await browser.close();
 if (fails.length){ console.log(`✗ ${fails.length} problème(s)`); process.exit(1); }

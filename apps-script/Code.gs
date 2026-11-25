@@ -102,6 +102,7 @@ const API_ = {
   getCreatorStats:   function () { return getCreatorStats(); },
   getVigilance:      function () { return getVigilance(); },
   getFlights:        function () { return getFlights(); },
+  getPlanes:         function () { return getPlanes(); },
   liveDiag:          function (code, lines) { return liveDiag(code, lines); },
   getLiveDiag:       function (code, from) { return getLiveDiag(code, from); }
 };
@@ -1288,4 +1289,34 @@ function getLiveDiag(code, from) {
   let lines = [];
   keys.forEach(function (k) { if (got[k]) { try { lines = lines.concat(JSON.parse(got[k])); } catch (e) {} } });
   return JSON.stringify({ n: n, from: a, lines: lines, at: Date.now() });
+}
+
+
+/* ------------------------------------------------------------------ */
+/*  ✈️ Avions en vol autour de l'île (via Roland Garros Live → OpenSky) */
+/* ------------------------------------------------------------------ */
+/** Positions des avions, gardées 25 s pour tout le monde (Roland Garros Live garde déjà 20 s de son côté). */
+function getPlanes() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get('planes');
+  if (hit) return hit;
+  const out = { at: Date.now(), avions: [], err: null };
+  try {
+    const r = UrlFetchApp.fetch(RGL_URL + '?api=avions', { muteHttpExceptions: true, followRedirects: true });
+    if (r.getResponseCode() !== 200) throw new Error('HTTP ' + r.getResponseCode());
+    const o = JSON.parse(r.getContentText());
+    out.err = o.erreur || null;
+    out.at = o.maj || out.at;
+    out.avions = (o.avions || []).filter(a => isFinite(a.lat) && isFinite(a.lon)).map(a => ({
+      cs: String(a.cs || '').trim(), lat: Math.round(a.lat * 1e5) / 1e5, lon: Math.round(a.lon * 1e5) / 1e5,
+      alt: a.alt == null ? null : Math.round(a.alt), sol: !!a.sol, v: a.v == null ? null : Math.round(a.v), cap: a.cap == null ? null : Math.round(a.cap),
+      vz: a.vz == null ? null : Math.round(a.vz * 10) / 10 }));
+  } catch (e) {
+    out.err = 'Avions indisponibles : ' + e.message;
+  }
+  const s = JSON.stringify(out);
+  if (!out.err || out.avions.length) { cache.put('planes', s, 25); cache.put('planes_ok', s, 900); return s; }
+  const ok = cache.get('planes_ok');
+  if (ok) { const o = JSON.parse(ok); o.err = out.err; return JSON.stringify(o); }
+  return s;
 }
