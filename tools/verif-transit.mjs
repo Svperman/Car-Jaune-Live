@@ -103,7 +103,9 @@ try {
   log('| Gare | Départs communs | Seulement dans Car Jaune Live | Seulement dans Transit |');
   log('|---|---|---|---|');
   const details = [];
+  let garesOk = 0;
   for (const [nom, g] of Object.entries(gares)){
+   try {
     const ns = await transit('nearby_stops', { lat: g.lat, lon: g.lon, max_distance: 200 });
     await sleep(PAUSE);
     // chez Transit, une gare = plusieurs quais (un par ligne) ; on garde ceux du réseau Car Jaune (identifiants « CJFR: »)
@@ -130,16 +132,25 @@ try {
     });
     leurs.forEach((x, k) => { if (!pris.has(k)) seulEux.push(x); });
     const c = nous.length - seulNous.length;
+    if (!leurs.length){                                   // Transit muet (panne, quai introuvable) : on ne compte pas cette gare
+      log(`| ${nom} | — | (Transit n'a rien renvoyé : gare non comptée) | — |`);
+      if (nous.length) details.push(`- ${nom} : Transit n'a renvoyé aucun départ Car Jaune (${ids.length} quai(s) trouvé(s)) ; gare non comptée.`);
+      continue;
+    }
+    garesOk++;
     total += nous.length + seulEux.length; communs += c; ecarts += seulNous.length + seulEux.length;
     const fmt = l => l.length ? l.sort((a, b) => a.t - b.t).slice(0, 12).map(x => `${x.ligne} ${hm(x.t)}`).join(', ') + (l.length > 12 ? ` (+${l.length - 12})` : '') : '—';
     log(`| ${nom} | ${c} | ${fmt(seulNous)} | ${fmt(seulEux)} |`);
-    if (!leurs.length && nous.length) details.push(`- ${nom} : Transit n'a renvoyé aucun départ Car Jaune (${ids.length} quai(s) trouvé(s)).`);
+   } catch(e){                                            // une gare en erreur n'empêche pas de vérifier les autres
+    log(`| ${nom} | — | (erreur : ${String(e.message).slice(0, 80)}) | — |`);
+   }
   }
   const taux = total ? Math.round(100 * communs / Math.max(1, communs + ecarts)) : 100;
-  log(`\n**Concordance : ${taux} %** (${communs} départs identiques, ${ecarts} écarts).`);
+  if (garesOk) log(`\n**Concordance : ${taux} %** (${communs} départs identiques, ${ecarts} écarts).`);
   details.forEach(d => log(d));
   if (ecarts) log(`\nUn départ « seulement dans Car Jaune Live » peut être une course supprimée que les horaires officiels n'ont pas retirée ; « seulement dans Transit » peut venir d'horaires plus récents chez eux. Dans les deux cas, le GTFS officiel (Région Réunion / Pysae) est la référence de l'appli.`);
-  writeFileSync('transit-ecarts.txt', String(taux < 90 ? ecarts : 0));
+  if (!garesOk) log(`\n⚠️ Aucune gare n'a pu être comparée (Transit muet ou en panne) : pas d'alerte.`);
+  writeFileSync('transit-ecarts.txt', String(garesOk && taux < 90 ? ecarts : 0));     // jamais d'alerte sans vraie comparaison
 } catch(e){
   log(`\n⚠️ Vérification impossible : ${e.message}`);
   writeFileSync('transit-ecarts.txt', '0');

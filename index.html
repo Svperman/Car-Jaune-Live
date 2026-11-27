@@ -1061,7 +1061,7 @@
   @media (min-width:700px){ .mn-grid{grid-template-columns:repeat(3,1fr)} }
   .mn-t{position:relative;aspect-ratio:1/1;border:0;border-radius:28px;background:var(--carte);cursor:pointer;font:inherit;text-align:left;padding:16px;display:flex;align-items:flex-end;overflow:hidden;box-shadow:0 3px 0 rgba(0,0,0,.08);transition:transform .12s}
   .mn-t:active{transform:scale(.96)}
-  .mn-t b{position:relative;z-index:1;font-size:23px;font-weight:800;line-height:1.1;color:var(--titre);letter-spacing:-.01em}
+  .mn-t b{position:relative;z-index:1;max-width:100%;overflow-wrap:anywhere;hyphens:auto;font-size:clamp(18px,5.6vw,23px);font-weight:800;line-height:1.1;color:var(--titre);letter-spacing:-.01em}
   .mn-ic{position:absolute;display:flex;align-items:center;justify-content:center;border-radius:30%;box-shadow:0 6px 14px rgba(0,0,0,.18);line-height:1}
   .mn-ic.a{width:84px;height:84px;font-size:44px;right:16px;top:20px;transform:rotate(-8deg)}
   .mn-ic.b{width:60px;height:60px;font-size:30px;left:38px;top:10px;transform:rotate(9deg)}
@@ -1569,7 +1569,11 @@ let vehicles = [], alerts = [], feedTime = null, lastTus = {};
 // sans réseau (voir « Sans réseau » plus bas)
 let netDown = false, netFails = 0;
 let outbox = { reps: [], share: [], last: null, ntfy: [] };
-try { outbox = Object.assign(outbox, JSON.parse(localStorage.getItem('cj_outbox') || '{}')); } catch(e){}
+/** Liste enregistrée sur l'appareil : toujours un tableau, même si la valeur est abîmée (stockage plein, ancienne version…). */
+function lsArr(k){ try { const v = JSON.parse(localStorage.getItem(k) || '[]'); return Array.isArray(v) ? v : []; } catch(e){ return []; } }
+/** Objet enregistré : toujours un objet simple. */
+function lsObj(k){ try { const v = JSON.parse(localStorage.getItem(k) || '{}'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch(e){ return {}; } }
+try { outbox = Object.assign(outbox, lsObj('cj_outbox')); } catch(e){}
 let selected = new Set(), query = '';
 let busy = false, nextAt = 0;
 let mode = 'init', sched = null, schedAt = 0, forceUntil = 0;
@@ -2397,7 +2401,7 @@ if (BACK_ON){
 function setView(v, silent){
   if (!VIEW_NAMES[v]) v = 'map';
   if (v !== view && BACK_ON){                      // onglet autre que la carte : « retour » ramène à la carte
-    if (v !== 'map' && view === 'map') backPush('view');
+    if (v !== 'map' && view === 'map' && !(history.state && history.state.cj === 'view')) backPush('view');
     else if (v === 'map' && history.state && history.state.cj === 'view') backDrop('view');
   }
   view = v;
@@ -3105,7 +3109,7 @@ function journeyRows(from, to){
    Aller (A → B) : le dernier car qui arrive avant le début du cours (moins la marge).
    Retour (B → A) : le premier car après la fin du cours (plus la marge pour rejoindre l'arrêt). */
 const DAYS = ['', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'dimanche'];
-const cls = Object.assign({ on:false, walk:5, d:{} }, (() => { try { return JSON.parse(localStorage.getItem('cj_cls') || '{}'); } catch(e){ return {}; } })());
+const cls = Object.assign({ on:false, walk:5, d:{} }, lsObj('cj_cls'));
 function saveCls(){ try { localStorage.setItem('cj_cls', JSON.stringify(cls)); } catch(e){} }
 const hmToMs = (day, hm) => { const [hh, mm] = hm.split(':').map(Number); return day + (hh * 60 + mm) * 60e3; };
 /** Conseils du jour : { aller:{r, leave}, retour:{r, leave}, s, e } (ou null). */
@@ -3379,7 +3383,7 @@ const fmtWalk = d => d > 6000 ? 'trop loin à pied' : `~${walkMin(d)} min à pie
 /** Arrêts les plus proches (tous arrêts, gares comprises), triés par distance. */
 /* Arrêts que ce téléphone ne veut plus voir choisis tout seuls (ex. « Campus » chez Samuel) */
 var IGNORED = [];
-try { IGNORED = JSON.parse(localStorage.getItem('cj_ign') || '[]'); } catch(e){}
+IGNORED = lsArr('cj_ign');
 const isIgnored = name => IGNORED.some(x => norm(name).includes(norm(x)));
 function nearbyStops(lat, lon, n){
   return stopGroups.filter(g => isFinite(g.lat) && isFinite(g.lon) && !isIgnored(g.name))
@@ -3914,7 +3918,7 @@ function nextSay(){
    - appli en arrière-plan → vraie notification du téléphone (+ ntfy si réglé) ;
    - infos secondaires (kind 'none') → seulement dans l'historique de la cloche (pastille), sans rien cacher ;
    - tout est gardé dans l'historique de la cloche 🔔. */
-const inbox = (() => { try { return JSON.parse(localStorage.getItem('cj_inbox') || '[]'); } catch(e){ return []; } })();
+const inbox = lsArr('cj_inbox');
 let unread = 0;
 function saveInbox(){ try { localStorage.setItem('cj_inbox', JSON.stringify(inbox.slice(0, 30))); } catch(e){} }
 function notify(title, body, kind, opt = {}){
@@ -4415,7 +4419,7 @@ $('#nextShortcut').addEventListener('click', async () => {
 
 /* ---------- journal de diagnostic (sur le téléphone uniquement) ---------- */
 let diagOn = false, diagLog = [];
-try { diagOn = localStorage.getItem('cj_diag_on') === '1'; diagLog = JSON.parse(localStorage.getItem('cj_diag') || '[]'); } catch(e){}
+try { diagOn = localStorage.getItem('cj_diag_on') === '1'; diagLog = lsArr('cj_diag'); } catch(e){}
 let diagSaveT = null, diagSeq = diagLog.reduce((m, e) => Math.max(m, e.n || 0), 0);
 
 /* ---------- 📡 Suivi en direct par Claude ----------
@@ -4493,7 +4497,7 @@ $('#diagShare').addEventListener('click', async () => {
 });
 
 /* ---------- apparence : thème et taille du texte ---------- */
-const look = Object.assign({ theme:'auto', text:'', eco:true }, (() => { try { return JSON.parse(localStorage.getItem('cj_look') || '{}'); } catch(e){ return {}; } })());
+const look = Object.assign({ theme:'auto', text:'', eco:true }, lsObj('cj_look'));
 const darkMq = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
 function isDark(){
   if (look.theme !== 'auto') return look.theme === 'dark';
@@ -4692,7 +4696,7 @@ $('#bellBtn').addEventListener('click', () => toggleBellMenu());
 
 function saveAlertCfg(){ try { localStorage.setItem('cj_alerts', JSON.stringify(alertCfg)); } catch(e){} try { syncPush(); } catch(e){} }
 function loadAlertCfg(){
-  try { Object.assign(alertCfg, JSON.parse(localStorage.getItem('cj_alerts') || '{}')); } catch(e){}
+  Object.assign(alertCfg, lsObj('cj_alerts'));
   // un seul canal ntfy : celui des alertes appli fermée (on reprend l'ancien nom s'il existait)
   if (alertCfg.ntfy && alertCfg.ntfy !== pushCfg.topic && !pushCfg.registered){ pushCfg.topic = alertCfg.ntfy; pushCfg.on = true; savePush(); }
   alertCfg.ntfy = pushCfg.on ? pushCfg.topic : '';
@@ -6451,7 +6455,7 @@ const URB_RT = {
 };
 const URB_ALL = ['citalis', 'karouest', 'alterneo', 'carsud', 'estival', 'papang'];
 let urbOn = {};
-try { urbOn = JSON.parse(localStorage.getItem('cj_urb') || 'null') || {}; } catch(e){}
+urbOn = lsObj('cj_urb');
 URB_ALL.forEach(id => { if (urbOn[id] == null) urbOn[id] = true; });          // tous visibles au départ
 const urb = { index: null, nets: {}, loading: {}, veh: {}, mode: {}, rtAt: {}, rtBusy: {}, drawKey: '', stopKey: '' };
 const urbPane = map.createPane('urb'); urbPane.style.zIndex = 380;            // sous les tracés et cars jaunes
@@ -6892,7 +6896,7 @@ urbIndex().then(() => { urbRenderFiches(); urbStopsLoad(); });
 let nsOn = true;
 try { nsOn = localStorage.getItem('cj_ns') !== '0'; } catch(e){}
 const ns = { rows: [], at: 0, pos: null, from: '', busy: false, snap: 'mid' };
-try { ns.snap = localStorage.getItem('cj_ns_snap') || 'mid'; } catch(e){}
+try { const v = localStorage.getItem('cj_ns_snap'); if (v === 'mini' || v === 'mid' || v === 'full') ns.snap = v; } catch(e){}
 const NS_LIVE = '<svg class="ns-live" viewBox="0 0 16 16" aria-hidden="true"><circle cx="3.5" cy="12.5" r="1.7" fill="currentColor"/><path class="w1" d="M3.5 8a4.5 4.5 0 0 1 4.5 4.5"/><path class="w2" d="M3.5 3.5a9 9 0 0 1 9 9"/></svg>';
 const NS_WALK = 80;                                  // mètres par minute à pied
 const NS_SNAP = { mini: 160, mid: .44, full: .9 };   // hauteur visible (px ou part de la carte)
@@ -7015,7 +7019,12 @@ function renderMenu(){
 }
 $('#menuOv').addEventListener('click', e => {
   const b = e.target.closest('[data-mn]'); if (!b) return;
-  const k = b.dataset.mn; closeMenu();
+  const k = b.dataset.mn;
+  // l'étape « retour » du menu devient celle de ce qu'on ouvre (sinon « retour » se décale et finit par quitter l'appli)
+  const tag = ['board', 'fiches', 'trip', 'avion', 'trafic', 'bilan', 'lignes', 'arrets', 'trajets'].includes(k) ? 'view'
+    : k === 'simple' ? 'simpleOv' : k === 'reglages' ? 'settingsModal' : '';
+  if (tag && BACK_ON && history.state && history.state.cj === 'menuOv') try { history.replaceState({ cj: tag }, ''); } catch(err){}
+  closeMenu();
   if (k === 'close') return;
   if (k === 'simple') return openSimple();
   if (k === 'papang') return goPapang();
@@ -7052,7 +7061,7 @@ $('#nsMe').addEventListener('click', () => {
 
 /** Où chercher : ma position si elle est récente, sinon le centre de la carte. */
 function nsWhere(){
-  if (myPos && Date.now() - (myFixAt || 0) < 10 * 60e3) return { lat: myPos.lat, lon: myPos.lon, me: true };
+  if (myPos && Number.isFinite(myPos.lat) && Number.isFinite(myPos.lon) && Date.now() - (myFixAt || 0) < 10 * 60e3) return { lat: myPos.lat, lon: myPos.lon, me: true };
   const c = map.getCenter(); return { lat: c.lat, lon: c.lng, me: false };
 }
 async function nsRefresh(force){
@@ -7897,7 +7906,7 @@ async function unseal(key, s){
 }
 
 /* ----- je partage ----- */
-const shareCfg = Object.assign({ on:false, name:'', code:'', events:true, auto:true }, (() => { try { return JSON.parse(localStorage.getItem('cj_share') || '{}'); } catch(e){ return {}; } })());
+const shareCfg = Object.assign({ on:false, name:'', code:'', events:true, auto:true }, lsObj('cj_share'));
 if (!codeKey(shareCfg.code)) shareCfg.code = newCode();
 let shareLast = { t:0, lat:0, lon:0, bus:'' }, shareTimer = null, shareOwnWatch = false, shareErr = '';
 function newCode(){ return String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000); }
@@ -8206,7 +8215,7 @@ const leaveBtn = (from, to, r, label) => {
 /* ---------- 📊 Mon bilan ----------
    Chaque trajet reconnu (montée → descente) est noté sur ton téléphone seulement : ligne, durée, distance, retard. */
 const CO2_CAR = 0.218, CO2_COACH = 0.0295;          // kg CO₂e par km et par personne (ADEME, Impact CO₂) : voiture thermique / autocar
-let rides = (() => { try { return JSON.parse(localStorage.getItem('cj_rides') || '[]'); } catch(e){ return []; } })();
+let rides = lsArr('cj_rides').filter(r => r && typeof r === 'object');
 let rideRec = null;
 function saveRides(){ try { localStorage.setItem('cj_rides', JSON.stringify(rides.slice(-600))); } catch(e){} }
 function bilanStart(v, from){
@@ -8845,7 +8854,7 @@ function setTripPair(a, b){
 }
 
 /* ---------- ⭐ Trajets favoris ---------- */
-let tripFavs = (() => { try { return JSON.parse(localStorage.getItem('cj_tripfavs') || '[]'); } catch(e){ return []; } })();
+let tripFavs = lsArr('cj_tripfavs').filter(f => f && typeof f === 'object');
 const shortStop = n => String(n || '').replace(/^Gare (de |d’|d')/i, '').replace(/^Saint-/, 'St-').replace(/^Sainte-/, 'Ste-');
 function renderTripFavs(){
   const box = $('#tripFavs'); if (!box) return;
@@ -9474,7 +9483,7 @@ $('#shAuto').addEventListener('change', e => {
 });
 
 /* ----- je suis mes proches ----- */
-const friends = (() => { try { return JSON.parse(localStorage.getItem('cj_friends') || '[]'); } catch(e){ return []; } })();
+const friends = lsArr('cj_friends');
 const friendLayer = L.layerGroup().addTo(map), friendMk = {};
 let friendPoll = null;
 function saveFriends(){ try { localStorage.setItem('cj_friends', JSON.stringify(friends.map(f => ({ name: f.name, code: f.code })))); } catch(e){} }
