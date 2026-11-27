@@ -33,7 +33,9 @@ jobs:
         run: |
           npm init -y >/dev/null
           npm install --no-save playwright@1.48.2 html-minifier-terser@7.2.0
-          npx playwright install --with-deps chromium
+          # un dépôt apt tiers en panne (ex. packages.microsoft.com en 403) ne doit pas bloquer l'installation du navigateur
+          sudo rm -f /etc/apt/sources.list.d/microsoft*.list /etc/apt/sources.list.d/microsoft*.sources || true
+          npx playwright install --with-deps chromium || { sleep 20; npx playwright install --with-deps chromium; }
       - name: Tester l'appli (téléphone + ordinateur)
         run: |
           python3 -m http.server 8765 >/dev/null 2>&1 &
